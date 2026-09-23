@@ -7,7 +7,7 @@ Hệ thống AI Recruitment Agent sử dụng n8n và AI để tự động hóa
 ## Thành viên
 
 - Nguyễn Thị Mỹ Hoa
-- Thành viên 2
+- Lê Thị Yến Nhi
 
 ## Công nghệ
 
