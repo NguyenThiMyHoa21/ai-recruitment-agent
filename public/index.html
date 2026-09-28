@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản lý ứng viên - Luồng 6</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+    body { background: #f8fafc; padding: 30px; color: #1e293b; }
+    .card { max-width: 950px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { font-size: 20px; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    th { background: #f1f5f9; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; background: #e2e8f0; font-weight: bold; }
+    button { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 4px; }
+    .btn-pass { background: #16a34a; }
+    .btn-interview { background: #2563eb; }
+    .btn-fail { background: #dc2626; }
+    #log { margin-top: 15px; padding: 12px; background: #eff6ff; border-radius: 4px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Quản lý ứng viên (Candidate Management)</h1>
+    <p style="color: #64748b; font-size: 13px;">Giao diện Web &larr;&rarr; Backend Node.js &larr;&rarr; n8n &larr;&rarr; Gemini &larr;&rarr; MySQL</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Họ tên</th>
+          <th>Vị trí</th>
+          <th>Trạng thái</th>
+          <th>Nhận xét AI</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="6" style="text-align: center;">Đang tải...</td></tr>
+      </tbody>
+    </table>
+
+    <div id="log"></div>
+  </div>
+
+  <script>
+    async function loadData() {
+      const res = await fetch('/api/candidates');
+      const json = await res.json();
+      const tbody = document.getElementById('rows');
+      tbody.innerHTML = '';
+
+      json.data.forEach(c => {
+        tbody.innerHTML += `
+          <tr>
+            <td>#${c.id}</td>
+            <td><strong>${c.full_name}</strong><br><small>${c.email}</small></td>
+            <td>${c.applied_position}</td>
+            <td><span class="badge">${c.status}</span></td>
+            <td style="font-style: italic;">${c.ai_evaluation || 'Chưa có'}</td>
+            <td>
+              <button class="btn-pass" onclick="update(${c.id}, '${c.full_name}', '${c.applied_position}', 'Đạt')">Đạt</button>
+              <button class="btn-interview" onclick="update(${c.id}, '${c.full_name}', '${c.applied_position}', 'Phỏng vấn')">Phỏng vấn</button>
+              <button class="btn-fail" onclick="update(${c.id}, '${c.full_name}', '${c.applied_position}', 'Không đạt')">Loại</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function update(id, name, pos, status) {
+      const log = document.getElementById('log');
+      log.style.display = 'block';
+      log.innerHTML = `⏳ Đang gửi yêu cầu sang n8n cho ứng viên <b>${name}</b>...`;
+
+      try {
+        const res = await fetch('/api/candidates/update-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, full_name: name, applied_position: pos, new_status: status })
+        });
+        const data = await res.json();
+        if (data.success) {
+          log.innerHTML = `✅ AI nhận xét: "${data.data.ai_note || 'Đã cập nhật'}"`;
+          loadData();
+        } else {
+          log.innerHTML = `❌ ${data.message}`;
+        }
+      } catch (e) {
+        log.innerHTML = `❌ Lỗi kết nối server Backend!`;
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
