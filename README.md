@@ -2,7 +2,7 @@
 
 ## Mô tả
 
-Hệ thống AI Recruitment Agent sử dụng n8n và AI để tự động hóa quy trình tuyển dụng.
+AI Recruitment Agent là hệ thống tự động hóa quy trình tuyển dụng sử dụng Web, Backend/API, n8n, AI/LLM và Database.
 
 ## Thành viên
 
@@ -12,28 +12,92 @@ Hệ thống AI Recruitment Agent sử dụng n8n và AI để tự động hóa
 ## Công nghệ
 
 - Ubuntu
+- Web
+- Backend / REST API
 - n8n
-- Git/GitHub
-- AI/LLM
-- API
+- Google Gemini
+- AI / LLM
 - Webhook
 - Database
-- OCR/PDF
+- OCR / PDF
+- Git / GitHub
 
 ## Workflows
 
-### Workflow 1 - Job Posting Agent
-Tạo và xử lý thông tin tuyển dụng.
+### Nguyễn Thị Mỹ Hoa
 
-### Workflow 2 - CV Screening Agent
-Đọc và phân tích CV ứng viên.
+#### Workflow 1 - Job Posting Agent
+Tạo và xử lý thông tin tuyển dụng bằng AI.
 
-### Workflow 3 - Interview Scheduling Agent
-Tự động hỗ trợ đặt lịch phỏng vấn.
+#### Workflow 2 - CV Screening Agent
+Đọc, phân tích CV và đánh giá mức độ phù hợp của ứng viên.
 
-### Workflow 4 - Recruitment Report Agent
+#### Workflow 3 - Recruitment Report Agent
 Tổng hợp dữ liệu tuyển dụng và tạo báo cáo.
 
-## Architecture
+### Lê Thị Yến Nhi
 
-Trigger → Data Processing → API → AI → Decision → Action → Human Approval → Logging
+#### Workflow 4 - Interview Scheduling Agent
+Tự động hỗ trợ sắp xếp lịch phỏng vấn.
+
+#### Workflow 5 - Interview Notification Agent
+Tự động tạo và gửi thông báo lịch phỏng vấn.
+
+#### Workflow 6 - Candidate Management Agent
+Quản lý thông tin và trạng thái của ứng viên.
+
+## System Architecture
+
+Web
+↓
+Backend / REST API
+↓
+n8n Automation
+↓
+AI / Gemini
+↓
+Decision
+↓
+Action
+↓
+Database
+
+## Workflow Architecture
+
+Trigger
+→ Data Processing
+→ API
+→ AI
+→ Decision
+→ Action
+→ Human Approval
+→ Logging / Monitoring
+
+## Project Structure
+
+ai-recruitment-agent/
+│
+├── workflows/
+│   ├── hoa/
+│   │   ├── 01-job-posting.json
+│   │   ├── 02-cv-screening.json
+│   │   └── 03-recruitment-report.json
+│   │
+│   └── nhi/
+│       ├── 04-interview-scheduling.json
+│       ├── 05-interview-notification.json
+│       └── 06-candidate-management.json
+│
+├── backend/
+├── web/
+└── README.md
+
+## Git Workflow
+
+Mỗi thành viên phát triển các workflow của mình trên branch riêng.
+
+main
+├── feature/hoa
+└── feature/nhi
+
+Các workflow n8n được export thành file JSON và lưu trong thư mục workflows.
