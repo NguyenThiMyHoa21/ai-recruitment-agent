@@ -63,6 +63,21 @@ app.post('/api/candidates/update-status', async (req, res) => {
     });
   }
 });
+// Route API xếp lịch phỏng vấn qua Luồng 4 n8n
+app.post('/api/schedule-interview', async (req, res) => {
+  const { candidate_id, requested_by } = req.body;
+  try {
+    const n8nUrl = 'http://localhost:5678/webhook/interview-schedule';
+    const response = await axios.post(n8nUrl, {
+      candidate_id: candidate_id,
+      requested_by: requested_by || 'HR_Web_Admin'
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Lỗi gọi Luồng 4 n8n:', error.message);
+    res.status(500).json({ success: false, message: 'Lỗi khi xếp lịch phỏng vấn qua n8n' });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
