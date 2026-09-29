@@ -1,93 +1,243 @@
 {
-  "name": "AI Recruitment - Job Posting Agent",
+  "name": "AI Job Posting Agent",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "job-posting",
+        "responseMode": "responseNode",
         "options": {}
       },
+      "id": "node-1",
+      "name": "1. Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        0,
-        0
-      ],
-      "id": "700bae40-59fe-4ab4-b14c-3e7670dae4c1",
-      "name": "Webhook",
-      "webhookId": "6dd98bac-a95d-4fbd-af49-44c8ba0be34e"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1.1,
-      "position": [
-        224,
-        240
-      ],
-      "id": "eade9c0a-323c-4013-8dce-30b03fd4ca99",
-      "name": "Google Gemini Chat Model",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "B0GnB02qU87nuQdn",
-          "name": "Google Gemini(PaLM) Api account"
-        }
-      }
+      "position": [200, 300]
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "=Bạn là AI Recruitment Assistant.\n\nHãy tạo một tin tuyển dụng chuyên nghiệp bằng tiếng Việt dựa CHỈ trên dữ liệu được cung cấp từ Webhook.\n\nVị trí tuyển dụng: {{$json.body.jobTitle}}\nPhòng ban: {{$json.body.department}}\nYêu cầu: {{$json.body.requirements}}\nKinh nghiệm: {{$json.body.experience}}\n\nHãy tạo nội dung gồm:\n\n1. Tiêu đề tuyển dụng\n2. Giới thiệu vị trí\n3. Mô tả công việc\n4. Yêu cầu ứng viên\n5. Quyền lợi\n6. Cách ứng tuyển\n\nQUY TẮC:\n- Không tự bịa địa điểm, mức lương, email, số điện thoại hoặc chính sách phúc lợi cụ thể.\n- Nếu dữ liệu không được cung cấp, ghi \"Chưa cung cấp\".\n- Không thêm yêu cầu kỹ thuật không có trong dữ liệu đầu vào.\n- Chỉ sử dụng thông tin được cung cấp và diễn đạt lại cho chuyên nghiệp.\n- Trình bày rõ ràng, dễ đọc.",
+        "assignments": {
+          "assignments": [
+            { "id": "f1", "name": "position", "value": "={{ $json.body.position }}", "type": "string" },
+            { "id": "f2", "name": "department", "value": "={{ $json.body.department }}", "type": "string" },
+            { "id": "f3", "name": "location", "value": "={{ $json.body.location || 'Remote' }}", "type": "string" },
+            { "id": "f4", "name": "salary", "value": "={{ $json.body.salary || 'Thỏa thuận' }}", "type": "string" },
+            { "id": "f5", "name": "requirements", "value": "={{ $json.body.requirements }}", "type": "string" }
+          ]
+        },
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
-      "position": [
-        224,
-        0
-      ],
-      "id": "a68b79a2-b772-4de9-ab12-8ad63fd02214",
-      "name": "AI Agent"
+      "id": "node-2",
+      "name": "2. Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.position }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.department }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-3",
+      "name": "3. Validate Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT id FROM jobs WHERE position = '{{ $json.position }}' AND department = '{{ $json.department }}' AND status = 'published' LIMIT 1;"
+      },
+      "id": "node-4",
+      "name": "4. MySQL - Check Job",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [860, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p1",
+              "name": "ai_prompt",
+              "value": "=Hãy tạo bản mô tả công việc (JD) cho: {{ $('2. Edit Fields').item.json.position }}, phòng {{ $('2. Edit Fields').item.json.department }}. Yêu cầu: {{ $('2. Edit Fields').item.json.requirements }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-5",
+      "name": "5. HTTP Request - AI API",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "jd1",
+              "name": "job_description",
+              "value": "=Mô tả công việc vị trí {{ $('2. Edit Fields').item.json.position }}:\n- Tham gia phát triển hệ thống cùng phòng ban {{ $('2. Edit Fields').item.json.department }}.\n- Đáp ứng tiêu chuẩn: {{ $('2. Edit Fields').item.json.requirements }}.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-6",
+      "name": "6. AI Agent - Generate Job Description",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "v1",
+              "leftValue": "={{ $json.job_description.length }}",
+              "rightValue": 20,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-7",
+      "name": "7. IF - Validate AI Result",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1520, 200]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "node-8",
+      "name": "8. Human Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1740, 100]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO jobs (position, department, location, salary, requirements, job_description, status) VALUES ('{{ $('2. Edit Fields').item.json.position }}', '{{ $('2. Edit Fields').item.json.department }}', '{{ $('2. Edit Fields').item.json.location }}', '{{ $('2. Edit Fields').item.json.salary }}', '{{ $('2. Edit Fields').item.json.requirements }}', '{{ $('6. AI Agent - Generate Job Description').item.json.job_description }}', 'published');"
+      },
+      "id": "node-9",
+      "name": "9. MySQL - Save Job",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1960, 100]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "n1", "name": "notification_status", "value": "Sent notification to Telegram/Email successfully", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-10",
+      "name": "10. HTTP Request - Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2180, 100]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "l1", "name": "log_status", "value": "SUCCESS - Workflow 1 completed", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-11",
+      "name": "11. Log Execution",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2400, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Job published successfully\",\n  \"position\": \"{{ $('2. Edit Fields').item.json.position }}\",\n  \"department\": \"{{ $('2. Edit Fields').item.json.department }}\"\n}",
+        "options": {}
+      },
+      "id": "node-12",
+      "name": "12. Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2620, 100]
     }
   ],
-  "pinData": {},
   "connections": {
-    "Google Gemini Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
+    "1. Webhook": {
+      "main": [[{ "node": "2. Edit Fields", "type": "main", "index": 0 }]]
+    },
+    "2. Edit Fields": {
+      "main": [[{ "node": "3. Validate Data", "type": "main", "index": 0 }]]
+    },
+    "3. Validate Data": {
+      "main": [
+        [{ "node": "4. MySQL - Check Job", "type": "main", "index": 0 }],
+        []
       ]
     },
-    "Webhook": {
+    "4. MySQL - Check Job": {
+      "main": [[{ "node": "5. HTTP Request - AI API", "type": "main", "index": 0 }]]
+    },
+    "5. HTTP Request - AI API": {
+      "main": [[{ "node": "6. AI Agent - Generate Job Description", "type": "main", "index": 0 }]]
+    },
+    "6. AI Agent - Generate Job Description": {
+      "main": [[{ "node": "7. IF - Validate AI Result", "type": "main", "index": 0 }]]
+    },
+    "7. IF - Validate AI Result": {
       "main": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "8. Human Approval", "type": "main", "index": 0 }],
+        []
       ]
+    },
+    "8. Human Approval": {
+      "main": [[{ "node": "9. MySQL - Save Job", "type": "main", "index": 0 }]]
+    },
+    "9. MySQL - Save Job": {
+      "main": [[{ "node": "10. HTTP Request - Notification", "type": "main", "index": 0 }]]
+    },
+    "10. HTTP Request - Notification": {
+      "main": [[{ "node": "11. Log Execution", "type": "main", "index": 0 }]]
+    },
+    "11. Log Execution": {
+      "main": [[{ "node": "12. Respond to Webhook", "type": "main", "index": 0 }]]
     }
-  },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
-  },
-  "versionId": "f0190e61-1bed-4655-9651-ed2195c395dd",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "b43eeafb5333a96e5cf3d1413ee97b0d103ba8e3623436b44abe7007a21ee182"
-  },
-  "nodeGroups": [],
-  "id": "WZw5NCjtxk0CHlbn",
-  "tags": []
+  }
 }
