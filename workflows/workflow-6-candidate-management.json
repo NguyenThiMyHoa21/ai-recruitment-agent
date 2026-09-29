@@ -1,0 +1,467 @@
+{
+  "name": "Luong 6 - Candidate Management Full 13 Steps",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "update-candidate-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4bf9325b-e764-4b5b-91cb-a5e5230e86d9",
+      "name": "Step 1: Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        48
+      ],
+      "webhookId": "f007acff-154c-4ab4-82fc-f2e646923f72"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check_payload",
+              "leftValue": "={{ $json.body.candidate_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c93a2e6e-9094-4402-a2e1-bfc34fc7e2da",
+      "name": "Step 2: Check Payload",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2016,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, full_name, applied_position, status, email FROM candidates WHERE id = {{ $('Step 1: Webhook').item.json.body.candidate_id }};",
+        "options": {}
+      },
+      "id": "f5e15e90-73b1-49b8-be67-c218ddc691a7",
+      "name": "Step 3: Fetch Current Candidate",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -1792,
+        32
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "zaF7raRXbUaS8A8L",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check_exist",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1db2e64-913d-404a-b69b-e0a9d86f30be",
+      "name": "Step 4: Check Existence",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const candidate = $('Step 3: Fetch Current Candidate').item.json;\nconst newStatus =$('Step 1: Webhook').item.json.body.new_status || 'Đang xem xét';\nconst prompt = `Ứng viên ${candidate.full_name} ứng tuyển vị trí ${candidate.applied_position} vừa được cập nhật sang trạng thái: \"${newStatus}\". Hãy viết một nhận xét tuyển dụng ngắn gọn dưới 25 từ bằng tiếng Việt cho HR.`;\n\nreturn [{\n  json: {\n    candidate_id: candidate.id,\n    full_name: candidate.full_name,\n    applied_position: candidate.applied_position,\n    new_status: newStatus,\n    ai_prompt: prompt\n  }\n}];"
+      },
+      "id": "391c744f-3604-4070-a4d5-e5f0c431d9e5",
+      "name": "Step 5: Build AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AQ.Ab8RN6Lw6M9JouQGiXnzmCpEK-Nf4QwHoWHYlCvHTYj5aqmIkg"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=={{ \n  JSON.stringify({\n    contents: [\n      {\n        parts: [\n          {\n            text: $json.ai_prompt\n          }\n        ]\n      }\n    ]\n  }) \n}}",
+        "options": {}
+      },
+      "id": "6bcddc85-a0bc-4fe1-b616-9d61cb88b8dc",
+      "name": "Step 6: Request Gemini AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1136,
+        16
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const candidate = $('Step 5: Build AI Prompt').item.json;\nlet aiNote = '';\n\ntry {\n  if ($json.candidates && $json.candidates[0].content.parts[0].text) {\n    aiNote = $json.candidates[0].content.parts[0].text.trim();\n  } else {\n    throw new Error('Fallback needed');\n  }\n} catch (err) {\n  if (candidate.new_status === 'Đạt') {\n    aiNote = `Hồ sơ ${candidate.full_name} đạt chuẩn vị trí ${candidate.applied_position}. Đề xuất HR liên hệ gửi offer.`;\n  } else if (candidate.new_status === 'Phỏng vấn') {\n    aiNote = `Ứng viên ${candidate.full_name} phù hợp tiêu chí ban đầu. Đề xuất xếp lịch phỏng vấn.`;\n  } else {\n    aiNote = `Hồ sơ ${candidate.full_name} chưa phù hợp đợt tuyển dụng này. Lưu hồ sơ ứng viên.`;\n  }\n}\n\nreturn [{\n  json: {\n    candidate_id: candidate.candidate_id,\n    new_status: candidate.new_status,\n    ai_evaluation: aiNote\n  }\n}];"
+      },
+      "id": "1b034803-8a69-4a01-98c6-6cbec1d3eea6",
+      "name": "Step 7: Catch & Fallback Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE candidates SET status = '{{ $json.new_status }}', ai_evaluation = '{{$json.ai_evaluation.replace(/'/g, \"''\") }}' WHERE id = {{ $json.candidate_id }};",
+        "options": {}
+      },
+      "id": "7156c3cd-c2fb-4a38-b79c-8fbbd0084565",
+      "name": "Step 8: Update Candidate DB",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -688,
+        16
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "Nj2c67pO83lf0sbL",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO candidate_history (candidate_id, action, note, updated_at) VALUES ({{ $('Step 7: Catch & Fallback Review').item.json.candidate_id }}, 'UPDATE_STATUS', 'Chuyển trạng thái sang {{ $('Step 7: Catch & Fallback Review').item.json.new_status }}', NOW());",
+        "options": {}
+      },
+      "id": "b39c12cf-6b64-4cca-8c86-6d7ef8eb57da",
+      "name": "Step 9: Insert Audit Log",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -464,
+        16
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "zaF7raRXbUaS8A8L",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "candidate_id",
+              "name": "candidate_id",
+              "value": "={{ $('Step 7: Catch & Fallback Review').item.json.candidate_id }}",
+              "type": "number"
+            },
+            {
+              "id": "new_status",
+              "name": "new_status",
+              "value": "={{ $('Step 7: Catch & Fallback Review').item.json.new_status }}",
+              "type": "string"
+            },
+            {
+              "id": "ai_note",
+              "name": "ai_note",
+              "value": "={{ $('Step 7: Catch & Fallback Review').item.json.ai_evaluation }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "398e5ebb-e04f-4346-97c5-f0358c496c6d",
+      "name": "Step 10: Format HR Dispatch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -256,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "route_status",
+              "leftValue": "={{ $json.new_status }}",
+              "rightValue": "Đạt",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9b86c66d-fc9d-4b2d-a68b-5b380ec27fde",
+      "name": "Step 11: Route Alert by Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": {{ $json.candidate_id }},\n  \"status\": \"{{ $json.new_status }}\",\n  \"evaluation\": \"{{ $json.ai_note }}\"\n}",
+        "options": {}
+      },
+      "id": "e845405e-2154-49e6-9b48-8ed894029dd4",
+      "name": "Step 12: Dispatch Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"candidate_id\": {{ $('Step 7: Catch & Fallback Review').item.json.candidate_id }},\n  \"new_status\": \"{{ $('Step 7: Catch & Fallback Review').item.json.new_status }}\",\n  \"ai_note\": \"{{ $('Step 7: Catch & Fallback Review').item.json.ai_evaluation }}\"\n}",
+        "options": {}
+      },
+      "id": "ac7d32b7-5227-45a4-a2e7-d7e4cf6170c6",
+      "name": "Step 13: Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        16
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Step 1: Webhook": {
+      "main": [
+        [
+          {
+            "node": "Step 2: Check Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2: Check Payload": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Fetch Current Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Fetch Current Candidate": {
+      "main": [
+        [
+          {
+            "node": "Step 4: Check Existence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4: Check Existence": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Build AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: Build AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 6: Request Gemini AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6: Request Gemini AI": {
+      "main": [
+        [
+          {
+            "node": "Step 7: Catch & Fallback Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7: Catch & Fallback Review": {
+      "main": [
+        [
+          {
+            "node": "Step 8: Update Candidate DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8: Update Candidate DB": {
+      "main": [
+        [
+          {
+            "node": "Step 9: Insert Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9: Insert Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Step 10: Format HR Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10: Format HR Dispatch": {
+      "main": [
+        [
+          {
+            "node": "Step 11: Route Alert by Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11: Route Alert by Status": {
+      "main": [
+        [
+          {
+            "node": "Step 12: Dispatch Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 13: Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12: Dispatch Notification": {
+      "main": [
+        [
+          {
+            "node": "Step 13: Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ad053cbc-8907-4761-a20f-542248e51b7a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bdea5f16c2ef479ba4e5c397d17a9b6cee12d9b255d968a071a19ff6b5314845"
+  },
+  "nodeGroups": [],
+  "id": "NKaFaNsm2Bf5lrAS",
+  "tags": []
+}

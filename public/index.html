@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candidate Management - AI Powered</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success-bg: #dcfce7;
+      --success-text: #15803d;
+      --info-bg: #e0f2fe;
+      --info-text: #0369a1;
+      --danger-bg: #fee2e2;
+      --danger-text: #b91c1c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Inter", sans-serif; background-color: var(--bg); color: var(--text-main); padding: 40px 20px; }
+    .container { max-width: 1100px; margin: 0 auto; background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
+    .header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .pipeline-tag { background: #eef2ff; color: var(--primary); font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 9999px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 14px 20px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); background: #fafafa; border-bottom: 1px solid var(--border); }
+    td { padding: 18px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 14px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background-color: #fcfcfd; }
+    .candidate-name { font-weight: 600; color: var(--text-main); }
+    .candidate-email { font-size: 12px; color: var(--text-muted); }
+    .ai-review { font-style: italic; color: #334155; line-height: 1.5; font-size: 13px; max-width: 280px; display: inline-block; }
+    .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-dat { background: var(--success-bg); color: var(--success-text); }
+    .badge-phong-van { background: var(--info-bg); color: var(--info-text); }
+    .badge-loai { background: var(--danger-bg); color: var(--danger-text); }
+    .action-wrapper { position: relative; display: inline-block; }
+    .status-select { appearance: none; background: #fff; border: 1px solid var(--border); padding: 7px 32px 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-main); cursor: pointer; outline: none; }
+    .action-wrapper::after { content: "▼"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 10px; color: var(--text-muted); }
+    .btn-schedule { background: #4f46e5; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .btn-schedule:hover { background: #4338ca; }
+    .meet-link { color: #4f46e5; font-weight: 600; text-decoration: none; font-size: 12px; display: inline-block; margin-top: 4px; }
+    #toast { margin: 16px 32px; padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 13px; color: #166534; display: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Quản lý ứng viên</h1>
+      <p>Hệ thống tự động hóa thẩm định trạng thái qua AI & n8n</p>
+    </div>
+    <span class="pipeline-tag">● N8N Workflow Active</span>
+  </div>
+
+  <div id="toast"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Họ tên & Email</th>
+        <th>Vị trí</th>
+        <th>Trạng thái</th>
+        <th>Nhận xét từ AI</th>
+        <th>Chuyển trạng thái</th>
+        <th>Lịch phỏng vấn</th>
+      </tr>
+    </thead>
+    <tbody id="candidate-list">
+      <tr><td colspan="7" style="text-align:center; padding: 24px;">Đang tải dữ liệu từ máy chủ...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+async function fetchCandidates() {
+  try {
+    const res = await fetch('/api/candidates?t=' + Date.now());
+    const json = await res.json();
+    const list = Array.isArray(json) ? json : (json.data || []);
+    renderRows(list);
+  } catch (err) {
+    console.error('Lỗi nạp dữ liệu:', err);
+  }
+}
+
+function formatTime(dtStr) {
+  if (!dtStr) return '';
+  const d = new Date(dtStr);
+  return d.toLocaleString('vi-VN', { 
+    year: 'numeric', month: '2-digit', day: '2-digit', 
+    hour: '2-digit', minute: '2-digit', hour12: false 
+  });
+}
+
+function renderRows(candidates) {
+  const tbody = document.getElementById('candidate-list');
+  if (!candidates || candidates.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không có dữ liệu ứng viên.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = candidates.map(c => {
+    let badgeClass = 'badge-phong-van';
+    if (c.status === 'Đạt') badgeClass = 'badge-dat';
+    else if (c.status === 'Loại' || c.status === 'Không đạt') badgeClass = 'badge-loai';
+
+    let scheduleCol = '';
+    if (c.status === 'Phỏng vấn') {
+      if (c.interview_time) {
+        scheduleCol = `
+          <div style="font-size: 13px;">
+            <strong>${formatTime(c.interview_time)}</strong><br>
+            <span style="color: #64748b; font-size: 12px;">PV: ${c.interviewer_name || 'N/A'}</span><br>
+            <a href="${c.meeting_link}" target="_blank" class="meet-link">🔗 Vào phòng Meet</a>
+          </div>`;
+      } else {
+        scheduleCol = `<button class="btn-schedule" data-id="${c.id}">📅 Xếp lịch ngay</button>`;
+      }
+    } else if (c.status === 'Đạt') {
+      scheduleCol = '<span style="color: #15803d; font-size: 13px; font-weight: 500;">✓ Đã xong PV (Pass)</span>';
+    } else {
+      scheduleCol = '<span style="color: #94a3b8; font-size: 13px;">— Không khả dụng —</span>';
+    }
+
+    // Lấy chính xác cột ai_evaluation từ database
+    const reviewText = c.ai_evaluation || c.ai_review || '';
+
+    return `
+      <tr data-id="${c.id}">
+        <td>#${c.id}</td>
+        <td>
+          <div class="candidate-name">${c.full_name}</div>
+          <div class="candidate-email">${c.email || ''}</div>
+        </td>
+        <td>${c.applied_position || c.position || ''}</td>
+        <td><span class="badge ${badgeClass}">${c.status}</span></td>
+        <td><span class="ai-review">${reviewText ? '"' + reviewText + '"' : '<em>(Chưa có nhận xét)</em>'}</span></td>
+        <td>
+          <div class="action-wrapper">
+            <select class="status-select" data-id="${c.id}">
+              <option value="Đạt" ${c.status === 'Đạt' ? 'selected' : ''}>Đạt</option>
+              <option value="Phỏng vấn" ${c.status === 'Phỏng vấn' ? 'selected' : ''}>Phỏng vấn</option>
+              <option value="Loại" ${c.status === 'Loại' || c.status === 'Không đạt' ? 'selected' : ''}>Loại</option>
+            </select>
+          </div>
+        </td>
+        <td id="schedule-cell-${c.id}">${scheduleCol}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+document.addEventListener('click', async (e) => {
+  if (e.target && e.target.classList.contains('btn-schedule')) {
+    const candidateId = e.target.getAttribute('data-id');
+    const cell = document.getElementById('schedule-cell-' + candidateId);
+    if (cell) cell.innerHTML = '<span style="color:#4f46e5; font-weight:600;">⏳ Đang xếp lịch qua AI...</span>';
+
+    try {
+      const res = await fetch('/api/schedule-interview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidate_id: Number(candidateId), requested_by: 'HR_Web' })
+      });
+      const result = await res.json();
+      fetchCandidates();
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ!');
+      fetchCandidates();
+    }
+  }
+});
+
+document.addEventListener('change', async (e) => {
+  if (e.target && e.target.classList.contains('status-select')) {
+    const candidateId = e.target.getAttribute('data-id');
+    const newStatus = e.target.value;
+    const row = e.target.closest('tr');
+    const fullName = row.querySelector('.candidate-name').innerText.trim();
+    const position = row.cells[2].innerText.trim();
+    const toast = document.getElementById('toast');
+
+    try {
+      const response = await fetch('/api/candidates/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(candidateId), full_name: fullName, applied_position: position, new_status: newStatus })
+      });
+      const result = await response.json();
+      if (result.success || response.ok) {
+        fetchCandidates();
+        toast.style.display = 'block';
+        toast.innerText = 'Cập nhật trạng thái thành công cho ứng viên #' + candidateId;
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ!');
+    }
+  }
+});
+
+document.addEventListener('DOMContentLoaded', fetchCandidates);
+</script>
+</body>
+</html>
