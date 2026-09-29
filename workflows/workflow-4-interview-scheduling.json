@@ -1,0 +1,315 @@
+{
+  "name": "Luong 4 - Interview Scheduling Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "interview-schedule",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        64
+      ],
+      "id": "323e1b29-f585-4b9b-81fa-87a2e81b757f",
+      "name": "Step 1: Webhook Trigger",
+      "webhookId": "0f6df4e7-d783-4ec4-b01a-9ac5d55aaf82"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst candidateId = body.candidate_id || body.id;\n\nif (!candidateId) {\n  throw new Error(\"Thiếu candidate_id hợp lệ!\");\n}\n\nreturn [{\n  json: {\n    candidate_id: Number(candidateId),\n    requested_by: body.requested_by || \"HR_System\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        64
+      ],
+      "id": "bf7ff12f-ea73-4fdf-a3cd-ee6326b4b8f3",
+      "name": "Step 2: Validate Input"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, full_name, email, applied_position, status FROM candidates WHERE id = {{ $json.candidate_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -592,
+        64
+      ],
+      "id": "68081581-1f0d-410d-99af-fb5bd24bae30",
+      "name": "Step 3: Query Candidate",
+      "credentials": {
+        "mySql": {
+          "id": "zaF7raRXbUaS8A8L",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const candidate = $input.first().json;\nconst pos = (candidate.applied_position || \"\").toLowerCase();\n\nlet interviewer = { name: \"Nguyễn HR\", email: \"hr@company.com\", role: \"HR Manager\" };\nif (pos.includes(\"frontend\")) {\n  interviewer = { name: \"Trần Văn Tech\", email: \"lead.frontend@company.com\", role: \"Frontend Lead\" };\n} else if (pos.includes(\"backend\") || pos.includes(\"nodejs\")) {\n  interviewer = { name: \"Lê Hoàng Dev\", email: \"lead.backend@company.com\", role: \"Backend Lead\" };\n} else if (pos.includes(\"ai\") || pos.includes(\"data\")) {\n  interviewer = { name: \"Phạm Trí Tuệ\", email: \"lead.ai@company.com\", role: \"AI Lead\" };\n}\n\nconst now = new Date();\nnow.setDate(now.getDate() + 2);\nconst dateStr = now.toISOString().split(\"T\")[0];\n\nconst proposedSlots = [\n  `${dateStr} 09:30:00`,\n  `${dateStr} 14:30:00`\n];\n\nreturn [{\n  json: {\n    candidate_id: candidate.id,\n    full_name: candidate.full_name,\n    email: candidate.email,\n    position: candidate.applied_position,\n    interviewer,\n    proposedSlots\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -48
+      ],
+      "id": "18928f63-c8e4-417a-8c80-7f7fa4c2a718",
+      "name": "Step 5: Match Interviewer & Slots"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconst prompt = `Bạn là trợ lý điều phối tuyển dụng ATS.\nỨng viên: ${item.full_name}\nVị trí: ${item.position}\nNgười phỏng vấn: ${item.interviewer.name} (${item.interviewer.role})\nCác khung giờ khả dụng:\n1. ${item.proposedSlots[0]}\n2. ${item.proposedSlots[1]}\n\nHãy chọn 1 khung giờ phù hợp nhất và tạo mã link Google Meet ngẫu nhiên dạng https://meet.google.com/dfj-amei-jzt.\nBẮT BUỘC chỉ trả về đúng định dạng JSON thuần túy (không markdown, không giải thích):\n{\n  \"selected_time\": \"YYYY-MM-DD HH:mm:ss\",\n  \"meeting_link\": \"https://meet.google.com/dfj-amei-jzt\",\n  \"schedule_note\": \"Ghi chú ngắn gọn cho ứng viên và HR chuẩn bị\"\n}`;\n\nreturn [{\n  json: {\n    ...item,\n    prompt\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "a3e0675c-ac6d-4d5f-ac2f-2f8cfd44cb32",
+      "name": "Step 6: Build AI Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": {{ JSON.stringify($json.prompt) }}\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        -48
+      ],
+      "id": "d1cdf6bd-6d50-4270-bfe0-3f596a7ab81c",
+      "name": "Step 7: Call Gemini AI",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Step 6: Build AI Prompt').first().json;\nconst item = $input.first().json;\nlet parsed = null;\n\ntry {\n  let text = item.candidates?.[0]?.content?.parts?.[0]?.text || '';\n  text = text.replace(/```json/g, '').replace(/```/g, '').trim();\n  parsed = JSON.parse(text);\n} catch (e) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.selected_time) {\n  parsed = {\n    selected_time: prev.proposedSlots[0],\n    meeting_link: 'https://meet.google.com/dfj-amei-jzt',\n    schedule_note: 'Lịch phỏng vấn xếp tự động theo slot khả dụng mặc định.'\n  };\n}\n\nreturn [{\n  json: {\n    candidate_id: prev.candidate_id,\n    full_name: prev.full_name,\n    email: prev.email,\n    position: prev.position,\n    interviewer_name: prev.interviewer.name,\n    interviewer_email: prev.interviewer.email,\n    interview_time: parsed.selected_time,\n    meeting_link: parsed.meeting_link,\n    schedule_note: parsed.schedule_note\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        -48
+      ],
+      "id": "30959d22-aa44-46c7-aeee-99ad9df75d7c",
+      "name": "Step 8: Parse AI Result & Fallback"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE candidates \nSET interview_time = '{{ $json.interview_time }}\n', interviewer_name = '{{ $json.interviewer_name }}\n', meeting_link = '{{ $json.meeting_link }}\n', status = 'Phỏng vấn'\nWHERE id = {{ $json.candidate_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        736,
+        -48
+      ],
+      "id": "f641ecce-7e7f-48dd-8cb6-366d8053d4ca",
+      "name": "Step 9: Update Candidate DB",
+      "credentials": {
+        "mySql": {
+          "id": "zaF7raRXbUaS8A8L",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO candidate_history (candidate_id, action, note)\nVALUES (\n  {{ $('Step 8: Parse AI Result & Fallback').first().json.candidate_id }},\n  'SCHEDULED_INTERVIEW',\n  'Đã xếp lịch phỏng vấn lúc {{ $('Step 8: Parse AI Result & Fallback').first().json.interview_time }} với {{ $('Step 8: Parse AI Result & Fallback').first().json.interviewer_name }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        960,
+        -48
+      ],
+      "id": "5c57ac71-d352-4098-b9a5-d551f0cf350e",
+      "name": "Step 10: Insert Audit Log",
+      "credentials": {
+        "mySql": {
+          "id": "zaF7raRXbUaS8A8L",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/interview-notification",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($(\"Step 8: Parse AI Result & Fallback\").first().json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1184,
+        -48
+      ],
+      "id": "d33785cf-1766-457f-a0ae-64b22b4774f5",
+      "name": "Step 11: Dispatch to Workflow 5",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Xếp lịch phỏng vấn thành công\",\n  \"data\": {\n    \"candidate_id\": {{ $(\"Step 8: Parse AI Result & Fallback\").first().json.candidate_id }},\n    \"full_name\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.full_name }}\",\n    \"interview_time\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.interview_time }}\",\n    \"interviewer\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.interviewer_name }}\",\n    \"meeting_link\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.meeting_link }}\",\n    \"note\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.schedule_note }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1408,
+        -48
+      ],
+      "id": "8f433007-1730-4d7b-a5a8-a53bc2521ba9",
+      "name": "Step 12: Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Step 1: Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Step 2: Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2: Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Query Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Query Candidate": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Match Interviewer & Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: Match Interviewer & Slots": {
+      "main": [
+        [
+          {
+            "node": "Step 6: Build AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6: Build AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 7: Call Gemini AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7: Call Gemini AI": {
+      "main": [
+        [
+          {
+            "node": "Step 8: Parse AI Result & Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8: Parse AI Result & Fallback": {
+      "main": [
+        [
+          {
+            "node": "Step 9: Update Candidate DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9: Update Candidate DB": {
+      "main": [
+        [
+          {
+            "node": "Step 10: Insert Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10: Insert Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Step 11: Dispatch to Workflow 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11: Dispatch to Workflow 5": {
+      "main": [
+        [
+          {
+            "node": "Step 12: Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "10dc8109-72d6-4adb-8945-95ccb7571fec",
+  "meta": {
+    "instanceId": "bdea5f16c2ef479ba4e5c397d17a9b6cee12d9b255d968a071a19ff6b5314845"
+  },
+  "nodeGroups": [],
+  "id": "kN4Mvgl3OSd5NQvV",
+  "tags": []
+}
