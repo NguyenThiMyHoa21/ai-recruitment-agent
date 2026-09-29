@@ -1,0 +1,93 @@
+{
+  "name": "AI Recruitment - Job Posting Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-posting",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "700bae40-59fe-4ab4-b14c-3e7670dae4c1",
+      "name": "Webhook",
+      "webhookId": "6dd98bac-a95d-4fbd-af49-44c8ba0be34e"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        240
+      ],
+      "id": "eade9c0a-323c-4013-8dce-30b03fd4ca99",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "B0GnB02qU87nuQdn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là AI Recruitment Assistant.\n\nHãy tạo một tin tuyển dụng chuyên nghiệp bằng tiếng Việt dựa CHỈ trên dữ liệu được cung cấp từ Webhook.\n\nVị trí tuyển dụng: {{$json.body.jobTitle}}\nPhòng ban: {{$json.body.department}}\nYêu cầu: {{$json.body.requirements}}\nKinh nghiệm: {{$json.body.experience}}\n\nHãy tạo nội dung gồm:\n\n1. Tiêu đề tuyển dụng\n2. Giới thiệu vị trí\n3. Mô tả công việc\n4. Yêu cầu ứng viên\n5. Quyền lợi\n6. Cách ứng tuyển\n\nQUY TẮC:\n- Không tự bịa địa điểm, mức lương, email, số điện thoại hoặc chính sách phúc lợi cụ thể.\n- Nếu dữ liệu không được cung cấp, ghi \"Chưa cung cấp\".\n- Không thêm yêu cầu kỹ thuật không có trong dữ liệu đầu vào.\n- Chỉ sử dụng thông tin được cung cấp và diễn đạt lại cho chuyên nghiệp.\n- Trình bày rõ ràng, dễ đọc.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "a68b79a2-b772-4de9-ab12-8ad63fd02214",
+      "name": "AI Agent"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f0190e61-1bed-4655-9651-ed2195c395dd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b43eeafb5333a96e5cf3d1413ee97b0d103ba8e3623436b44abe7007a21ee182"
+  },
+  "nodeGroups": [],
+  "id": "WZw5NCjtxk0CHlbn",
+  "tags": []
+}
