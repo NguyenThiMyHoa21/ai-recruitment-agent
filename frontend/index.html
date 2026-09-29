@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recruitment Agent</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Recruitment Agent</h1>
+    <p class="subtitle">Hệ thống hỗ trợ tuyển dụng nhân sự</p>
+
+    <form id="jobForm">
+
+        <label>Vị trí tuyển dụng</label>
+        <input type="text" id="position" placeholder="Ví dụ: Nhân viên kinh doanh" required>
+
+        <label>Phòng ban</label>
+        <input type="text" id="department" placeholder="Ví dụ: Kinh doanh" required>
+
+        <label>Địa điểm làm việc</label>
+        <input type="text" id="location" placeholder="Ví dụ: Đà Nẵng" required>
+
+        <label>Mức lương</label>
+        <input type="text" id="salary" placeholder="Ví dụ: 8-12 triệu" required>
+
+        <label>Yêu cầu ứng viên</label>
+        <textarea id="requirements"
+                  placeholder="Nhập yêu cầu ứng viên..."
+                  required></textarea>
+
+        <button type="submit">Gửi yêu cầu tuyển dụng</button>
+
+    </form>
+
+    <div id="message"></div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
