@@ -1,0 +1,430 @@
+{
+  "name": "AI Recruitment - CV Screening Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cv-screening",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -464,
+        -208
+      ],
+      "id": "c1495037-70dc-44cd-acf4-7a4f9c35f644",
+      "name": "Webhook",
+      "webhookId": "695106ea-a349-4ad9-9bcb-096a82544768"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "db09915b-6a62-4b0d-b9af-6753a547fcfc",
+              "name": "job_id",
+              "value": "={{ $('Extract CV Text').item.json.job_id }}",
+              "type": "number"
+            },
+            {
+              "id": "e04d2be4-8864-4057-ade3-6b3c69d5d6ec",
+              "name": "candidate_name",
+              "value": "={{ $('Extract CV Text').item.json.candidate_name }}",
+              "type": "string"
+            },
+            {
+              "id": "680be0c5-3c51-4a95-b6b6-a252ad5a0ec7",
+              "name": "candidate_email",
+              "value": "={{ $('Extract CV Text').item.json.candidate_email }}",
+              "type": "string"
+            },
+            {
+              "id": "cb4d7191-ced4-4485-afea-8be06c8e5328",
+              "name": "cv_text",
+              "value": "={{ $json.extracted_cv_text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -32,
+        -208
+      ],
+      "id": "a6ec48bc-589e-4a07-a904-b54ed61c1dfc",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bb76afc5-7d5d-48b6-aa0f-617a3209d7a7",
+              "leftValue": "={{ $json.candidate_name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        -208
+      ],
+      "id": "11bda40a-6277-4dca-8b37-e45b2f3b0e21",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id AS job_db_id, position, requirements FROM jobs WHERE id = {{ $json.job_id }} LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        464,
+        -224
+      ],
+      "id": "95c0aea6-db58-4c2a-90d7-693a2e99b781",
+      "name": "Get Job Info",
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "45a85035-5529-4984-88d5-663cb9eeb5fe",
+              "name": "match_score",
+              "value": "=85",
+              "type": "number"
+            },
+            {
+              "id": "d03e853f-6c37-4dba-9782-5a2053a1c3a7",
+              "name": "ai_evaluation",
+              "value": "=Ứng viên đáp ứng tốt các yêu cầu kỹ thuật của công việc (Docker, Linux, CI/CD).",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "207ef87a-6acc-4586-96c5-176a2f903e16",
+      "name": "AI Agent (Mock)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f21e560b-d4a2-4758-b13e-a0cf19f7fca2",
+              "leftValue": "={{ $json.match_score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        16
+      ],
+      "id": "3c9d746f-7388-4413-97cf-aa55ebbb51c1",
+      "name": "Validate Score"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e96d420f-63d9-4954-8517-6895a1b9f97f",
+              "name": "approval_status",
+              "value": "=APPROVED",
+              "type": "string"
+            },
+            {
+              "id": "c0e30478-0555-45e5-a052-850e7c233204",
+              "name": "approved_by",
+              "value": "=HR Lead",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        32,
+        0
+      ],
+      "id": "138efdf7-bc42-4f59-bb32-44a8ca27d4ad",
+      "name": "Human Approval"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        0
+      ],
+      "id": "7b0e3803-4b38-4321-ad78-7906506ddd4b",
+      "name": "Wait",
+      "webhookId": "048ecbb2-6a26-47c7-9e0b-4a93fdd06249"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO candidates (job_id, name, email, cv_content, match_score, ai_evaluation, approval_status)\nVALUES (\n  {{ $('Edit Fields').item.json.job_id }},\n  '{{ $('Edit Fields').item.json.candidate_name }}',\n  '{{ $('Edit Fields').item.json.candidate_email }}',\n  '{{ $('Edit Fields').item.json.cv_text }}',\n  {{ $('AI Agent (Mock)').item.json.match_score }},\n  '{{ $('AI Agent (Mock)').item.json.ai_evaluation }}',\n  '{{ $('Human Approval').item.json.approval_status }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        464,
+        0
+      ],
+      "id": "0d7e91c2-ab1c-4992-b80f-d63e7cc93491",
+      "name": "Save Candidate",
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'AI CV Screening Agent',\n  'SUCCESS',\n  JSON_OBJECT(\n    'candidate_name', '{{ $('Edit Fields').item.json.candidate_name }}',\n    'score', {{ $('AI Agent (Mock)').item.json.match_score }},\n    'status', '{{ $('Human Approval').item.json.approval_status }}'\n  )\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -192,
+        320
+      ],
+      "id": "eab73edc-0fec-4a1a-bed2-9292d39e3c80",
+      "name": "Log Screening Execution",
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Sàng lọc CV thành công!\",\n  \"candidate\": \"{{ $('Edit Fields').item.json.candidate_name }}\",\n  \"match_score\": {{ $('AI Agent (Mock)').item.json.match_score }},\n  \"status\": \"{{ $('Human Approval').item.json.approval_status }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        32,
+        320
+      ],
+      "id": "568cec67-402a-4c91-98e9-db4fe0579d5b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst rawCv = body.cv_text || body.cv_file_content || \"Kỹ sư phần mềm kinh nghiệm Docker, Linux, CI/CD.\";\n\nreturn [\n  {\n    json: {\n      ...body,\n      extracted_cv_text: rawCv.trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -208
+      ],
+      "id": "91250d62-1c2e-4419-9fdd-bb7dda7d7651",
+      "name": "Extract CV Text"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract CV Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Job Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Job Info": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Mock)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Mock)": {
+      "main": [
+        [
+          {
+            "node": "Validate Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Score": {
+      "main": [
+        [
+          {
+            "node": "Human Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Approval": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Save Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Candidate": {
+      "main": [
+        [
+          {
+            "node": "Log Screening Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Screening Execution": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV Text": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f05153e7-f989-4b00-ba7b-f31c7046cd0b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b43eeafb5333a96e5cf3d1413ee97b0d103ba8e3623436b44abe7007a21ee182"
+  },
+  "nodeGroups": [],
+  "id": "0QEWx1KA91owTKJE",
+  "tags": []
+}
