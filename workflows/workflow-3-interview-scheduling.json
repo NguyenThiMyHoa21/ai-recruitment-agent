@@ -1,0 +1,361 @@
+{
+  "name": "AI Recruitment - Interview Scheduling Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "interview-schedule",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -112,
+        -96
+      ],
+      "id": "3560fb2e-c8a3-4a64-b3e0-145277f176ed",
+      "name": "Webhook",
+      "webhookId": "63883692-e39f-4c05-a32c-0817f0417c0e"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1214c574-74ff-47dd-be79-75597dd6fbd0",
+              "name": "candidate_id",
+              "value": "={{ $json.body.candidate_id }}",
+              "type": "number"
+            },
+            {
+              "id": "5f241638-e5e5-45f9-ac22-f91b158c18a8",
+              "name": "candidate_name",
+              "value": "={{ $json.body.candidate_name }}",
+              "type": "string"
+            },
+            {
+              "id": "b04eae41-4c72-43a5-aaff-aa7f970d9a8f",
+              "name": "candidate_email",
+              "value": "={{ $json.body.candidate_email }}",
+              "type": "string"
+            },
+            {
+              "id": "6aa1964d-5621-46ed-a6d1-50441c51c90a",
+              "name": "job_id",
+              "value": "={{ $json.body.job_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        144,
+        -96
+      ],
+      "id": "b80ed286-2a3c-44e6-b333-5839c13f8349",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM jobs WHERE id = {{ $('Edit Fields').item.json.job_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        384,
+        -96
+      ],
+      "id": "720dc105-756e-45a7-8b25-465554117c4b",
+      "name": "Get Job Info",
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a8c84c47-30cf-42b2-8f73-615c027f781f",
+              "name": "interview_date",
+              "value": "=2026-10-05 09:30:00",
+              "type": "string"
+            },
+            {
+              "id": "a1fd4bf8-244b-4d70-85b3-22423632ee70",
+              "name": "interview_type",
+              "value": "=Online (Google Meet: [meet.google.com/abc-xyz-rec](https://meet.google.com/abc-xyz-rec))",
+              "type": "string"
+            },
+            {
+              "id": "5ef4bf8d-2524-41a7-9292-cf0867297b86",
+              "name": "interview_questions",
+              "value": "=1. Hãy mô tả kiến trúc hệ thống CI/CD bạn từng triển khai. 2. Bạn xử lý xung đột git và rollback phiên bản lỗi như thế nào? 3. Cách tối ưu truy vấn MySQL khi dữ liệu lớn?",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        640,
+        -96
+      ],
+      "id": "04ba031d-7485-4385-b9b4-98346908ba19",
+      "name": "AI Agent (Mock)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO interviews (candidate_id, interview_date, interview_type, questions_generated, interview_status)\nVALUES (\n  {{ $('Edit Fields').item.json.candidate_id }},\n  '{{ $json.interview_date }}',\n  '{{ $json.interview_type }}',\n  '{{ $json.interview_questions }}',\n  'SCHEDULED'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        864,
+        -96
+      ],
+      "id": "41893d15-3283-4f78-848a-bc95172b3dee",
+      "name": "Save Interview Schedule",
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE candidates \nSET approval_status = 'INTERVIEW_SCHEDULED' \nWHERE id = {{ $('Edit Fields').item.json.candidate_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -96,
+        208
+      ],
+      "id": "9ca65804-1d12-4af2-89b1-638ec5bc635d",
+      "name": "Update Candidate Status",
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        208
+      ],
+      "id": "a96d3753-41a2-4d00-8978-9f414e1aede4",
+      "name": "Wait",
+      "webhookId": "16405266-49c0-449c-bf13-0ed0d40d0aa9"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "48f8dd47-4250-48d6-8104-3389addf5c65",
+              "name": "email_to",
+              "value": "={{ $('Edit Fields').item.json.candidate_email }}",
+              "type": "string"
+            },
+            {
+              "id": "79df96a8-eac9-4446-87df-0a05b8cb233f",
+              "name": "email_subject",
+              "value": "=[Thư mời phỏng vấn] Vị trí {{ $('Get Job Info').item.json.job_title || $('Get Job Info').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "882960cc-c565-4088-ad9f-f7930ccbba58",
+              "name": "email_content",
+              "value": "=Chào {{ $('Edit Fields').item.json.candidate_name }}, bạn đã vượt qua vòng lọc CV. Lịch phỏng vấn của bạn là {{ $('AI Agent (Mock)').item.json.interview_date }} qua {{ $('AI Agent (Mock)').item.json.interview_type }}.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        416,
+        208
+      ],
+      "id": "e2523bb4-6ff0-4426-925e-a34f7ec1171b",
+      "name": "Prepare Invitation Email"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'AI Recruitment - Interview Scheduling Agent',\n  'SUCCESS',\n  '{\"candidate_id\": {{ $('Edit Fields').item.json.candidate_id }}, \"interview_date\": \"{{ $('AI Agent (Mock)').item.json.interview_date }}\", \"status\": \"SCHEDULED\"}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        640,
+        208
+      ],
+      "id": "116f6a1c-776b-446d-91b7-e5bd0bd60851",
+      "name": "Log Interview Execution",
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Lên lịch phỏng vấn và gửi thư mời thành công!\",\n  \"candidate_id\": {{ $('Edit Fields').item.json.candidate_id }},\n  \"candidate_name\": \"{{ $('Edit Fields').item.json.candidate_name }}\",\n  \"interview_date\": \"{{ $('AI Agent (Mock)').item.json.interview_date }}\",\n  \"interview_type\": \"{{ $('AI Agent (Mock)').item.json.interview_type }}\",\n  \"questions\": \"{{ $('AI Agent (Mock)').item.json.interview_questions }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        208
+      ],
+      "id": "170d9a9b-5424-4a1a-b063-17a05fa737e5",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get Job Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Job Info": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Mock)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Mock)": {
+      "main": [
+        [
+          {
+            "node": "Save Interview Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Interview Schedule": {
+      "main": [
+        [
+          {
+            "node": "Update Candidate Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Candidate Status": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Prepare Invitation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Invitation Email": {
+      "main": [
+        [
+          {
+            "node": "Log Interview Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Interview Execution": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fa6acb0a-3669-4b9b-9ab6-4fb39e23df1d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b43eeafb5333a96e5cf3d1413ee97b0d103ba8e3623436b44abe7007a21ee182"
+  },
+  "nodeGroups": [],
+  "id": "OoOBTJbpBP6EiKHL",
+  "tags": []
+}
