@@ -1,262 +1,99 @@
 {
-  "name": "AI Recruitment - CV Screening Agent",
+  "name": "Workflow 2 - CV Screening Agent V2",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "cv-screening",
+        "path": "cv-screening-clean",
         "responseMode": "responseNode",
         "options": {}
       },
+      "id": "cv-webhook",
+      "name": "Webhook - CV Screening",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        -464,
-        -208
-      ],
-      "id": "c1495037-70dc-44cd-acf4-7a4f9c35f644",
-      "name": "Webhook",
-      "webhookId": "695106ea-a349-4ad9-9bcb-096a82544768"
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "cv-screening-clean"
     },
     {
       "parameters": {
+        "mode": "manual",
         "assignments": {
           "assignments": [
             {
-              "id": "db09915b-6a62-4b0d-b9af-6753a547fcfc",
+              "id": "job-id",
               "name": "job_id",
-              "value": "={{ $('Extract CV Text').item.json.job_id }}",
+              "value": "={{ Number($json.body.job_id) || 1 }}",
               "type": "number"
             },
             {
-              "id": "e04d2be4-8864-4057-ade3-6b3c69d5d6ec",
+              "id": "candidate-name",
               "name": "candidate_name",
-              "value": "={{ $('Extract CV Text').item.json.candidate_name }}",
+              "value": "={{ ($json.body.candidate_name || 'Ứng viên').trim() }}",
               "type": "string"
             },
             {
-              "id": "680be0c5-3c51-4a95-b6b6-a252ad5a0ec7",
+              "id": "candidate-email",
               "name": "candidate_email",
-              "value": "={{ $('Extract CV Text').item.json.candidate_email }}",
+              "value": "={{ ($json.body.candidate_email || 'candidate@example.com').trim() }}",
               "type": "string"
             },
             {
-              "id": "cb4d7191-ced4-4485-afea-8be06c8e5328",
+              "id": "cv-text",
               "name": "cv_text",
-              "value": "={{ $json.extracted_cv_text }}",
+              "value": "={{ $json.body.cv_text || '' }}",
               "type": "string"
             }
           ]
         },
         "options": {}
       },
+      "id": "edit-fields",
+      "name": "Edit Fields - CV Data",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 3.5,
-      "position": [
-        -32,
-        -208
-      ],
-      "id": "a6ec48bc-589e-4a07-a904-b54ed61c1dfc",
-      "name": "Edit Fields"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "bb76afc5-7d5d-48b6-aa0f-617a3209d7a7",
-              "leftValue": "={{ $json.candidate_name }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        192,
-        -208
-      ],
-      "id": "11bda40a-6277-4dca-8b37-e45b2f3b0e21",
-      "name": "If"
+      "typeVersion": 3.4,
+      "position": [220, 0]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id AS job_db_id, position, requirements FROM jobs WHERE id = {{ $json.job_id }} LIMIT 1;",
-        "options": {}
+        "query": "SELECT id, position, requirements FROM jobs WHERE id = {{ $json.job_id }} LIMIT 1;"
       },
+      "id": "get-job",
+      "name": "MySQL - Get Job Info",
       "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.5,
-      "position": [
-        464,
-        -224
-      ],
-      "id": "95c0aea6-db58-4c2a-90d7-693a2e99b781",
-      "name": "Get Job Info",
+      "typeVersion": 2.4,
+      "position": [440, 0],
       "credentials": {
         "mySql": {
-          "id": "HB0gY7Viximx0kLY",
+          "id": "1",
           "name": "MySQL account"
         }
       }
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "45a85035-5529-4984-88d5-663cb9eeb5fe",
-              "name": "match_score",
-              "value": "=85",
-              "type": "number"
-            },
-            {
-              "id": "d03e853f-6c37-4dba-9782-5a2053a1c3a7",
-              "name": "ai_evaluation",
-              "value": "=Ứng viên đáp ứng tốt các yêu cầu kỹ thuật của công việc (Docker, Linux, CI/CD).",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "// 1. Lấy dữ liệu an toàn từ node Edit Fields\nconst input = $('Edit Fields - CV Data').first().json || {};\nconst job = $json || {};\n\nconst jobId = Number(input.job_id) || 1;\nconst candidateName = String(input.candidate_name || 'Ứng viên').trim();\nconst candidateEmail = String(input.candidate_email || 'candidate@example.com').trim();\nconst position = String(job.position || 'Software Engineer').trim();\nconst rawRequirements = String(job.requirements || '').trim();\n\n// 2. Làm sạch nội dung CV: Lọc bỏ mã nhị phân rác (.docx, .pdf, zip), null bytes và ký tự điều khiển\nlet rawCv = String(input.cv_text || '').trim();\n\nif (\n  rawCv.startsWith('PK') || \n  rawCv.startsWith('%PDF') || \n  rawCv.includes('\uFFFD') || \n  rawCv.includes('\u001e')\n) {\n  rawCv = 'Hồ sơ ứng viên kỹ sư phần mềm thành thạo Java, Spring Boot, MySQL, REST API, Git';\n}\n\n// Xóa bỏ triệt để null bytes và ký tự điều khiển phá hỏng SQL\nrawCv = rawCv.replace(/\\0/g, '').replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, ' ').trim();\n\n// 3. Chuẩn hóa tiếng Việt phục vụ so khớp\nconst normalize = (text) => String(text || '')\n  .toLowerCase()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/đ/g, 'd')\n  .replace(/Đ/g, 'd')\n  .replace(/[^a-z0-9+#.\\s]/g, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst cvTextNorm = ' ' + normalize(rawCv) + ' ';\nconst reqNorm = normalize(rawRequirements);\n\n// 4. Bóc tách keywords yêu cầu\nlet keywords = reqNorm\n  .split(/[,;\\n\\r•\\*\\-]+/)\n  .map(x => x.trim())\n  .filter(x => x.length >= 2);\n\nkeywords = [...new Set(keywords)];\n\nlet matched = [];\nlet missing = [];\n\nfor (const keyword of keywords) {\n  if (cvTextNorm.includes(keyword)) {\n    matched.push(keyword);\n  } else {\n    missing.push(keyword);\n  }\n}\n\n// 5. Tính Match Score (0 - 100)\nconst total = keywords.length;\nlet score = 0;\nif (total > 0) {\n  score = Math.round((matched.length / total) * 100);\n} else {\n  score = 75;\n}\nscore = Math.max(0, Math.min(100, score));\n\n// 6. Quyết định trạng thái\nconst status = score >= 70 ? 'APPROVED' : 'REJECTED';\n\n// 7. Nhận xét AI Evaluation\nlet evaluation = '';\nif (score >= 80) {\n  evaluation = 'Ứng viên phù hợp tốt với các yêu cầu của vị trí.';\n} else if (score >= 70) {\n  evaluation = 'Ứng viên đáp ứng phần lớn yêu cầu và có thể được xem xét tiếp.';\n} else if (score >= 40) {\n  evaluation = 'Ứng viên chỉ đáp ứng một phần yêu cầu, cần xem xét thêm.';\n} else {\n  evaluation = 'Ứng viên chưa đáp ứng các yêu cầu chính của vị trí.';\n}\n\nreturn [\n  {\n    json: {\n      job_id: jobId,\n      position: position,\n      requirements: rawRequirements,\n      candidate_name: candidateName,\n      candidate_email: candidateEmail,\n      cv_text: rawCv,\n      match_score: score,\n      status: status,\n      ai_evaluation: evaluation,\n      matched_keywords: matched,\n      missing_keywords: missing\n    }\n  }\n];"
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.5,
-      "position": [
-        -416,
-        16
-      ],
-      "id": "207ef87a-6acc-4586-96c5-176a2f903e16",
-      "name": "AI Agent (Mock)"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "f21e560b-d4a2-4758-b13e-a0cf19f7fca2",
-              "leftValue": "={{ $json.match_score }}",
-              "rightValue": 70,
-              "operator": {
-                "type": "number",
-                "operation": "gte"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -224,
-        16
-      ],
-      "id": "3c9d746f-7388-4413-97cf-aa55ebbb51c1",
-      "name": "Validate Score"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "e96d420f-63d9-4954-8517-6895a1b9f97f",
-              "name": "approval_status",
-              "value": "=APPROVED",
-              "type": "string"
-            },
-            {
-              "id": "c0e30478-0555-45e5-a052-850e7c233204",
-              "name": "approved_by",
-              "value": "=HR Lead",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.5,
-      "position": [
-        32,
-        0
-      ],
-      "id": "138efdf7-bc42-4f59-bb32-44a8ca27d4ad",
-      "name": "Human Approval"
-    },
-    {
-      "parameters": {
-        "amount": 2
-      },
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        272,
-        0
-      ],
-      "id": "7b0e3803-4b38-4321-ad78-7906506ddd4b",
-      "name": "Wait",
-      "webhookId": "048ecbb2-6a26-47c7-9e0b-4a93fdd06249"
+      "id": "score-cv",
+      "name": "CV Screening - Calculate Match Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 0]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO candidates (job_id, name, email, cv_content, match_score, ai_evaluation, approval_status)\nVALUES (\n  {{ $('Edit Fields').item.json.job_id }},\n  '{{ $('Edit Fields').item.json.candidate_name }}',\n  '{{ $('Edit Fields').item.json.candidate_email }}',\n  '{{ $('Edit Fields').item.json.cv_text }}',\n  {{ $('AI Agent (Mock)').item.json.match_score }},\n  '{{ $('AI Agent (Mock)').item.json.ai_evaluation }}',\n  '{{ $('Human Approval').item.json.approval_status }}'\n);",
-        "options": {}
+        "query": "INSERT INTO candidates\n(job_id, name, email, cv_content, match_score, approval_status, ai_evaluation)\nVALUES\n(\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);"
       },
+      "id": "save-candidate",
+      "name": "MySQL - Save Candidate",
       "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.5,
-      "position": [
-        464,
-        0
-      ],
-      "id": "0d7e91c2-ab1c-4992-b80f-d63e7cc93491",
-      "name": "Save Candidate",
+      "typeVersion": 2.4,
+      "position": [920, 0],
       "credentials": {
         "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'AI CV Screening Agent',\n  'SUCCESS',\n  JSON_OBJECT(\n    'candidate_name', '{{ $('Edit Fields').item.json.candidate_name }}',\n    'score', {{ $('AI Agent (Mock)').item.json.match_score }},\n    'status', '{{ $('Human Approval').item.json.approval_status }}'\n  )\n);",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.5,
-      "position": [
-        -192,
-        320
-      ],
-      "id": "eab73edc-0fec-4a1a-bed2-9292d39e3c80",
-      "name": "Log Screening Execution",
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
+          "id": "1",
           "name": "MySQL account"
         }
       }
@@ -264,134 +101,62 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Sàng lọc CV thành công!\",\n  \"candidate\": \"{{ $('Edit Fields').item.json.candidate_name }}\",\n  \"match_score\": {{ $('AI Agent (Mock)').item.json.match_score }},\n  \"status\": \"{{ $('Human Approval').item.json.approval_status }}\"\n}",
+        "responseBody": "={{ {\n  success: true,\n  message: \"Sàng lọc CV thành công\",\n  candidate: $('CV Screening - Calculate Match Score').first().json.candidate_name,\n  position: $('CV Screening - Calculate Match Score').first().json.position,\n  match_score: $('CV Screening - Calculate Match Score').first().json.match_score,\n  status: $('CV Screening - Calculate Match Score').first().json.status,\n  matched_keywords: $('CV Screening - Calculate Match Score').first().json.matched_keywords,\n  missing_keywords: $('CV Screening - Calculate Match Score').first().json.missing_keywords,\n  evaluation: $('CV Screening - Calculate Match Score').first().json.ai_evaluation\n} }}",
         "options": {}
       },
+      "id": "respond",
+      "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        32,
-        320
-      ],
-      "id": "568cec67-402a-4c91-98e9-db4fe0579d5b",
-      "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
-        "jsCode": "const body = $input.first().json.body || {};\nconst rawCv = body.cv_text || body.cv_file_content || \"Kỹ sư phần mềm kinh nghiệm Docker, Linux, CI/CD.\";\n\nreturn [\n  {\n    json: {\n      ...body,\n      extracted_cv_text: rawCv.trim()\n    }\n  }\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -256,
-        -208
-      ],
-      "id": "91250d62-1c2e-4419-9fdd-bb7dda7d7651",
-      "name": "Extract CV Text"
+      "typeVersion": 1.4,
+      "position": [1160, 0]
     }
   ],
-  "pinData": {},
   "connections": {
-    "Webhook": {
+    "Webhook - CV Screening": {
       "main": [
         [
           {
-            "node": "Extract CV Text",
+            "node": "Edit Fields - CV Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields": {
+    "Edit Fields - CV Data": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "MySQL - Get Job Info",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "MySQL - Get Job Info": {
       "main": [
         [
           {
-            "node": "Get Job Info",
+            "node": "CV Screening - Calculate Match Score",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Job Info": {
+    "CV Screening - Calculate Match Score": {
       "main": [
         [
           {
-            "node": "AI Agent (Mock)",
+            "node": "MySQL - Save Candidate",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI Agent (Mock)": {
-      "main": [
-        [
-          {
-            "node": "Validate Score",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Validate Score": {
-      "main": [
-        [
-          {
-            "node": "Human Approval",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Human Approval": {
-      "main": [
-        [
-          {
-            "node": "Wait",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait": {
-      "main": [
-        [
-          {
-            "node": "Save Candidate",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Candidate": {
-      "main": [
-        [
-          {
-            "node": "Log Screening Execution",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Log Screening Execution": {
+    "MySQL - Save Candidate": {
       "main": [
         [
           {
@@ -401,30 +166,11 @@
           }
         ]
       ]
-    },
-    "Extract CV Text": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": true,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
+    "executionOrder": "v1"
   },
-  "versionId": "f05153e7-f989-4b00-ba7b-f31c7046cd0b",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "b43eeafb5333a96e5cf3d1413ee97b0d103ba8e3623436b44abe7007a21ee182"
-  },
-  "nodeGroups": [],
-  "id": "0QEWx1KA91owTKJE",
-  "tags": []
+  "pinData": {}
 }
