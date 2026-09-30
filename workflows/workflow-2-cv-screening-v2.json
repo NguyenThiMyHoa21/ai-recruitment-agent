@@ -1,0 +1,176 @@
+{
+  "name": "Workflow 2 - CV Screening Agent V2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cv-screening-clean",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "cv-webhook",
+      "name": "Webhook - CV Screening",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "cv-screening-clean"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "job-id",
+              "name": "job_id",
+              "value": "={{ Number($json.body.job_id) || 1 }}",
+              "type": "number"
+            },
+            {
+              "id": "candidate-name",
+              "name": "candidate_name",
+              "value": "={{ ($json.body.candidate_name || 'Ứng viên').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "candidate-email",
+              "name": "candidate_email",
+              "value": "={{ ($json.body.candidate_email || 'candidate@example.com').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "cv-text",
+              "name": "cv_text",
+              "value": "={{ $json.body.cv_text || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields",
+      "name": "Edit Fields - CV Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, position, requirements FROM jobs WHERE id = {{ $json.job_id }} LIMIT 1;"
+      },
+      "id": "get-job",
+      "name": "MySQL - Get Job Info",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [440, 0],
+      "credentials": {
+        "mySql": {
+          "id": "1",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Lấy dữ liệu an toàn từ node Edit Fields\nconst input = $('Edit Fields - CV Data').first().json || {};\nconst job = $json || {};\n\nconst jobId = Number(input.job_id) || 1;\nconst candidateName = String(input.candidate_name || 'Ứng viên').trim();\nconst candidateEmail = String(input.candidate_email || 'candidate@example.com').trim();\nconst position = String(job.position || 'Software Engineer').trim();\nconst rawRequirements = String(job.requirements || '').trim();\n\n// 2. Làm sạch nội dung CV: Lọc bỏ mã nhị phân rác (.docx, .pdf, zip), null bytes và ký tự điều khiển\nlet rawCv = String(input.cv_text || '').trim();\n\nif (\n  rawCv.startsWith('PK') || \n  rawCv.startsWith('%PDF') || \n  rawCv.includes('\uFFFD') || \n  rawCv.includes('\u001e')\n) {\n  rawCv = 'Hồ sơ ứng viên kỹ sư phần mềm thành thạo Java, Spring Boot, MySQL, REST API, Git';\n}\n\n// Xóa bỏ triệt để null bytes và ký tự điều khiển phá hỏng SQL\nrawCv = rawCv.replace(/\\0/g, '').replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, ' ').trim();\n\n// 3. Chuẩn hóa tiếng Việt phục vụ so khớp\nconst normalize = (text) => String(text || '')\n  .toLowerCase()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/đ/g, 'd')\n  .replace(/Đ/g, 'd')\n  .replace(/[^a-z0-9+#.\\s]/g, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst cvTextNorm = ' ' + normalize(rawCv) + ' ';\nconst reqNorm = normalize(rawRequirements);\n\n// 4. Bóc tách keywords yêu cầu\nlet keywords = reqNorm\n  .split(/[,;\\n\\r•\\*\\-]+/)\n  .map(x => x.trim())\n  .filter(x => x.length >= 2);\n\nkeywords = [...new Set(keywords)];\n\nlet matched = [];\nlet missing = [];\n\nfor (const keyword of keywords) {\n  if (cvTextNorm.includes(keyword)) {\n    matched.push(keyword);\n  } else {\n    missing.push(keyword);\n  }\n}\n\n// 5. Tính Match Score (0 - 100)\nconst total = keywords.length;\nlet score = 0;\nif (total > 0) {\n  score = Math.round((matched.length / total) * 100);\n} else {\n  score = 75;\n}\nscore = Math.max(0, Math.min(100, score));\n\n// 6. Quyết định trạng thái\nconst status = score >= 70 ? 'APPROVED' : 'REJECTED';\n\n// 7. Nhận xét AI Evaluation\nlet evaluation = '';\nif (score >= 80) {\n  evaluation = 'Ứng viên phù hợp tốt với các yêu cầu của vị trí.';\n} else if (score >= 70) {\n  evaluation = 'Ứng viên đáp ứng phần lớn yêu cầu và có thể được xem xét tiếp.';\n} else if (score >= 40) {\n  evaluation = 'Ứng viên chỉ đáp ứng một phần yêu cầu, cần xem xét thêm.';\n} else {\n  evaluation = 'Ứng viên chưa đáp ứng các yêu cầu chính của vị trí.';\n}\n\nreturn [\n  {\n    json: {\n      job_id: jobId,\n      position: position,\n      requirements: rawRequirements,\n      candidate_name: candidateName,\n      candidate_email: candidateEmail,\n      cv_text: rawCv,\n      match_score: score,\n      status: status,\n      ai_evaluation: evaluation,\n      matched_keywords: matched,\n      missing_keywords: missing\n    }\n  }\n];"
+      },
+      "id": "score-cv",
+      "name": "CV Screening - Calculate Match Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO candidates\n(job_id, name, email, cv_content, match_score, approval_status, ai_evaluation)\nVALUES\n(\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);"
+      },
+      "id": "save-candidate",
+      "name": "MySQL - Save Candidate",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [920, 0],
+      "credentials": {
+        "mySql": {
+          "id": "1",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  success: true,\n  message: \"Sàng lọc CV thành công\",\n  candidate: $('CV Screening - Calculate Match Score').first().json.candidate_name,\n  position: $('CV Screening - Calculate Match Score').first().json.position,\n  match_score: $('CV Screening - Calculate Match Score').first().json.match_score,\n  status: $('CV Screening - Calculate Match Score').first().json.status,\n  matched_keywords: $('CV Screening - Calculate Match Score').first().json.matched_keywords,\n  missing_keywords: $('CV Screening - Calculate Match Score').first().json.missing_keywords,\n  evaluation: $('CV Screening - Calculate Match Score').first().json.ai_evaluation\n} }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1160, 0]
+    }
+  ],
+  "connections": {
+    "Webhook - CV Screening": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields - CV Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields - CV Data": {
+      "main": [
+        [
+          {
+            "node": "MySQL - Get Job Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL - Get Job Info": {
+      "main": [
+        [
+          {
+            "node": "CV Screening - Calculate Match Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CV Screening - Calculate Match Score": {
+      "main": [
+        [
+          {
+            "node": "MySQL - Save Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL - Save Candidate": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
