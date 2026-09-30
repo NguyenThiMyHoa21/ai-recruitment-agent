@@ -3,119 +3,675 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>AI Recruitment - Báo Cáo Tuyển Dụng</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  >
+
   <style>
-    body { background-color: #f1f5f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .stat-number { font-size: 2.2rem; font-weight: 700; }
-  </style>
-</head>
-<body class="py-5">
-  <div class="container" style="max-width: 900px;">
-    <!-- Header -->
-    <div class="card p-4 border-0 shadow-sm mb-4">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-          <h3 class="fw-bold text-primary mb-1"><i class="fa-solid fa-chart-line me-2"></i>AI Recruitment Report Agent</h3>
-          <p class="text-muted mb-0">Hệ thống phân tích hiệu suất tuyển dụng & đề xuất thông minh bằng AI</p>
-        </div>
-        <button class="btn btn-primary px-4 py-2 fw-semibold" id="btnGenerate" onclick="generateReport()">
-          <i class="fa-solid fa-arrows-rotate me-2"></i>Tạo Báo Cáo Mới
-        </button>
-      </div>
-    </div>
-
-    <!-- Loading Spinner -->
-    <div id="loading" class="text-center py-4" style="display: none;">
-      <div class="spinner-border text-primary" role="status"></div>
-      <p class="mt-2 text-muted fw-semibold">AI đang tổng hợp số liệu và phân tích tuyển dụng...</p>
-    </div>
-
-    <!-- Bảng số liệu thống kê -->
-    <div id="reportDashboard" style="display: none;">
-      <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6">
-          <div class="card card-stat p-3 bg-white text-center">
-            <div class="text-muted fw-semibold small">TỔNG VỊ TRÍ (JOBS)</div>
-            <div class="stat-number text-dark" id="statJobs">0</div>
-          </div>
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="card card-stat p-3 bg-white text-center">
-            <div class="text-muted fw-semibold small">TỔNG ỨNG VIÊN</div>
-            <div class="stat-number text-primary" id="statCandidates">0</div>
-          </div>
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="card card-stat p-3 bg-white text-center">
-            <div class="text-muted fw-semibold small">TỶ LỆ ĐẠT (PASS)</div>
-            <div class="stat-number text-success" id="statPassRate">0%</div>
-          </div>
-        </div>
-        <div class="col-md-3 col-6">
-          <div class="card card-stat p-3 bg-white text-center">
-            <div class="text-muted fw-semibold small">ĐIỂM TRUNG BÌNH</div>
-            <div class="stat-number text-warning" id="statAvgScore">0</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Phân tích chuyên sâu của AI -->
-      <div class="card p-4 border-0 shadow-sm mb-4">
-        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-brain text-info me-2"></i>Đánh Giá & Đề Xuất Từ AI Agent</h5>
-        <div class="p-3 bg-light rounded border text-secondary" id="aiInsights" style="font-size: 1.05rem; line-height: 1.6;">
-        </div>
-      </div>
-
-      <!-- Thông tin lưu trữ -->
-      <div class="alert alert-success border-0 shadow-sm d-flex justify-content-between align-items-center">
-        <span><i class="fa-solid fa-circle-check me-2"></i>Báo cáo đã được lưu vào cơ sở dữ liệu MySQL và gửi email phòng ban!</span>
-        <span class="badge bg-success" id="badgeDelivery">SUCCESS</span>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    async function generateReport() {
-      const btn = document.getElementById('btnGenerate');
-      const loader = document.getElementById('loading');
-      const dashboard = document.getElementById('reportDashboard');
-
-      btn.disabled = true;
-      loader.style.display = 'block';
-      dashboard.style.display = 'none';
-
-      try {
-        const response = await fetch('http://localhost:5678/webhook/generate-recruitment-report', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        });
-
-        const data = await response.json();
-        if (response.ok && data.success) {
-          document.getElementById('statJobs').innerText = data.statistics.total_jobs;
-          document.getElementById('statCandidates').innerText = data.statistics.total_candidates;
-          document.getElementById('statPassRate').innerText = data.statistics.pass_rate;
-          document.getElementById('statAvgScore').innerText = data.statistics.avg_score;
-          document.getElementById('aiInsights').innerText = data.ai_insights;
-
-          dashboard.style.display = 'block';
-        } else {
-          alert('Không thể lấy báo cáo từ n8n: ' + (data.message || 'Lỗi server'));
-        }
-      } catch (err) {
-        alert('Lỗi kết nối tới n8n: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        loader.style.display = 'none';
-      }
+    body {
+      background-color: #f1f5f9;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
 
-    // Tự động tải báo cáo ngay khi mở trang
-    window.onload = generateReport;
-  </script>
+    .main-container {
+      max-width: 1100px;
+    }
+
+    .card-custom {
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    }
+
+    .header-card {
+      border-radius: 14px;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    }
+
+    .stat-card {
+      border: none;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+      transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .section-title {
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .ai-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .status-approved {
+      color: #198754;
+      font-weight: 700;
+    }
+
+    .table th {
+      background-color: #f8fafc;
+      color: #475569;
+      font-size: 0.9rem;
+    }
+
+    .table td {
+      vertical-align: middle;
+    }
+
+    .loading-box {
+      display: none;
+    }
+
+    .report-info {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 15px;
+    }
+
+    .badge-approved {
+      background-color: #d1e7dd;
+      color: #146c43;
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+
+<body class="py-5">
+
+<div class="container main-container">
+
+  <!-- HEADER -->
+  <div class="card header-card p-4 mb-4">
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+      <div>
+        <h3 class="fw-bold text-primary mb-1">
+          <i class="fa-solid fa-chart-line me-2"></i>
+          AI Recruitment Report Agent
+        </h3>
+
+        <p class="text-muted mb-0">
+          Báo cáo và phân tích tình hình tuyển dụng
+        </p>
+      </div>
+
+      <button
+        class="btn btn-primary px-4 py-2 fw-semibold"
+        id="btnGenerate"
+        onclick="generateReport()"
+      >
+        <i class="fa-solid fa-arrows-rotate me-2"></i>
+        Tạo Báo Cáo Mới
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- LOADING -->
+  <div
+    id="loading"
+    class="card card-custom loading-box text-center p-4 mb-4"
+  >
+
+    <div class="spinner-border text-primary" role="status"></div>
+
+    <p class="mt-3 mb-0 text-muted fw-semibold">
+      Đang tổng hợp dữ liệu tuyển dụng...
+    </p>
+
+  </div>
+
+
+  <!-- REPORT -->
+  <div id="reportDashboard" style="display:none;">
+
+    <!-- STATISTICS -->
+    <div class="row g-3 mb-4">
+
+      <!-- TOTAL JOBS -->
+      <div class="col-lg col-md-6">
+        <div class="stat-card p-4 text-center">
+
+          <div class="text-muted small fw-semibold">
+            <i class="fa-solid fa-briefcase me-1"></i>
+            TỔNG VỊ TRÍ
+          </div>
+
+          <div
+            class="stat-number text-dark mt-2"
+            id="statJobs"
+          >
+            0
+          </div>
+
+          <small class="text-muted">
+            Jobs trong hệ thống
+          </small>
+
+        </div>
+      </div>
+
+
+      <!-- TOTAL CANDIDATES -->
+      <div class="col-lg col-md-6">
+        <div class="stat-card p-4 text-center">
+
+          <div class="text-muted small fw-semibold">
+            <i class="fa-solid fa-users me-1"></i>
+            TỔNG ỨNG VIÊN
+          </div>
+
+          <div
+            class="stat-number text-primary mt-2"
+            id="statCandidates"
+          >
+            0
+          </div>
+
+          <small class="text-muted">
+            Hồ sơ đã tiếp nhận
+          </small>
+
+        </div>
+      </div>
+
+
+      <!-- APPROVED -->
+      <div class="col-lg col-md-6">
+        <div class="stat-card p-4 text-center">
+
+          <div class="text-muted small fw-semibold">
+            <i class="fa-solid fa-circle-check me-1"></i>
+            ỨNG VIÊN ĐẠT
+          </div>
+
+          <div
+            class="stat-number text-success mt-2"
+            id="statApproved"
+          >
+            0
+          </div>
+
+          <small class="text-muted">
+            Được đánh giá đạt
+          </small>
+
+        </div>
+      </div>
+
+
+      <!-- REJECTED -->
+      <div class="col-lg col-md-6">
+        <div class="stat-card p-4 text-center">
+
+          <div class="text-muted small fw-semibold">
+            <i class="fa-solid fa-circle-xmark me-1"></i>
+            ỨNG VIÊN KHÔNG ĐẠT
+          </div>
+
+          <div
+            class="stat-number text-danger mt-2"
+            id="statRejected"
+          >
+            0
+          </div>
+
+          <small class="text-muted">
+            Không đạt yêu cầu
+          </small>
+
+        </div>
+      </div>
+
+
+      <!-- AVG SCORE -->
+      <div class="col-lg col-md-6">
+        <div class="stat-card p-4 text-center">
+
+          <div class="text-muted small fw-semibold">
+            <i class="fa-solid fa-star me-1"></i>
+            ĐIỂM TRUNG BÌNH
+          </div>
+
+          <div
+            class="stat-number text-warning mt-2"
+            id="statAvgScore"
+          >
+            0
+          </div>
+
+          <small class="text-muted">
+            Điểm sàng lọc CV
+          </small>
+
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- RECRUITMENT SUMMARY -->
+    <div class="card card-custom p-4 mb-4">
+
+      <h5 class="section-title mb-3">
+        <i class="fa-solid fa-chart-pie text-primary me-2"></i>
+        Tổng Quan Tuyển Dụng
+      </h5>
+
+      <div class="table-responsive">
+
+        <table class="table table-bordered align-middle mb-0">
+
+          <thead>
+            <tr>
+              <th>Chỉ số</th>
+              <th>Giá trị</th>
+              <th>Ý nghĩa</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr>
+              <td>Tổng vị trí tuyển dụng</td>
+              <td id="summaryJobs">0</td>
+              <td>Số Job hiện có trong hệ thống</td>
+            </tr>
+
+            <tr>
+              <td>Tổng ứng viên</td>
+              <td id="summaryCandidates">0</td>
+              <td>Số hồ sơ ứng viên đã tiếp nhận</td>
+            </tr>
+
+            <tr>
+              <td>Ứng viên đạt</td>
+              <td
+                id="summaryApproved"
+                class="text-success fw-bold"
+              >
+                0
+              </td>
+              <td>Ứng viên đáp ứng yêu cầu</td>
+            </tr>
+
+            <tr>
+              <td>Ứng viên không đạt</td>
+              <td
+                id="summaryRejected"
+                class="text-danger fw-bold"
+              >
+                0
+              </td>
+              <td>Ứng viên chưa đáp ứng yêu cầu</td>
+            </tr>
+
+            <tr>
+              <td>Tỷ lệ đạt</td>
+              <td
+                id="summaryPassRate"
+                class="text-primary fw-bold"
+              >
+                0%
+              </td>
+              <td>Tỷ lệ ứng viên được đánh giá đạt</td>
+            </tr>
+
+            <tr>
+              <td>Điểm trung bình</td>
+              <td
+                id="summaryAvgScore"
+                class="text-warning fw-bold"
+              >
+                0
+              </td>
+              <td>Điểm trung bình của ứng viên</td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <!-- AI ANALYSIS -->
+    <div class="card card-custom p-4 mb-4">
+
+      <h5 class="section-title mb-3">
+
+        <i class="fa-solid fa-brain text-info me-2"></i>
+
+        Đánh Giá & Đề Xuất Từ AI Agent
+
+      </h5>
+
+      <div
+        class="ai-box p-3 text-secondary"
+        id="aiInsights"
+      >
+        Chưa có dữ liệu phân tích.
+      </div>
+
+    </div>
+
+
+    <!-- REPORT INFORMATION -->
+    <div class="card card-custom p-4 mb-4">
+
+      <h5 class="section-title mb-3">
+
+        <i class="fa-solid fa-file-lines text-primary me-2"></i>
+
+        Thông Tin Báo Cáo
+
+      </h5>
+
+
+      <div class="row g-3">
+
+        <div class="col-md-4">
+
+          <div class="report-info">
+
+            <small class="text-muted d-block">
+              Trạng thái phê duyệt
+            </small>
+
+            <span
+              id="approvalStatus"
+              class="badge-approved"
+            >
+              APPROVED
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+          <div class="report-info">
+
+            <small class="text-muted d-block">
+              Thời gian tạo
+            </small>
+
+            <strong id="reportCreatedAt">
+              -
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+          <div class="report-info">
+
+            <small class="text-muted d-block">
+              Lưu trữ
+            </small>
+
+            <strong class="text-success">
+              <i class="fa-solid fa-database me-1"></i>
+              MySQL
+            </strong>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- SUCCESS -->
+    <div
+      class="alert alert-success border-0 shadow-sm d-flex justify-content-between align-items-center"
+    >
+
+      <span>
+
+        <i class="fa-solid fa-circle-check me-2"></i>
+
+        Báo cáo đã được xử lý và lưu vào cơ sở dữ liệu MySQL.
+
+      </span>
+
+      <span
+        class="badge bg-success"
+        id="badgeDelivery"
+      >
+        SUCCESS
+      </span>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+async function generateReport() {
+
+  const btn = document.getElementById("btnGenerate");
+
+  const loader = document.getElementById("loading");
+
+  const dashboard = document.getElementById("reportDashboard");
+
+
+  btn.disabled = true;
+
+  loader.style.display = "block";
+
+  dashboard.style.display = "none";
+
+
+  try {
+
+    const response = await fetch(
+      "http://localhost:5678/webhook/generate-recruitment-report",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({})
+      }
+    );
+
+
+    const data = await response.json();
+
+
+    if (response.ok && data.success) {
+
+      const statistics = data.statistics || {};
+
+
+      // =========================
+      // STATISTICS
+      // =========================
+
+      const totalJobs =
+        statistics.total_jobs ?? 0;
+
+      const totalCandidates =
+        statistics.total_candidates ?? 0;
+
+      const approvedCandidates =
+        statistics.approved_candidates ??
+        statistics.approved ??
+        0;
+
+      const rejectedCandidates =
+        statistics.rejected_candidates ??
+        statistics.rejected ??
+        0;
+
+      const passRate =
+        statistics.pass_rate ?? "0%";
+
+      const avgScore =
+        statistics.avg_score ?? 0;
+
+
+      // =========================
+      // TOP CARDS
+      // =========================
+
+      document.getElementById("statJobs").innerText =
+        totalJobs;
+
+      document.getElementById("statCandidates").innerText =
+        totalCandidates;
+
+      document.getElementById("statApproved").innerText =
+        approvedCandidates;
+
+      document.getElementById("statRejected").innerText =
+        rejectedCandidates;
+
+      document.getElementById("statAvgScore").innerText =
+        avgScore;
+
+
+      // =========================
+      // SUMMARY TABLE
+      // =========================
+
+      document.getElementById("summaryJobs").innerText =
+        totalJobs;
+
+      document.getElementById("summaryCandidates").innerText =
+        totalCandidates;
+
+      document.getElementById("summaryApproved").innerText =
+        approvedCandidates;
+
+      document.getElementById("summaryRejected").innerText =
+        rejectedCandidates;
+
+      document.getElementById("summaryPassRate").innerText =
+        passRate;
+
+      document.getElementById("summaryAvgScore").innerText =
+        avgScore;
+
+
+      // =========================
+      // AI INSIGHTS
+      // =========================
+
+      document.getElementById("aiInsights").innerText =
+        data.ai_insights ||
+        "Chưa có nội dung phân tích từ AI Agent.";
+
+
+      // =========================
+      // APPROVAL STATUS
+      // =========================
+
+      const approvalStatus =
+        data.approval_status ||
+        statistics.approval_status ||
+        "APPROVED";
+
+      document.getElementById("approvalStatus").innerText =
+        approvalStatus;
+
+
+      // =========================
+      // CREATED TIME
+      // =========================
+
+      const createdAt =
+        data.created_at ||
+        statistics.created_at ||
+        new Date().toLocaleString("vi-VN");
+
+      document.getElementById("reportCreatedAt").innerText =
+        createdAt;
+
+
+      // =========================
+      // SHOW REPORT
+      // =========================
+
+      dashboard.style.display = "block";
+
+    } else {
+
+      alert(
+        "Không thể lấy báo cáo từ n8n: " +
+        (data.message || "Lỗi server")
+      );
+
+    }
+
+  } catch (err) {
+
+    alert(
+      "Lỗi kết nối tới n8n: " +
+      err.message
+    );
+
+  } finally {
+
+    btn.disabled = false;
+
+    loader.style.display = "none";
+
+  }
+
+}
+
+
+// Tự động tạo báo cáo khi mở trang
+window.onload = generateReport;
+
+</script>
+
 </body>
 </html>
