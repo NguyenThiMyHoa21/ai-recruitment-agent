@@ -1073,6 +1073,8 @@ function renderCandidatesTable(candidatesList) {
           <button
             type="button"
             class="btn btn-outline-primary btn-sm py-1 px-2 fw-semibold"
+            data-bs-toggle="modal"
+            data-bs-target="#candidateModal"
             onclick="viewCandidateDetail(${c.id})"
             title="Bấm để xem chi tiết hồ sơ & đánh giá AI"
           >
@@ -1141,31 +1143,44 @@ function viewCandidateDetail(candidateId) {
   const isApproved = (app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
   const isInterview = (app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
 
-  scoreBadge.innerText = score + " / 100";
-  scoreBadge.className = "fs-4 fw-bold px-3 py-1 rounded-pill text-white shadow-sm " + (isApproved ? "bg-success" : (score >= 40 ? "bg-warning text-dark" : "bg-danger"));
+  const scoreBadge = document.getElementById("modalCandidateScore");
+  if (scoreBadge) {
+    scoreBadge.innerText = score + " / 100";
+    scoreBadge.className = "fs-4 fw-bold px-3 py-1 rounded-pill text-white shadow-sm " + (isApproved ? "bg-success" : (score >= 40 ? "bg-warning text-dark" : "bg-danger"));
+  }
 
   const statusBadge = document.getElementById("modalCandidateStatus");
-  if (isInterview) {
-    statusBadge.innerText = "PHỎNG VẤN";
-    statusBadge.className = "badge bg-info text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
-  } else if (isApproved) {
-    statusBadge.innerText = "APPROVED (Đạt)";
-    statusBadge.className = "badge bg-success text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
-  } else {
-    statusBadge.innerText = "REJECTED (Loại)";
-    statusBadge.className = "badge bg-danger text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
+  if (statusBadge) {
+    if (isInterview) {
+      statusBadge.innerText = "PHỎNG VẤN";
+      statusBadge.className = "badge bg-info text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
+    } else if (isApproved) {
+      statusBadge.innerText = "APPROVED (Đạt)";
+      statusBadge.className = "badge bg-success text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
+    } else {
+      statusBadge.innerText = "REJECTED (Loại)";
+      statusBadge.className = "badge bg-danger text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
+    }
   }
 
-  document.getElementById("modalCandidateEvaluation").innerText = candidate.ai_evaluation || "Chưa có nhận định từ AI.";
-  document.getElementById("modalCandidateCv").innerText = candidate.cv_content || "(Chưa có nội dung văn bản CV)";
+  const evalEl = document.getElementById("modalCandidateEvaluation");
+  if (evalEl) evalEl.innerText = candidate.ai_evaluation || "Chưa có nhận định từ AI.";
+
+  const cvEl = document.getElementById("modalCandidateCv");
+  if (cvEl) cvEl.innerText = candidate.cv_content || "(Chưa có nội dung văn bản CV)";
 
   const modalEl = document.getElementById("candidateModal");
-  if (window.bootstrap && bootstrap.Modal) {
-    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
-  } else {
-    alert(`CHI TIẾT ỨNG VIÊN: ${candidate.name}\nEmail: ${candidate.email}\nĐiểm: ${score}/100\nTrạng thái: ${candidate.approval_status}\nĐánh giá: ${candidate.ai_evaluation}\nCV: ${candidate.cv_content}`);
+  try {
+    if (window.bootstrap && bootstrap.Modal && modalEl) {
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+      return;
+    }
+  } catch (mErr) {
+    console.warn("Lỗi mở modal Bootstrap:", mErr);
   }
+  
+  alert(`📋 CHI TIẾT ỨNG VIÊN: ${candidate.name}\n📧 Email: ${candidate.email}\n🎯 Điểm: ${score}/100\n📌 Trạng thái: ${candidate.approval_status || candidate.status}\n🤖 Đánh giá: ${candidate.ai_evaluation || 'N/A'}`);
 }
 
 // Hàm xóa hồ sơ ứng viên

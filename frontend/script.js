@@ -184,7 +184,7 @@ function renderJobsTable(jobs) {
             <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1">${j.department || 'Phòng Nhân sự'}</span></td>
             <td class="text-success fw-bold">${j.salary || 'Thỏa thuận'}</td>
             <td class="text-end text-nowrap">
-                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" onclick="viewJobDetail(${j.id})">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" data-bs-toggle="modal" data-bs-target="#jobDetailModal" onclick="viewJobDetail(${j.id})">
                     <i class="fa-solid fa-circle-info me-1"></i> Chi tiết
                 </button>
                 <a href="cv-screening.html?job_id=${j.id}" class="btn btn-primary btn-sm py-1 px-2 fw-semibold me-1">
@@ -199,7 +199,7 @@ function renderJobsTable(jobs) {
 }
 
 // Hàm mở Modal xem chi tiết JD công việc
-function viewJobDetail(jobId) {
+window.viewJobDetail = function(jobId) {
     const jobList = window.jobsCache || defaultJobsFallback;
     const job = jobList.find(j => String(j.id) === String(jobId));
     if (!job) {
@@ -226,13 +226,18 @@ function viewJobDetail(jobId) {
     if (linkEl) linkEl.href = `cv-screening.html?job_id=${job.id}`;
 
     const modalEl = document.getElementById("jobDetailModal");
-    if (window.bootstrap && bootstrap.Modal && modalEl) {
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-    } else {
-        alert(`CHI TIẾT VỊ TRÍ #${job.id}: ${job.position}\nPhòng ban: ${job.department}\nMức lương: ${job.salary}\nYêu cầu: ${job.requirements || 'N/A'}`);
+    try {
+        if (window.bootstrap && bootstrap.Modal && modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+            return;
+        }
+    } catch (err) {
+        console.warn("Lỗi mở modal Bootstrap:", err);
     }
-}
+    
+    alert(`📋 CHI TIẾT VỊ TRÍ #${job.id}: ${job.position}\n🏢 Phòng ban: ${job.department || 'Phòng Nhân sự'}\n📍 Địa điểm: ${job.location || 'Toàn quốc'}\n💰 Mức lương: ${job.salary || 'Thỏa thuận'}\n📝 Yêu cầu: ${job.requirements || 'N/A'}`);
+};
 
 // Hàm xóa vị trí tuyển dụng
 async function deleteJob(jobId, jobPosition) {
