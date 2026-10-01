@@ -79,11 +79,13 @@
 </div>
 
 <script>
+const API_BASE = window.location.port === '3000' ? '' : 'http://localhost:3000';
+
 async function fetchCandidates() {
   try {
-    const res = await fetch('/api/candidates?t=' + Date.now());
+    const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now());
     const json = await res.json();
-    const list = Array.isArray(json) ? json : (json.data || []);
+    const list = Array.isArray(json) ? json : (json.data || json.candidates || []);
     renderRows(list);
   } catch (err) {
     console.error('Lỗi nạp dữ liệu:', err);
@@ -107,23 +109,20 @@ function renderRows(candidates) {
   }
   tbody.innerHTML = candidates.map(c => {
     let badgeClass = 'badge-phong-van';
-    if (c.status === 'Đạt') badgeClass = 'badge-dat';
-    else if (c.status === 'Loại' || c.status === 'Không đạt') badgeClass = 'badge-loai';
+    if (c.status === 'Đạt' || c.status === 'APPROVED') badgeClass = 'badge-dat';
+    else if (c.status === 'Loại' || c.status === 'Không đạt' || c.status === 'REJECTED') badgeClass = 'badge-loai';
 
     let scheduleCol = '';
-    if (c.status === 'Phỏng vấn') {
-      if (c.interview_time) {
-        scheduleCol = `
-          <div style="font-size: 13px;">
-            <strong>${formatTime(c.interview_time)}</strong><br>
-            <span style="color: #64748b; font-size: 12px;">PV: ${c.interviewer_name || 'N/A'}</span><br>
-            <a href="${c.meeting_link}" target="_blank" class="meet-link">🔗 Vào phòng Meet</a>
-          </div>`;
-      } else {
-        scheduleCol = `<button class="btn-schedule" data-id="${c.id}">📅 Xếp lịch ngay</button>`;
-      }
-    } else if (c.status === 'Đạt') {
-      scheduleCol = '<span style="color: #15803d; font-size: 13px; font-weight: 500;">✓ Đã xong PV (Pass)</span>';
+    const s = (c.status || '').trim();
+    if (c.interview_time) {
+      scheduleCol = `
+        <div style="font-size: 13px;">
+          <strong>${formatTime(c.interview_time)}</strong><br>
+          <span style="color: #64748b; font-size: 12px;">PV: ${c.interviewer_name || 'N/A'}</span><br>
+          <a href="${c.meeting_link}" target="_blank" class="meet-link">🔗 Vào phòng Meet</a>
+        </div>`;
+    } else if (s === 'Phỏng vấn' || s === 'Đạt' || s === 'APPROVED') {
+      scheduleCol = `<button class="btn-schedule" data-id="${c.id}">📅 Xếp lịch ngay</button>`;
     } else {
       scheduleCol = '<span style="color: #94a3b8; font-size: 13px;">— Không khả dụng —</span>';
     }
@@ -163,7 +162,7 @@ document.addEventListener('click', async (e) => {
     if (cell) cell.innerHTML = '<span style="color:#4f46e5; font-weight:600;">⏳ Đang xếp lịch qua AI...</span>';
 
     try {
-      const res = await fetch('/api/schedule-interview', {
+      const res = await fetch(`${API_BASE}/api/schedule-interview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidate_id: Number(candidateId), requested_by: 'HR_Web' })
@@ -187,10 +186,10 @@ document.addEventListener('change', async (e) => {
     const toast = document.getElementById('toast');
 
     try {
-      const response = await fetch('/api/candidates/update-status', {
+      const response = await fetch(`${API_BASE}/api/candidates/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: Number(candidateId), full_name: fullName, applied_position: position, new_status: newStatus })
+        body: JSON.stringify({ id: Number(candidateId), candidate_id: Number(candidateId), full_name: fullName, applied_position: position, new_status: newStatus })
       });
       const result = await response.json();
       if (result.success || response.ok) {

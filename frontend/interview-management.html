@@ -220,24 +220,36 @@
         if (c.status === 'Đạt' || c.status === 'APPROVED') badgeClass = 'badge-dat';
         else if (c.status === 'Loại' || c.status === 'REJECTED') badgeClass = 'badge-loai';
 
+        const s = (c.status || '').trim();
+        const isApprovedOrInterview = (s === 'Đạt' || s === 'APPROVED' || s === 'Phỏng vấn');
+
         let scheduleCol = '';
-        if (c.status === 'Phỏng vấn' || c.status === 'APPROVED' || c.status === 'Đạt') {
-          if (c.interview_time) {
-            scheduleCol = `
-              <div class="small">
-                <div class="fw-bold text-dark"><i class="fa-regular fa-clock text-primary me-1"></i>${formatTime(c.interview_time)}</div>
-                <div class="text-muted"><i class="fa-solid fa-user-tie text-secondary me-1"></i>${c.interviewer_name || 'HR Manager'}</div>
-                <a href="${c.meeting_link}" target="_blank" class="btn btn-sm btn-outline-success meet-btn mt-1 py-0 px-2">
+        if (c.interview_time) {
+          scheduleCol = `
+            <div class="small">
+              <div class="fw-bold text-dark"><i class="fa-regular fa-clock text-primary me-1"></i>${formatTime(c.interview_time)}</div>
+              <div class="text-muted"><i class="fa-solid fa-user-tie text-secondary me-1"></i>${c.interviewer_name || 'HR Manager'}</div>
+              <div class="d-flex align-items-center gap-1 mt-1">
+                <a href="${c.meeting_link}" target="_blank" class="btn btn-sm btn-outline-success meet-btn py-0 px-2">
                   <i class="fa-solid fa-video me-1"></i> Google Meet
                 </a>
-              </div>`;
-          } else {
-            scheduleCol = `<button class="btn btn-sm btn-primary btn-schedule px-3 py-1 rounded-pill" data-id="${c.id}">
-              <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch AI
-            </button>`;
-          }
+                <button class="btn btn-sm btn-light border btn-schedule py-0 px-2 text-muted" title="Xếp lại lịch phỏng vấn" data-id="${c.id}">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+              </div>
+            </div>`;
+        } else if (isApprovedOrInterview) {
+          scheduleCol = `<button class="btn btn-sm btn-primary btn-schedule px-3 py-1 rounded-pill shadow-sm" data-id="${c.id}">
+            <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch AI
+          </button>`;
         } else {
-          scheduleCol = '<span class="text-muted small"><em>(Đã loại)</em></span>';
+          scheduleCol = `
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted small"><em>(Chưa đạt)</em></span>
+              <button class="btn btn-sm btn-outline-secondary btn-schedule py-0 px-2 small" title="Vẫn muốn xếp lịch phỏng vấn" data-id="${c.id}">
+                <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch
+              </button>
+            </div>`;
         }
 
         const reviewText = c.ai_evaluation || c.ai_review || '';

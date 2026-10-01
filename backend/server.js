@@ -13,12 +13,15 @@ const db = mysql.createPool({
 const app = express();
 const PORT = 3000;
 
+const path = require("path");
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "../public")));
 
 // Kiểm tra backend
-app.get("/", (req, res) => {
+app.get("/api/health", (req, res) => {
     res.json({
         message: "AI Recruitment Agent Backend is running!"
     });
