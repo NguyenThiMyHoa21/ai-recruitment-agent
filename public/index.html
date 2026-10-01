@@ -40,7 +40,7 @@
     .badge-phong-van { background: var(--info-bg); color: var(--info-text); }
     .badge-loai { background: var(--danger-bg); color: var(--danger-text); }
     .action-wrapper { position: relative; display: inline-block; }
-    .status-select { appearance: none; background: #fff; border: 1px solid var(--border); padding: 7px 32px 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-main); cursor: pointer; outline: none; }
+    .status-select { appearance: none; background: #fff; border: 1px solid var(--border); padding: 7px 32px 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-main); cursor: pointer; }
     .action-wrapper::after { content: "▼"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 10px; color: var(--text-muted); }
     .btn-schedule { background: #4f46e5; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
     .btn-schedule:hover { background: #4338ca; }
@@ -78,6 +78,21 @@
 </div>
 
 <script>
+function formatTime(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const DD = String(d.getDate()).padStart(2, '0');
+    const MM = String(d.getMonth() + 1).padStart(2, '0');
+    const YYYY = d.getFullYear();
+    return `${hh}:${mm} ${DD}/${MM}/${YYYY}`;
+  } catch (e) {
+    return isoStr;
+  }
+}
 const API_BASE = window.location.port === '3000' ? '' : 'http://localhost:3000';
 
 async function fetchCandidates() {
@@ -89,15 +104,6 @@ async function fetchCandidates() {
   } catch (err) {
     console.error('Lỗi nạp dữ liệu:', err);
   }
-}
-
-function formatTime(dtStr) {
-  if (!dtStr) return '';
-  const d = new Date(dtStr);
-  return d.toLocaleString('vi-VN', { 
-    year: 'numeric', month: '2-digit', day: '2-digit', 
-    hour: '2-digit', minute: '2-digit', hour12: false 
-  });
 }
 
 function renderRows(candidates) {
@@ -112,6 +118,23 @@ function renderRows(candidates) {
     else if (c.status === 'Loại' || c.status === 'Không đạt' || c.status === 'REJECTED') badgeClass = 'badge-loai';
 
     let scheduleCol = '';
+    if (c.status === 'Phỏng vấn') {
+      if (c.interview_time) {
+        scheduleCol = `
+          <div style="font-size: 13px;">
+            <strong>${formatTime(c.interview_time)}</strong><br>
+            <span style="color: #64748b; font-size: 12px;">PV: ${c.interviewer_name || 'N/A'}</span><br>
+            <a href="${c.meeting_link}" target="_blank" class="meet-link">🔗 Vào phòng Meet</a>
+            <div style="margin-top: 6px;">
+              <button onclick="sendNotification(${c.id})" style="background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">✉️ Gửi thư mời</button>
+            </div>
+          </div>`;
+      } else {
+        scheduleCol = `<button class="btn-schedule" data-id="${c.id}">📅 Xếp lịch ngay</button>`;
+      }
+    } else if (c.status === 'Đạt') {
+      scheduleCol = '<span style="color: #15803d; font-size: 13px; font-weight: 500;">✓ Đã xong PV (Pass)</span>';
+    } else {
     const s = (c.status || '').trim();
     if (s === 'Loại' || s === 'Không đạt' || s === 'REJECTED') {
       scheduleCol = '<span style="color: #94a3b8; font-size: 13px;">— Không khả dụng —</span>';
@@ -128,7 +151,6 @@ function renderRows(candidates) {
       scheduleCol = '<span style="color: #94a3b8; font-size: 13px;">— Chưa xếp lịch —</span>';
     }
 
-    // Lấy chính xác cột ai_evaluation từ database
     const reviewText = c.ai_evaluation || c.ai_review || '';
 
     return `
@@ -203,6 +225,21 @@ document.addEventListener('change', async (e) => {
     }
   }
 });
+
+async function sendNotification(id) {
+  if (!confirm('Bạn có muốn kích hoạt Luồng 5 gửi thư mời và đặt nhắc lịch cho ứng viên này?')) return;
+  try {
+    const res = await fetch(`/api/candidates/${id}/send-invite`, { method: 'POST' });
+    const resData = await res.json();
+    if (resData.success) {
+      alert('Đã gửi thư mời và kích hoạt lịch nhắc nhở thành công!');
+    } else {
+      alert('Lỗi: ' + (resData.message || resData.error));
+    }
+  } catch (e) {
+    alert('Lỗi kết nối: ' + e.message);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', fetchCandidates);
 </script>
