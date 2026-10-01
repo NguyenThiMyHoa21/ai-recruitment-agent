@@ -21,7 +21,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT \n  (SELECT COUNT(*) FROM jobs) AS total_jobs,\n  (SELECT COUNT(*) FROM candidates) AS total_candidates,\n  (SELECT COUNT(*) FROM candidates WHERE approval_status = 'APPROVED' OR approval_status = 'INTERVIEW_SCHEDULED') AS approved_candidates,\n  (SELECT COUNT(*) FROM candidates WHERE approval_status = 'REJECTED') AS rejected_candidates,\n  (SELECT COALESCE(ROUND(AVG(match_score), 2), 0) FROM candidates) AS avg_score;"
+        "query": "SELECT \n  (SELECT COUNT(*) FROM jobs) AS total_jobs,\n  (SELECT COUNT(*) FROM candidates) AS total_candidates,\n  (SELECT COUNT(*) FROM candidates WHERE approval_status = 'APPROVED' OR approval_status = 'INTERVIEW_SCHEDULED' OR status = 'Đạt' OR status = 'Phỏng vấn') AS approved_candidates,\n  (SELECT COUNT(*) FROM candidates WHERE (approval_status = 'REJECTED' OR status = 'Loại' OR status = 'Chưa đạt') AND NOT (approval_status = 'APPROVED' OR status = 'Đạt' OR approval_status = 'INTERVIEW_SCHEDULED' OR status = 'Phỏng vấn')) AS rejected_candidates,\n  (SELECT COALESCE(ROUND(AVG(match_score), 2), 0) FROM candidates) AS avg_score;"
       },
       "id": "node-2-mysql",
       "name": "Step 2: MySQL - Get Recruitment Data",
@@ -293,7 +293,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Tạo báo cáo tuyển dụng và gửi thành công!\",\n  \"report_title\": \"{{ $('Step 7: Generate Report').item.json.report_title }}\",\n  \"statistics\": {\n    \"total_jobs\": {{ $('Step 4: Aggregate Statistics').item.json.total_jobs }},\n    \"total_candidates\": {{ $('Step 4: Aggregate Statistics').item.json.total_candidates }},\n    \"pass_rate\": \"{{ $('Step 4: Aggregate Statistics').item.json.pass_rate }}\",\n    \"avg_score\": {{ $('Step 4: Aggregate Statistics').item.json.avg_score }}\n  },\n  \"ai_insights\": \"{{ $('Step 6: AI Agent - Analyze Recruitment').item.json.ai_insights }}\",\n  \"delivery\": \"{{ $json.delivery_status }}\"\n}",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Tạo báo cáo tuyển dụng và gửi thành công!\",\n  \"report_title\": \"{{ $('Step 7: Generate Report').item.json.report_title }}\",\n  \"statistics\": {\n    \"total_jobs\": {{ $('Step 4: Aggregate Statistics').item.json.total_jobs }},\n    \"total_candidates\": {{ $('Step 4: Aggregate Statistics').item.json.total_candidates }},\n    \"approved_candidates\": {{ $('Step 4: Aggregate Statistics').item.json.approved_candidates }},\n    \"rejected_candidates\": {{ $('Step 4: Aggregate Statistics').item.json.rejected_candidates }},\n    \"pass_rate\": \"{{ $('Step 4: Aggregate Statistics').item.json.pass_rate }}\",\n    \"avg_score\": {{ $('Step 4: Aggregate Statistics').item.json.avg_score }}\n  },\n  \"ai_insights\": \"{{ $('Step 6: AI Agent - Analyze Recruitment').item.json.ai_insights }}\",\n  \"delivery\": \"{{ $json.delivery_status }}\"\n}",
         "options": {}
       },
       "id": "node-13-respond",

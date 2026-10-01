@@ -732,15 +732,29 @@ async function generateReport() {
       const totalCandidates =
         statistics.total_candidates ?? 0;
 
-      const approvedCandidates =
+      let approvedCandidates =
         statistics.approved_candidates ??
-        statistics.approved ??
-        0;
+        statistics.approved;
 
-      const rejectedCandidates =
+      let rejectedCandidates =
         statistics.rejected_candidates ??
-        statistics.rejected ??
-        0;
+        statistics.rejected;
+
+      // Fallback tính toán nếu n8n phiên bản cũ chưa trả về approved_candidates
+      if (approvedCandidates === undefined || approvedCandidates === null) {
+        if (window.candidatesCache && window.candidatesCache.length > 0) {
+          approvedCandidates = window.candidatesCache.filter(c => {
+            const s = (c.status || '').trim();
+            const app = (c.approval_status || '').trim();
+            return app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn";
+          }).length;
+          rejectedCandidates = Math.max(0, window.candidatesCache.length - approvedCandidates);
+        } else {
+          const rate = parseFloat(statistics.pass_rate) || 0;
+          approvedCandidates = Math.round((rate / 100) * totalCandidates);
+          rejectedCandidates = Math.max(0, totalCandidates - approvedCandidates);
+        }
+      }
 
       const passRate =
         statistics.pass_rate ?? "0%";
@@ -970,6 +984,32 @@ async function loadRecentCandidates() {
       if (bAll) bAll.innerText = total;
       if (bApp) bApp.innerText = approvedCount;
       if (bRej) bRej.innerText = rejectedCount;
+
+      // Đồng bộ trực tiếp với các thẻ thống kê tổng quan nếu đang là 0 hoặc chưa nạp
+      const statCandidatesEl = document.getElementById("statCandidates");
+      if (statCandidatesEl && (statCandidatesEl.innerText === "0" || statCandidatesEl.innerText === "" || statCandidatesEl.innerText === "--")) {
+        statCandidatesEl.innerText = total;
+      }
+      const statApprovedEl = document.getElementById("statApproved");
+      if (statApprovedEl && (statApprovedEl.innerText === "0" || statApprovedEl.innerText === "" || statApprovedEl.innerText === "--")) {
+        statApprovedEl.innerText = approvedCount;
+      }
+      const statRejectedEl = document.getElementById("statRejected");
+      if (statRejectedEl && (statRejectedEl.innerText === "0" || statRejectedEl.innerText === "" || statRejectedEl.innerText === "--")) {
+        statRejectedEl.innerText = rejectedCount;
+      }
+      const summaryCandidatesEl = document.getElementById("summaryCandidates");
+      if (summaryCandidatesEl && (summaryCandidatesEl.innerText === "0" || summaryCandidatesEl.innerText === "" || summaryCandidatesEl.innerText === "--")) {
+        summaryCandidatesEl.innerText = total;
+      }
+      const summaryApprovedEl = document.getElementById("summaryApproved");
+      if (summaryApprovedEl && (summaryApprovedEl.innerText === "0" || summaryApprovedEl.innerText === "" || summaryApprovedEl.innerText === "--")) {
+        summaryApprovedEl.innerText = approvedCount;
+      }
+      const summaryRejectedEl = document.getElementById("summaryRejected");
+      if (summaryRejectedEl && (summaryRejectedEl.innerText === "0" || summaryRejectedEl.innerText === "" || summaryRejectedEl.innerText === "--")) {
+        summaryRejectedEl.innerText = rejectedCount;
+      }
 
       filterCandidates(window.currentFilter || 'ALL');
       return;
