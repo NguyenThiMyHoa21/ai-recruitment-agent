@@ -47,7 +47,7 @@
       "name": "Step 3: Query Candidate",
       "credentials": {
         "mySql": {
-          "id": "zaF7raRXbUaS8A8L",
+          "id": "HB0gY7Viximx0kLY",
           "name": "MySQL account"
         }
       }
@@ -81,10 +81,19 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AQ.Ab8RN6Lw6M9JouQGiXnzmCpEK-Nf4QwHoWHYlCvHTYj5aqmIkg"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": {{ JSON.stringify($json.prompt) }}\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": $json.prompt\n        }\n      ]\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -113,7 +122,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE candidates \nSET interview_time = '{{ $json.interview_time }}\n', interviewer_name = '{{ $json.interviewer_name }}\n', meeting_link = '{{ $json.meeting_link }}\n', status = 'Phỏng vấn'\nWHERE id = {{ $json.candidate_id }};",
+        "query": "UPDATE candidates SET interview_time = '{{ $json.interview_time }}', interviewer_name = '{{ $json.interviewer_name }}', meeting_link = '{{ $json.meeting_link }}', status = 'Phỏng vấn' WHERE id = {{ $json.candidate_id }};",
         "options": {}
       },
       "type": "n8n-nodes-base.mySql",
@@ -126,7 +135,7 @@
       "name": "Step 9: Update Candidate DB",
       "credentials": {
         "mySql": {
-          "id": "zaF7raRXbUaS8A8L",
+          "id": "HB0gY7Viximx0kLY",
           "name": "MySQL account"
         }
       }
@@ -147,7 +156,7 @@
       "name": "Step 10: Insert Audit Log",
       "credentials": {
         "mySql": {
-          "id": "zaF7raRXbUaS8A8L",
+          "id": "HB0gY7Viximx0kLY",
           "name": "MySQL account"
         }
       }

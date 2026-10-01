@@ -1,43 +1,424 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Recruitment Agent</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Recruitment - Đăng Tin Tuyển Dụng (Workflow 1)</title>
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <!-- FontAwesome Icons -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  >
+
+  <style>
+    body {
+      background-color: #f4f6f9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .main-card {
+      border-radius: 14px;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      background: #ffffff;
+    }
+
+    .btn-primary {
+      background-color: #0d6efd;
+      border-radius: 8px;
+      font-weight: 600;
+      padding: 12px 24px;
+    }
+
+    .form-label {
+      color: #334155;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="container">
-    <h1>AI Recruitment Agent</h1>
-    <p class="subtitle">Hệ thống hỗ trợ tuyển dụng nhân sự</p>
+  <!-- ========================================================= -->
+  <!-- THANH ĐIỀU HƯỚNG CHUNG (NAVBAR) -->
+  <!-- ========================================================= -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4 py-2">
+    <div class="container" style="max-width: 1050px;">
+      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
+        <i class="fa-solid fa-robot me-2 fs-4"></i>
+        <span>AI Recruitment System</span>
+      </a>
 
-    <form id="jobForm">
+      <div class="navbar-nav d-flex flex-row flex-wrap gap-2 ms-auto">
+        <a class="nav-link px-3 active bg-white text-primary rounded-pill fw-bold shadow-sm" href="index.html">
+          <i class="fa-solid fa-file-circle-plus me-1"></i> 1. Đăng tin tuyển dụng
+        </a>
+        <a class="nav-link px-3 text-white" href="cv-screening.html">
+          <i class="fa-solid fa-file-lines me-1"></i> 2. Sàng lọc CV
+        </a>
+        <a class="nav-link px-3 text-white" href="recruitment-report.html">
+          <i class="fa-solid fa-chart-pie me-1"></i> 3. Báo cáo tuyển dụng
+        </a>
+        <a class="nav-link px-3 text-white" href="interview-management.html">
+          <i class="fa-solid fa-calendar-check me-1"></i> 4. Xếp lịch & Quản lý
+        </a>
+      </div>
+    </div>
+  </nav>
 
-        <label>Vị trí tuyển dụng</label>
-        <input type="text" id="position" placeholder="Ví dụ: Nhân viên kinh doanh" required>
+  <!-- ========================================================= -->
+  <!-- NỘI DUNG CHÍNH (WORKFLOW 1: JOB POSTING) -->
+  <!-- ========================================================= -->
+  <div class="container pb-5" style="max-width: 960px;">
 
-        <label>Phòng ban</label>
-        <input type="text" id="department" placeholder="Ví dụ: Kinh doanh" required>
+    <div class="card main-card p-4 p-md-5">
 
-        <label>Địa điểm làm việc</label>
-        <input type="text" id="location" placeholder="Ví dụ: Đà Nẵng" required>
+      <!-- TIÊU ĐỀ -->
+      <div class="d-flex align-items-center mb-3">
+        <div class="bg-primary text-white rounded-3 p-3 me-3">
+          <i class="fa-solid fa-briefcase fs-3"></i>
+        </div>
+        <div>
+          <h3 class="text-primary mb-1 fw-bold">
+            Tạo & Đăng Tin Tuyển Dụng (AI Job Posting)
+          </h3>
+          <p class="text-muted mb-0 small">
+            Nhập yêu cầu công việc cơ bản, AI Gemini sẽ tự động viết bản mô tả công việc (JD) chuyên nghiệp và lưu vào hệ thống.
+          </p>
+        </div>
+      </div>
 
-        <label>Mức lương</label>
-        <input type="text" id="salary" placeholder="Ví dụ: 8-12 triệu" required>
+      <hr class="mb-4">
 
-        <label>Yêu cầu ứng viên</label>
-        <textarea id="requirements"
-                  placeholder="Nhập yêu cầu ứng viên..."
-                  required></textarea>
+      <!-- THANH ĐIỀN MẪU NHANH KHI DEMO -->
+      <div class="p-3 bg-light rounded-3 border mb-4 d-flex align-items-center flex-wrap gap-2">
+        <span class="small text-muted fw-semibold">
+          <i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Điền mẫu nhanh:
+        </span>
+        <button type="button" class="btn btn-white btn-sm border shadow-sm px-2 py-1" onclick="fillJobTemplate('marketing')">
+          <i class="fa-solid fa-bullhorn text-primary me-1"></i> Marketing
+        </button>
+        <button type="button" class="btn btn-white btn-sm border shadow-sm px-2 py-1" onclick="fillJobTemplate('dev')">
+          <i class="fa-solid fa-code text-success me-1"></i> Software Engineer
+        </button>
+        <button type="button" class="btn btn-white btn-sm border shadow-sm px-2 py-1" onclick="fillJobTemplate('sales')">
+          <i class="fa-solid fa-chart-line text-info me-1"></i> Kinh doanh
+        </button>
+      </div>
 
-        <button type="submit">Gửi yêu cầu tuyển dụng</button>
+      <!-- FORM NHẬP LIỆU -->
+      <form id="jobForm">
 
-    </form>
+        <div class="row">
 
-    <div id="message"></div>
-</div>
+          <!-- VỊ TRÍ TUYỂN DỤNG -->
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fa-solid fa-user-tag text-primary me-1"></i> Vị trí tuyển dụng
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="position"
+              placeholder="Ví dụ: Nhân viên chăm sóc khách hàng"
+              required
+            >
+          </div>
 
-<script src="script.js"></script>
+          <!-- PHÒNG BAN -->
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fa-solid fa-building text-primary me-1"></i> Phòng ban
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="department"
+              placeholder="Ví dụ: CSKH / Kinh doanh / Kỹ thuật"
+              required
+            >
+          </div>
+
+        </div>
+
+        <div class="row">
+
+          <!-- ĐỊA ĐIỂM -->
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fa-solid fa-location-dot text-primary me-1"></i> Địa điểm làm việc
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="location"
+              placeholder="Ví dụ: Đà Nẵng / Hà Nội / TP.HCM"
+              required
+            >
+          </div>
+
+          <!-- MỨC LƯƠNG -->
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fa-solid fa-money-bill-wave text-primary me-1"></i> Mức lương
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="salary"
+              placeholder="Ví dụ: 8 - 12 triệu / Thỏa thuận"
+              required
+            >
+          </div>
+
+        </div>
+
+        <!-- YÊU CẦU ỨNG VIÊN -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            <i class="fa-solid fa-list-check text-primary me-1"></i> Yêu cầu ứng viên (Từ khóa chính)
+          </label>
+          <textarea
+            class="form-control"
+            id="requirements"
+            rows="4"
+            placeholder="Ví dụ: Tốt nghiệp Cao đẳng/Đại học, có kỹ năng giao tiếp tốt, thành thạo tin học văn phòng, kinh nghiệm 1 năm..."
+            required
+          ></textarea>
+          <div class="form-text">
+            Các yêu cầu này sẽ được Luồng 2 (AI CV Screening) sử dụng làm tiêu chí để chấm điểm hồ sơ ứng viên.
+          </div>
+        </div>
+
+        <!-- NÚT GỬI -->
+        <button
+          type="submit"
+          class="btn btn-primary w-100 shadow-sm"
+          id="btnSubmit"
+        >
+          <i class="fa-solid fa-paper-plane me-2"></i> GỬI YÊU CẦU ĐĂNG TIN
+        </button>
+
+      </form>
+
+      <!-- HỘP THÔNG BÁO THÀNH CÔNG & KHUNG XEM TRƯỚC JD TỪ AI -->
+      <div id="resultBox" class="mt-4" style="display: none;">
+        <div class="card border-0 shadow-sm p-4" style="border-radius: 12px; background: #ffffff; border-left: 5px solid #198754 !important;">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div class="d-flex align-items-center">
+              <i class="fa-solid fa-circle-check fs-3 text-success me-2"></i>
+              <div>
+                <h5 class="fw-bold mb-0 text-success">Đã Đăng Tin Tuyển Dụng Thành Công!</h5>
+                <span class="text-muted small">Đã lưu vào MySQL & hoàn tất quy trình 12 bước</span>
+              </div>
+            </div>
+            <div>
+              <span class="badge bg-primary px-3 py-2 rounded-pill" id="resApprovedBy">
+                <i class="fa-solid fa-user-check me-1"></i> HR Manager Phê Duyệt
+              </span>
+            </div>
+          </div>
+
+          <!-- KHUNG XEM TRƯỚC BẢN JD DO AI SINH RA -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-semibold text-primary small">
+                <i class="fa-solid fa-brain me-1"></i> Bản mô tả công việc (JD) tạo bởi AI Gemini:
+              </span>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCopyJd" onclick="copyJdContent()">
+                <i class="fa-solid fa-copy me-1"></i> Sao chép JD
+              </button>
+            </div>
+            <div
+              id="aiJdContent"
+              class="p-3 bg-light rounded-3 border small text-dark"
+              style="white-space: pre-wrap; font-family: inherit; line-height: 1.6; max-height: 280px; overflow-y: auto;"
+            >
+              Đang tải nội dung JD...
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top">
+            <span class="text-muted small">Vị trí này đã sẵn sàng tiếp nhận hồ sơ.</span>
+            <a href="cv-screening.html" class="btn btn-success btn-sm fw-semibold px-3 py-2">
+              <i class="fa-solid fa-arrow-right me-1"></i> Sang Luồng 2: Sàng Lọc CV Ngay
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- HỘP THÔNG BÁO LỖI -->
+      <div id="errorBox" class="alert alert-danger mt-4" style="display: none;"></div>
+
+    </div>
+
+    <!-- DANH SÁCH TIN TUYỂN DỤNG ĐANG MỞ -->
+    <div class="card main-card p-4 mt-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-primary mb-0">
+          <i class="fa-solid fa-list-ul me-2"></i> Danh Sách Vị Trí Đang Tuyển Dụng
+        </h5>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadActiveJobs()">
+          <i class="fa-solid fa-arrows-rotate me-1"></i> Làm mới
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light small">
+            <tr>
+              <th scope="col" style="width: 60px;">ID</th>
+              <th scope="col">Vị trí tuyển dụng</th>
+              <th scope="col">Phòng ban</th>
+              <th scope="col">Mức lương</th>
+              <th scope="col" class="text-end">Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="jobsTableBody" class="small">
+            <tr>
+              <td><span class="badge bg-light text-dark border">#14</span></td>
+              <td class="fw-semibold text-primary">Senior Backend Engineer</td>
+              <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1">Engineering</span></td>
+              <td class="text-success fw-bold">35 - 50 Triệu VND</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" data-bs-toggle="modal" data-bs-target="#jobDetailModal" onclick="viewJobDetail(14)">
+                  <i class="fa-solid fa-circle-info me-1"></i> Chi tiết
+                </button>
+                <a href="cv-screening.html?job_id=14" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                  <i class="fa-solid fa-user-plus me-1"></i> Sàng lọc CV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-light text-dark border">#13</span></td>
+              <td class="fw-semibold text-primary">Nhân viên chăm sóc khách hàng</td>
+              <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1">CSKH</span></td>
+              <td class="text-success fw-bold">8 - 12 Triệu VND</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" data-bs-toggle="modal" data-bs-target="#jobDetailModal" onclick="viewJobDetail(13)">
+                  <i class="fa-solid fa-circle-info me-1"></i> Chi tiết
+                </button>
+                <a href="cv-screening.html?job_id=13" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                  <i class="fa-solid fa-user-plus me-1"></i> Sàng lọc CV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-light text-dark border">#12</span></td>
+              <td class="fw-semibold text-primary">Kỹ sư Công nghệ thông tin</td>
+              <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1">IT Software</span></td>
+              <td class="text-success fw-bold">15 - 25 Triệu VND</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" data-bs-toggle="modal" data-bs-target="#jobDetailModal" onclick="viewJobDetail(12)">
+                  <i class="fa-solid fa-circle-info me-1"></i> Chi tiết
+                </button>
+                <a href="cv-screening.html?job_id=12" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                  <i class="fa-solid fa-user-plus me-1"></i> Sàng lọc CV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-light text-dark border">#11</span></td>
+              <td class="fw-semibold text-primary">Nhân viên kinh doanh</td>
+              <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1">Kinh doanh</span></td>
+              <td class="text-success fw-bold">10 - 20 Triệu VND</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" data-bs-toggle="modal" data-bs-target="#jobDetailModal" onclick="viewJobDetail(11)">
+                  <i class="fa-solid fa-circle-info me-1"></i> Chi tiết
+                </button>
+                <a href="cv-screening.html?job_id=11" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                  <i class="fa-solid fa-user-plus me-1"></i> Sàng lọc CV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge bg-light text-dark border">#10</span></td>
+              <td class="fw-semibold text-primary">Frontend Developer</td>
+              <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1">Engineering</span></td>
+              <td class="text-success fw-bold">18 - 28 Triệu VND</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" data-bs-toggle="modal" data-bs-target="#jobDetailModal" onclick="viewJobDetail(10)">
+                  <i class="fa-solid fa-circle-info me-1"></i> Chi tiết
+                </button>
+                <a href="cv-screening.html?job_id=10" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                  <i class="fa-solid fa-user-plus me-1"></i> Sàng lọc CV
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL XEM CHI TIẾT VỊ TRÍ TUYỂN DỤNG (JD) -->
+  <div class="modal fade" id="jobDetailModal" tabindex="-1" aria-labelledby="jobDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow border-0" style="border-radius: 14px; overflow: hidden;">
+        <div class="modal-header bg-primary text-white py-3">
+          <h5 class="modal-title fw-bold" id="jobDetailModalLabel">
+            <i class="fa-solid fa-briefcase me-2"></i> Chi Tiết Tin Tuyển Dụng
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-primary mb-0" id="modalJobTitle">-</h4>
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">Đang tuyển dụng</span>
+          </div>
+
+          <div class="row g-3 mb-3 p-3 bg-light rounded-3 border">
+            <div class="col-md-4">
+              <div class="small text-muted fw-semibold">Phòng ban:</div>
+              <div class="fw-bold text-dark" id="modalJobDept">-</div>
+            </div>
+            <div class="col-md-4">
+              <div class="small text-muted fw-semibold">Địa điểm:</div>
+              <div class="fw-bold text-dark" id="modalJobLocation">-</div>
+            </div>
+            <div class="col-md-4">
+              <div class="small text-muted fw-semibold">Mức lương:</div>
+              <div class="fw-bold text-success" id="modalJobSalary">-</div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold text-primary small mb-1">
+              <i class="fa-solid fa-list-check me-1"></i> Tiêu chuẩn & Yêu cầu ứng viên (Từ khóa AI Matching):
+            </label>
+            <div class="p-3 bg-light rounded-3 border small text-dark" style="white-space: pre-wrap;" id="modalJobReq">
+              -
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light py-2 d-flex justify-content-between">
+          <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
+          <a href="cv-screening.html" class="btn btn-primary btn-sm px-4 fw-semibold shadow-sm" id="modalJobLinkScreen">
+            <i class="fa-solid fa-user-plus me-1"></i> Chuyển sang Sàng lọc CV vị trí này
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHÂN TRANG (FOOTER) -->
+  <footer class="text-center py-4 text-muted small border-top mt-5 bg-white">
+    <div class="container">
+      <div>© 2026 <strong>AI Recruitment Multi-Agent System</strong> • Hệ Thống Tuyển Dụng Thông Minh Đa Tác Tử</div>
+      <div class="mt-1 text-secondary">Nghiên cứu & Phát triển bởi: <strong class="text-primary">Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi</strong></div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap 5 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- JAVASCRIPT XỬ LÝ -->
+  <script src="script.js?v=5"></script>
 </body>
 </html>

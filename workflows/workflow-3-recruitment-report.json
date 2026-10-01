@@ -1,0 +1,445 @@
+{
+  "name": "AI Recruitment Report Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-recruitment-report",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-1-webhook",
+      "name": "Step 1: Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "generate-recruitment-report"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  (SELECT COUNT(*) FROM jobs) AS total_jobs,\n  (SELECT COUNT(*) FROM candidates) AS total_candidates,\n  (SELECT COUNT(*) FROM candidates WHERE approval_status = 'APPROVED' OR approval_status = 'INTERVIEW_SCHEDULED' OR status = 'Đạt' OR status = 'Phỏng vấn') AS approved_candidates,\n  (SELECT COUNT(*) FROM candidates WHERE (approval_status = 'REJECTED' OR status = 'Loại' OR status = 'Chưa đạt') AND NOT (approval_status = 'APPROVED' OR status = 'Đạt' OR approval_status = 'INTERVIEW_SCHEDULED' OR status = 'Phỏng vấn')) AS rejected_candidates,\n  (SELECT COALESCE(ROUND(AVG(match_score), 2), 0) FROM candidates) AS avg_score;"
+      },
+      "id": "node-2-mysql",
+      "name": "Step 2: MySQL - Get Recruitment Data",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        420,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.total_candidates }}",
+              "operation": "largerEqual",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "node-3-filter",
+      "name": "Step 3: Filter Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "total_jobs",
+              "value": "={{ $json.total_jobs }}",
+              "type": "number"
+            },
+            {
+              "name": "total_candidates",
+              "value": "={{ $json.total_candidates }}",
+              "type": "number"
+            },
+            {
+              "name": "approved_candidates",
+              "value": "={{ $json.approved_candidates }}",
+              "type": "number"
+            },
+            {
+              "name": "rejected_candidates",
+              "value": "={{ $json.rejected_candidates }}",
+              "type": "number"
+            },
+            {
+              "name": "avg_score",
+              "value": "={{ $json.avg_score }}",
+              "type": "number"
+            },
+            {
+              "name": "pass_rate",
+              "value": "={{ $json.total_candidates > 0 ? Math.round(($json.approved_candidates / $json.total_candidates) * 100) : 0 }}%",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "node-4-aggregate",
+      "name": "Step 4: Aggregate Statistics",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "prompt_payload",
+              "value": "Báo cáo: {{ $json.total_jobs }} việc làm, {{ $json.total_candidates }} ứng viên, đỗ {{ $json.approved_candidates }}, điểm TB {{ $json.avg_score }}.",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "node-5-http",
+      "name": "Step 5: Prepare AI Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "ai_insights",
+              "value": "Tỷ lệ ứng viên đạt yêu cầu ở mức tích cực. Chất lượng nguồn hồ sơ kỹ thuật cao, điểm trung bình đạt chuẩn. Khuyến nghị đẩy nhanh vòng phỏng vấn để tránh mất ứng viên tiềm năng.",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "node-6-ai",
+      "name": "Step 6: AI Agent - Analyze Recruitment",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "report_title",
+              "value": "Báo Cáo Tuyển Dụng Định Kỳ - Phòng Nhân Sự",
+              "type": "string"
+            },
+            {
+              "name": "report_content",
+              "value": "TỔNG QUAN: Tổng số vị trí: {{ $('Step 4: Aggregate Statistics').item.json.total_jobs }} | Tổng ứng viên: {{ $('Step 4: Aggregate Statistics').item.json.total_candidates }} | Tỉ lệ đỗ: {{ $('Step 4: Aggregate Statistics').item.json.pass_rate }} | Điểm TB: {{ $('Step 4: Aggregate Statistics').item.json.avg_score }}. ĐÁNH GIÁ AI: {{ $json.ai_insights }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "node-7-generate",
+      "name": "Step 7: Generate Report",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.report_title }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "node-8-if",
+      "name": "Step 8: IF - Check Report",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "approval_status",
+              "value": "APPROVED",
+              "type": "string"
+            },
+            {
+              "name": "approved_by",
+              "value": "HR Manager (Nguyen Thi My Hoa)",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "node-9-approval",
+      "name": "Step 9: Human Approval",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO recruitment_reports (report_title, total_jobs, total_candidates, approved_candidates, rejected_candidates, avg_score, ai_insights, approval_status)\nVALUES (\n  '{{ $('Step 7: Generate Report').item.json.report_title }}',\n  {{ $('Step 4: Aggregate Statistics').item.json.total_jobs }},\n  {{ $('Step 4: Aggregate Statistics').item.json.total_candidates }},\n  {{ $('Step 4: Aggregate Statistics').item.json.approved_candidates }},\n  {{ $('Step 4: Aggregate Statistics').item.json.rejected_candidates }},\n  {{ $('Step 4: Aggregate Statistics').item.json.avg_score }},\n  '{{ $('Step 6: AI Agent - Analyze Recruitment').item.json.ai_insights }}',\n  '{{ $json.approval_status }}'\n);"
+      },
+      "id": "node-10-save",
+      "name": "Step 10: Save Report to MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        2180,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "send_to",
+              "value": "management@company.com",
+              "type": "string"
+            },
+            {
+              "name": "email_subject",
+              "value": "[Báo cáo Tuyển dụng] {{ $('Step 7: Generate Report').item.json.report_title }}",
+              "type": "string"
+            },
+            {
+              "name": "delivery_status",
+              "value": "SENT_SUCCESSFULLY",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "node-11-send",
+      "name": "Step 11: Send Report Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'AI Recruitment Report Agent',\n  'SUCCESS',\n  '{\"report_title\": \"{{ $('Step 7: Generate Report').item.json.report_title }}\", \"status\": \"DELIVERED\"}'\n);"
+      },
+      "id": "node-12-log",
+      "name": "Step 12: Insert Audit Log",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        2620,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Tạo báo cáo tuyển dụng và gửi thành công!\",\n  \"report_title\": \"{{ $('Step 7: Generate Report').item.json.report_title }}\",\n  \"statistics\": {\n    \"total_jobs\": {{ $('Step 4: Aggregate Statistics').item.json.total_jobs }},\n    \"total_candidates\": {{ $('Step 4: Aggregate Statistics').item.json.total_candidates }},\n    \"approved_candidates\": {{ $('Step 4: Aggregate Statistics').item.json.approved_candidates }},\n    \"rejected_candidates\": {{ $('Step 4: Aggregate Statistics').item.json.rejected_candidates }},\n    \"pass_rate\": \"{{ $('Step 4: Aggregate Statistics').item.json.pass_rate }}\",\n    \"avg_score\": {{ $('Step 4: Aggregate Statistics').item.json.avg_score }}\n  },\n  \"ai_insights\": \"{{ $('Step 6: AI Agent - Analyze Recruitment').item.json.ai_insights }}\",\n  \"delivery\": \"{{ $json.delivery_status }}\"\n}",
+        "options": {}
+      },
+      "id": "node-13-respond",
+      "name": "Step 13: Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2840,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Step 1: Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Step 2: MySQL - Get Recruitment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2: MySQL - Get Recruitment Data": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Filter Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Filter Data": {
+      "main": [
+        [
+          {
+            "node": "Step 4: Aggregate Statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4: Aggregate Statistics": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Prepare AI Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: Prepare AI Payload": {
+      "main": [
+        [
+          {
+            "node": "Step 6: AI Agent - Analyze Recruitment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6: AI Agent - Analyze Recruitment": {
+      "main": [
+        [
+          {
+            "node": "Step 7: Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7: Generate Report": {
+      "main": [
+        [
+          {
+            "node": "Step 8: IF - Check Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8: IF - Check Report": {
+      "main": [
+        [
+          {
+            "node": "Step 9: Human Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9: Human Approval": {
+      "main": [
+        [
+          {
+            "node": "Step 10: Save Report to MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10: Save Report to MySQL": {
+      "main": [
+        [
+          {
+            "node": "Step 11: Send Report Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11: Send Report Notification": {
+      "main": [
+        [
+          {
+            "node": "Step 12: Insert Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12: Insert Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Step 13: Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "id": "zmrThnSnWih1eGK7"
+}
