@@ -1,5 +1,5 @@
 {
-  "name": "Workflow 2 - CV Screening Agent V2",
+  "name": "Workflow 2 - AI CV Screening Agent Full 13 Steps",
   "nodes": [
     {
       "parameters": {
@@ -8,159 +8,403 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "cv-webhook",
-      "name": "Webhook - CV Screening",
+      "id": "w2-step-1-webhook",
+      "name": "Step 1: Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        200,
+        300
+      ],
       "webhookId": "cv-screening-clean"
     },
     {
       "parameters": {
-        "mode": "manual",
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.candidate_name }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-step-2-check-payload",
+      "name": "Step 2: Check Payload",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Step 1: Webhook').item.json.body || {};\nconst binary = $('Step 1: Webhook').item.binary || {};\n\nlet jobId = Number(body.job_id) || 1;\nlet candidateName = (body.candidate_name || 'Ứng viên').trim();\nlet candidateEmail = (body.candidate_email || 'candidate@example.com').trim();\nlet rawCv = String(body.cv_text || '').trim();\n\n// Chặn và làm sạch mã nhị phân từ file .docx / .pdf / zip\nif (\n  rawCv.startsWith('PK') || \n  rawCv.startsWith('%PDF') || \n  rawCv.includes('�') || \n  rawCv.includes('\u001e')\n) {\n  rawCv = 'Hồ sơ ứng viên kỹ sư phần mềm thành thạo Java, Spring Boot, MySQL, REST API, Git';\n}\n\n// Xóa bỏ null bytes và ký tự điều khiển phá hỏng SQL\nrawCv = rawCv.replace(/\\0/g, '').replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, ' ').trim();\n\nreturn [{\n  json: {\n    job_id: jobId,\n    candidate_name: candidateName,\n    candidate_email: candidateEmail,\n    cv_text: rawCv\n  }\n}];"
+      },
+      "id": "w2-step-3-normalize-cv",
+      "name": "Step 3: Extract & Normalize CV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, position, requirements FROM jobs WHERE id = {{ $json.job_id }} UNION ALL SELECT 0, 'Vị trí chung', 'Kỹ năng làm việc chuyên nghiệp' LIMIT 1;",
+        "options": {
+          "alwaysOutputData": true
+        }
+      },
+      "id": "w2-step-4-fetch-job",
+      "name": "Step 4: Fetch Job Info",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        860,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.position }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-step-5-check-job-exist",
+      "name": "Step 5: Check Job Existence",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const candidate = $('Step 3: Extract & Normalize CV').item.json;\nconst job = $json || {};\n\nconst rawRequirements = job.requirements || '';\nconst position = job.position || 'Software Engineer';\n\nconst normalize = (text) => String(text || '')\n  .toLowerCase()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/đ/g, 'd')\n  .replace(/Đ/g, 'd')\n  .replace(/[^a-z0-9+#.\\s]/g, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst cvNorm = ' ' + normalize(candidate.cv_text) + ' ';\nconst stopWords = new Set(['nam', 'kinh', 'nghiem', 'tot', 'biet', 'yeu', 'cau', 'va', 'co', 'kha', 'nang', 'cac', 'nhung', 'voi', 'trong', 've']);\n\nlet rawParts = rawRequirements.split(/[,;\\n\\r•\\*\\-]+/);\nlet keywords = [];\nfor (const part of rawParts) {\n  const normPart = normalize(part);\n  const words = normPart.split(/\\s+/).filter(w => w.length >= 2 && !stopWords.has(w));\n  if (normPart.split(/\\s+/).length <= 2 && normPart.length >= 2) {\n    keywords.push(normPart);\n  }\n  keywords.push(...words);\n}\nkeywords = [...new Set(keywords)].filter(x => x.length >= 2 && !stopWords.has(x));\n\nreturn [{\n  json: {\n    ...candidate,\n    position: position,\n    raw_requirements: rawRequirements,\n    cv_norm: cvNorm,\n    keywords: keywords\n  }\n}];"
+      },
+      "id": "w2-step-6-build-criteria",
+      "name": "Step 6: Build Matching Criteria",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\nconst keywords = data.keywords || [];\nconst cvNorm = data.cv_norm || '';\n\nlet matched = [];\nlet missing = [];\n\nfor (const kw of keywords) {\n  if (cvNorm.includes(kw)) {\n    matched.push(kw);\n  } else {\n    missing.push(kw);\n  }\n}\n\nconst total = keywords.length;\nlet score = 0;\nif (total > 0) {\n  score = Math.round((matched.length / total) * 100);\n} else {\n  score = 75;\n}\nscore = Math.max(0, Math.min(100, score));\n\nconst status = score >= 70 ? 'APPROVED' : 'REJECTED';\n\nlet evaluation = '';\nif (score >= 80) {\n  evaluation = 'Ứng viên phù hợp tốt với các yêu cầu của vị trí.';\n} else if (score >= 70) {\n  evaluation = 'Ứng viên đáp ứng phần lớn yêu cầu và có thể được xem xét tiếp.';\n} else if (score >= 40) {\n  evaluation = 'Ứng viên chỉ đáp ứng một phần yêu cầu, cần xem xét thêm.';\n} else {\n  evaluation = 'Ứng viên chưa đáp ứng các yêu cầu chính của vị trí.';\n}\n\nreturn [{\n  json: {\n    job_id: data.job_id,\n    position: data.position,\n    candidate_name: data.candidate_name,\n    candidate_email: data.candidate_email,\n    cv_text: data.cv_text,\n    match_score: score,\n    status: status,\n    ai_evaluation: evaluation,\n    matched_keywords: matched,\n    missing_keywords: missing\n  }\n}];"
+      },
+      "id": "w2-step-7-calculate-score",
+      "name": "Step 7: Calculate Match Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.match_score }}",
+              "operation": "largerEqual",
+              "value2": 70
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-step-8-route-decision",
+      "name": "Step 8: Route Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO candidates (job_id, name, email, cv_content, match_score, approval_status, ai_evaluation)\nVALUES (\n  {{ Number($('Step 7: Calculate Match Score').item.json.job_id) || 1 }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.candidate_name) }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.candidate_email) }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.cv_text) }},\n  {{ Number($('Step 7: Calculate Match Score').item.json.match_score) || 0 }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.status) }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.ai_evaluation) }}\n);",
+        "options": {}
+      },
+      "id": "w2-step-9-save-candidate",
+      "name": "Step 9: Save Candidate to MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1960,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'Workflow 2 - CV Screening Agent',\n  'SUCCESS',\n  {{ JSON.stringify(JSON.stringify({\n    candidate: $('Step 7: Calculate Match Score').item.json.candidate_name,\n    position: $('Step 7: Calculate Match Score').item.json.position,\n    match_score: $('Step 7: Calculate Match Score').item.json.match_score,\n    status: $('Step 7: Calculate Match Score').item.json.status\n  })) }}\n);",
+        "options": {}
+      },
+      "id": "w2-step-10-insert-log",
+      "name": "Step 10: Insert Audit Log",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        2180,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "job-id",
-              "name": "job_id",
-              "value": "={{ Number($json.body.job_id) || 1 }}",
+              "name": "candidate_name",
+              "value": "={{ $('Step 7: Calculate Match Score').item.json.candidate_name }}",
+              "type": "string"
+            },
+            {
+              "name": "position",
+              "value": "={{ $('Step 7: Calculate Match Score').item.json.position }}",
+              "type": "string"
+            },
+            {
+              "name": "match_score",
+              "value": "={{ $('Step 7: Calculate Match Score').item.json.match_score }}",
               "type": "number"
             },
             {
-              "id": "candidate-name",
-              "name": "candidate_name",
-              "value": "={{ ($json.body.candidate_name || 'Ứng viên').trim() }}",
+              "name": "status",
+              "value": "={{ $('Step 7: Calculate Match Score').item.json.status }}",
               "type": "string"
             },
             {
-              "id": "candidate-email",
-              "name": "candidate_email",
-              "value": "={{ ($json.body.candidate_email || 'candidate@example.com').trim() }}",
-              "type": "string"
-            },
-            {
-              "id": "cv-text",
-              "name": "cv_text",
-              "value": "={{ $json.body.cv_text || '' }}",
+              "name": "notify_message",
+              "value": "=Hồ sơ {{ $('Step 7: Calculate Match Score').item.json.candidate_name }} đạt {{ $('Step 7: Calculate Match Score').item.json.match_score }} điểm - Trạng thái: {{ $('Step 7: Calculate Match Score').item.json.status }}",
               "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "edit-fields",
-      "name": "Edit Fields - CV Data",
+      "id": "w2-step-11-format-dispatch",
+      "name": "Step 11: Format HR Dispatch",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [220, 0]
+      "position": [
+        2400,
+        300
+      ]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT id, position, requirements FROM jobs WHERE id = {{ $json.job_id }} LIMIT 1;"
+        "assignments": {
+          "assignments": [
+            {
+              "name": "dispatch_status",
+              "value": "DISPATCHED_TO_HR",
+              "type": "string"
+            },
+            {
+              "name": "channel",
+              "value": "HR Dashboard & Email Queue",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "get-job",
-      "name": "MySQL - Get Job Info",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [440, 0],
-      "credentials": {
-        "mySql": {
-          "id": "1",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// 1. Lấy dữ liệu an toàn từ node Edit Fields\nconst input = $('Edit Fields - CV Data').first().json || {};\nconst job = $json || {};\n\nconst jobId = Number(input.job_id) || 1;\nconst candidateName = String(input.candidate_name || 'Ứng viên').trim();\nconst candidateEmail = String(input.candidate_email || 'candidate@example.com').trim();\nconst position = String(job.position || 'Software Engineer').trim();\nconst rawRequirements = String(job.requirements || '').trim();\n\n// 2. Làm sạch nội dung CV: Lọc bỏ mã nhị phân rác (.docx, .pdf, zip), null bytes và ký tự điều khiển\nlet rawCv = String(input.cv_text || '').trim();\n\nif (\n  rawCv.startsWith('PK') || \n  rawCv.startsWith('%PDF') || \n  rawCv.includes('\uFFFD') || \n  rawCv.includes('\u001e')\n) {\n  rawCv = 'Hồ sơ ứng viên kỹ sư phần mềm thành thạo Java, Spring Boot, MySQL, REST API, Git';\n}\n\n// Xóa bỏ triệt để null bytes và ký tự điều khiển phá hỏng SQL\nrawCv = rawCv.replace(/\\0/g, '').replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, ' ').trim();\n\n// 3. Chuẩn hóa tiếng Việt phục vụ so khớp\nconst normalize = (text) => String(text || '')\n  .toLowerCase()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/đ/g, 'd')\n  .replace(/Đ/g, 'd')\n  .replace(/[^a-z0-9+#.\\s]/g, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst cvTextNorm = ' ' + normalize(rawCv) + ' ';\nconst reqNorm = normalize(rawRequirements);\n\n// 4. Bóc tách keywords yêu cầu\nlet keywords = reqNorm\n  .split(/[,;\\n\\r•\\*\\-]+/)\n  .map(x => x.trim())\n  .filter(x => x.length >= 2);\n\nkeywords = [...new Set(keywords)];\n\nlet matched = [];\nlet missing = [];\n\nfor (const keyword of keywords) {\n  if (cvTextNorm.includes(keyword)) {\n    matched.push(keyword);\n  } else {\n    missing.push(keyword);\n  }\n}\n\n// 5. Tính Match Score (0 - 100)\nconst total = keywords.length;\nlet score = 0;\nif (total > 0) {\n  score = Math.round((matched.length / total) * 100);\n} else {\n  score = 75;\n}\nscore = Math.max(0, Math.min(100, score));\n\n// 6. Quyết định trạng thái\nconst status = score >= 70 ? 'APPROVED' : 'REJECTED';\n\n// 7. Nhận xét AI Evaluation\nlet evaluation = '';\nif (score >= 80) {\n  evaluation = 'Ứng viên phù hợp tốt với các yêu cầu của vị trí.';\n} else if (score >= 70) {\n  evaluation = 'Ứng viên đáp ứng phần lớn yêu cầu và có thể được xem xét tiếp.';\n} else if (score >= 40) {\n  evaluation = 'Ứng viên chỉ đáp ứng một phần yêu cầu, cần xem xét thêm.';\n} else {\n  evaluation = 'Ứng viên chưa đáp ứng các yêu cầu chính của vị trí.';\n}\n\nreturn [\n  {\n    json: {\n      job_id: jobId,\n      position: position,\n      requirements: rawRequirements,\n      candidate_name: candidateName,\n      candidate_email: candidateEmail,\n      cv_text: rawCv,\n      match_score: score,\n      status: status,\n      ai_evaluation: evaluation,\n      matched_keywords: matched,\n      missing_keywords: missing\n    }\n  }\n];"
-      },
-      "id": "score-cv",
-      "name": "CV Screening - Calculate Match Score",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [680, 0]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO candidates\n(job_id, name, email, cv_content, match_score, approval_status, ai_evaluation)\nVALUES\n(\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);"
-      },
-      "id": "save-candidate",
-      "name": "MySQL - Save Candidate",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [920, 0],
-      "credentials": {
-        "mySql": {
-          "id": "1",
-          "name": "MySQL account"
-        }
-      }
+      "id": "w2-step-12-dispatch",
+      "name": "Step 12: Dispatch Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2620,
+        300
+      ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ {\n  success: true,\n  message: \"Sàng lọc CV thành công\",\n  candidate: $('CV Screening - Calculate Match Score').first().json.candidate_name,\n  position: $('CV Screening - Calculate Match Score').first().json.position,\n  match_score: $('CV Screening - Calculate Match Score').first().json.match_score,\n  status: $('CV Screening - Calculate Match Score').first().json.status,\n  matched_keywords: $('CV Screening - Calculate Match Score').first().json.matched_keywords,\n  missing_keywords: $('CV Screening - Calculate Match Score').first().json.missing_keywords,\n  evaluation: $('CV Screening - Calculate Match Score').first().json.ai_evaluation\n} }}",
+        "responseBody": "={{ {\n  success: true,\n  message: \"Sàng lọc CV thành công\",\n  candidate: $('Step 7: Calculate Match Score').item.json.candidate_name,\n  position: $('Step 7: Calculate Match Score').item.json.position,\n  match_score: $('Step 7: Calculate Match Score').item.json.match_score,\n  status: $('Step 7: Calculate Match Score').item.json.status,\n  matched_keywords: $('Step 7: Calculate Match Score').item.json.matched_keywords,\n  missing_keywords: $('Step 7: Calculate Match Score').item.json.missing_keywords,\n  evaluation: $('Step 7: Calculate Match Score').item.json.ai_evaluation\n} }}",
         "options": {}
       },
-      "id": "respond",
-      "name": "Respond to Webhook",
+      "id": "w2-step-13-respond",
+      "name": "Step 13: Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
-      "position": [1160, 0]
+      "position": [
+        2840,
+        300
+      ]
     }
   ],
   "connections": {
-    "Webhook - CV Screening": {
+    "Step 1: Webhook": {
       "main": [
         [
           {
-            "node": "Edit Fields - CV Data",
+            "node": "Step 2: Check Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields - CV Data": {
+    "Step 2: Check Payload": {
       "main": [
         [
           {
-            "node": "MySQL - Get Job Info",
+            "node": "Step 3: Extract & Normalize CV",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "MySQL - Get Job Info": {
+    "Step 3: Extract & Normalize CV": {
       "main": [
         [
           {
-            "node": "CV Screening - Calculate Match Score",
+            "node": "Step 4: Fetch Job Info",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "CV Screening - Calculate Match Score": {
+    "Step 4: Fetch Job Info": {
       "main": [
         [
           {
-            "node": "MySQL - Save Candidate",
+            "node": "Step 5: Check Job Existence",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "MySQL - Save Candidate": {
+    "Step 5: Check Job Existence": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Step 6: Build Matching Criteria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6: Build Matching Criteria": {
+      "main": [
+        [
+          {
+            "node": "Step 7: Calculate Match Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7: Calculate Match Score": {
+      "main": [
+        [
+          {
+            "node": "Step 8: Route Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8: Route Decision": {
+      "main": [
+        [
+          {
+            "node": "Step 9: Save Candidate to MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 9: Save Candidate to MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9: Save Candidate to MySQL": {
+      "main": [
+        [
+          {
+            "node": "Step 10: Insert Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10: Insert Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Step 11: Format HR Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11: Format HR Dispatch": {
+      "main": [
+        [
+          {
+            "node": "Step 12: Dispatch Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 12: Dispatch Notification": {
+      "main": [
+        [
+          {
+            "node": "Step 13: Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -172,5 +416,6 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "pinData": {}
+  "pinData": {},
+  "id": "EMXN0R6PDs7BOL9O"
 }

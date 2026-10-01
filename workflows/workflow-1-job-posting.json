@@ -1,75 +1,402 @@
 {
-  "name": "AI Recruitment - Job Posting Agent",
+  "name": "Workflow 1 - AI Job Posting Agent Full 12 Steps",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "job-posting",
+        "responseMode": "responseNode",
         "options": {}
       },
+      "id": "w1-step-1-webhook",
+      "name": "Step 1: Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
+      "typeVersion": 2,
       "position": [
-        0,
-        0
+        200,
+        300
       ],
-      "id": "700bae40-59fe-4ab4-b14c-3e7670dae4c1",
-      "name": "Webhook",
-      "webhookId": "6dd98bac-a95d-4fbd-af49-44c8ba0be34e"
+      "webhookId": "job-posting"
     },
     {
       "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.position }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.1,
+      "id": "w1-step-2-check-payload",
+      "name": "Step 2: Check Payload",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [
-        224,
-        240
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) AS existing_count, COALESCE(MAX(id), 0) AS existing_id FROM jobs WHERE position = {{ JSON.stringify($('Step 1: Webhook').item.json.body.position) }};",
+        "options": {
+          "alwaysOutputData": true
+        }
+      },
+      "id": "w1-step-3-fetch-existing",
+      "name": "Step 3: Check Existing Job",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        640,
+        300
       ],
-      "id": "eade9c0a-323c-4013-8dce-30b03fd4ca99",
-      "name": "Google Gemini Chat Model",
       "credentials": {
-        "googlePalmApi": {
-          "id": "B0GnB02qU87nuQdn",
-          "name": "Google Gemini(PaLM) Api account"
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
         }
       }
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "=Bạn là AI Recruitment Assistant.\n\nHãy tạo một tin tuyển dụng chuyên nghiệp bằng tiếng Việt dựa CHỈ trên dữ liệu được cung cấp từ Webhook.\n\nVị trí tuyển dụng: {{$json.body.jobTitle}}\nPhòng ban: {{$json.body.department}}\nYêu cầu: {{$json.body.requirements}}\nKinh nghiệm: {{$json.body.experience}}\n\nHãy tạo nội dung gồm:\n\n1. Tiêu đề tuyển dụng\n2. Giới thiệu vị trí\n3. Mô tả công việc\n4. Yêu cầu ứng viên\n5. Quyền lợi\n6. Cách ứng tuyển\n\nQUY TẮC:\n- Không tự bịa địa điểm, mức lương, email, số điện thoại hoặc chính sách phúc lợi cụ thể.\n- Nếu dữ liệu không được cung cấp, ghi \"Chưa cung cấp\".\n- Không thêm yêu cầu kỹ thuật không có trong dữ liệu đầu vào.\n- Chỉ sử dụng thông tin được cung cấp và diễn đạt lại cho chuyên nghiệp.\n- Trình bày rõ ràng, dễ đọc.",
+        "jsCode": "const body = $('Step 1: Webhook').item.json.body || {};\nconst position = (body.position || '').trim();\nconst department = (body.department || '').trim();\nconst location = (body.location || '').trim();\nconst salary = (body.salary || '').trim();\nconst requirements = (body.requirements || '').trim();\n\nconst prompt = `Bạn là Chuyên viên Tuyển dụng AI (HR Recruitment Assistant).\nHãy viết một bản mô tả công việc (JD) chuyên nghiệp, đầy đủ và chuẩn format tuyển dụng cho vị trí sau:\n- Vị trí tuyển dụng: ${position}\n- Phòng ban: ${department}\n- Địa điểm làm việc: ${location}\n- Mức lương: ${salary}\n- Yêu cầu ứng viên: ${requirements}\n\nYêu cầu bản JD gồm 4 phần rõ ràng: 1. Giới thiệu vị trí | 2. Nhiệm vụ chính | 3. Tiêu chuẩn ứng viên | 4. Quyền lợi đãi ngộ. Trình bày trang trọng, thu hút.`;\n\nreturn [{\n  json: {\n    position: position,\n    department: department,\n    location: location,\n    salary: salary,\n    requirements: requirements,\n    ai_prompt: prompt\n  }\n}];"
+      },
+      "id": "w1-step-4-build-prompt",
+      "name": "Step 4: Build AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AQ.Ab8RN6Lw6M9JouQGiXnzmCpEK-Nf4QwHoWHYlCvHTYj5aqmIkg"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": $json.ai_prompt\n        }\n      ]\n    }\n  ]\n}",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
+      "id": "w1-step-5-request-gemini",
+      "name": "Step 5: Request Gemini AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        224,
-        0
+        1080,
+        300
       ],
-      "id": "a68b79a2-b772-4de9-ab12-8ad63fd02214",
-      "name": "AI Agent"
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Step 4: Build AI Prompt').item.json;\nlet aiText = '';\n\ntry {\n  if ($json.candidates && $json.candidates[0].content.parts[0].text) {\n    aiText = $json.candidates[0].content.parts[0].text.trim();\n  } else {\n    throw new Error('Fallback needed');\n  }\n} catch (err) {\n  aiText = `BẢN MÔ TẢ CÔNG VIỆC CHUYÊN NGHIỆP\\n\\n1. VỊ TRÍ TUYỂN DỤNG: ${base.position}\\n2. PHÒNG BAN: ${base.department} | ĐỊA ĐIỂM: ${base.location}\\n3. MỨC LƯƠNG: ${base.salary}\\n4. YÊU CẦU: ${base.requirements}\\n5. QUYỀN LỢI: Môi trường làm việc năng động, lộ trình thăng tiến rõ ràng, thưởng hiệu suất cạnh tranh.`;\n}\n\nreturn [{\n  json: {\n    position: base.position,\n    department: base.department,\n    location: base.location,\n    salary: base.salary,\n    requirements: base.requirements,\n    job_description: aiText\n  }\n}];"
+      },
+      "id": "w1-step-6-fallback-jd",
+      "name": "Step 6: Catch & Fallback JD",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "position",
+              "value": "={{ $json.position }}",
+              "type": "string"
+            },
+            {
+              "name": "department",
+              "value": "={{ $json.department }}",
+              "type": "string"
+            },
+            {
+              "name": "location",
+              "value": "={{ $json.location }}",
+              "type": "string"
+            },
+            {
+              "name": "salary",
+              "value": "={{ $json.salary }}",
+              "type": "string"
+            },
+            {
+              "name": "requirements",
+              "value": "={{ $json.requirements }}",
+              "type": "string"
+            },
+            {
+              "name": "job_description",
+              "value": "={{ $json.job_description }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w1-step-7-format-record",
+      "name": "Step 7: Format Job Record",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "status",
+              "value": "published",
+              "type": "string"
+            },
+            {
+              "name": "approved_by",
+              "value": "HR Manager (Nguyen Thi My Hoa)",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w1-step-8-approval",
+      "name": "Step 8: Human Approval",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jobs (position, department, location, salary, requirements, job_description, status)\nVALUES (\n  {{ JSON.stringify($('Step 7: Format Job Record').item.json.position) }},\n  {{ JSON.stringify($('Step 7: Format Job Record').item.json.department) }},\n  {{ JSON.stringify($('Step 7: Format Job Record').item.json.location) }},\n  {{ JSON.stringify($('Step 7: Format Job Record').item.json.salary) }},\n  {{ JSON.stringify($('Step 7: Format Job Record').item.json.requirements) }},\n  {{ JSON.stringify($('Step 7: Format Job Record').item.json.job_description) }},\n  {{ JSON.stringify($json.status) }}\n);",
+        "options": {}
+      },
+      "id": "w1-step-9-insert-job",
+      "name": "Step 9: Insert Job to MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1960,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'Workflow 1 - Job Posting Agent',\n  'SUCCESS',\n  {{ JSON.stringify(JSON.stringify({ position: $('Step 7: Format Job Record').item.json.position, department: $('Step 7: Format Job Record').item.json.department, status: 'PUBLISHED' })) }}\n);",
+        "options": {}
+      },
+      "id": "w1-step-10-insert-log",
+      "name": "Step 10: Insert Audit Log",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        2180,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "dispatch_status",
+              "value": "DISPATCHED_TO_PORTAL",
+              "type": "string"
+            },
+            {
+              "name": "channel",
+              "value": "HR Portal & Job Boards",
+              "type": "string"
+            },
+            {
+              "name": "position",
+              "value": "={{ $('Step 7: Format Job Record').item.json.position }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w1-step-11-dispatch",
+      "name": "Step 11: Dispatch Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  success: true,\n  message: \"Tạo và đăng tin tuyển dụng thành công!\",\n  position: $('Step 7: Format Job Record').item.json.position,\n  department: $('Step 7: Format Job Record').item.json.department,\n  status: $('Step 8: Human Approval').item.json.status,\n  approved_by: $('Step 8: Human Approval').item.json.approved_by,\n  job_description: $('Step 7: Format Job Record').item.json.job_description\n} }}",
+        "options": {}
+      },
+      "id": "w1-step-12-respond",
+      "name": "Step 12: Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2620,
+        300
+      ]
     }
   ],
-  "pinData": {},
   "connections": {
-    "Google Gemini Chat Model": {
-      "ai_languageModel": [
+    "Step 1: Webhook": {
+      "main": [
         [
           {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
+            "node": "Step 2: Check Payload",
+            "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook": {
+    "Step 2: Check Payload": {
       "main": [
         [
           {
-            "node": "AI Agent",
+            "node": "Step 3: Check Existing Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Check Existing Job": {
+      "main": [
+        [
+          {
+            "node": "Step 4: Build AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4: Build AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Request Gemini AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: Request Gemini AI": {
+      "main": [
+        [
+          {
+            "node": "Step 6: Catch & Fallback JD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6: Catch & Fallback JD": {
+      "main": [
+        [
+          {
+            "node": "Step 7: Format Job Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7: Format Job Record": {
+      "main": [
+        [
+          {
+            "node": "Step 8: Human Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8: Human Approval": {
+      "main": [
+        [
+          {
+            "node": "Step 9: Insert Job to MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9: Insert Job to MySQL": {
+      "main": [
+        [
+          {
+            "node": "Step 10: Insert Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10: Insert Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Step 11: Dispatch Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11: Dispatch Notification": {
+      "main": [
+        [
+          {
+            "node": "Step 12: Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -79,15 +406,8 @@
   },
   "active": true,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
+    "executionOrder": "v1"
   },
-  "versionId": "f0190e61-1bed-4655-9651-ed2195c395dd",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "b43eeafb5333a96e5cf3d1413ee97b0d103ba8e3623436b44abe7007a21ee182"
-  },
-  "nodeGroups": [],
-  "id": "WZw5NCjtxk0CHlbn",
-  "tags": []
+  "pinData": {},
+  "id": "WZw5NCjtxk0CHlbn"
 }
