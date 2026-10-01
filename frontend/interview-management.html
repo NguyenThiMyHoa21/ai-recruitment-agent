@@ -96,7 +96,7 @@
           Quản Lý Ứng Viên & Xếp Lịch Phỏng Vấn AI
         </h3>
         <p class="text-muted small mb-0">
-          Tự động điều phối lịch phỏng vấn (Luồng 4) và cập nhật trạng thái ứng viên qua AI (Luồng 6) • Nghiên cứu & phát triển: <strong>Lê Thị Yến Nhi</strong>
+          Tự động điều phối lịch phỏng vấn và cập nhật trạng thái ứng viên qua AI & n8n
         </p>
       </div>
       <div>
@@ -168,17 +168,7 @@
       </div>
     </div>
 
-    <!-- HƯỚNG DẪN DEMO NHANH CHO THẦY CÔ -->
-    <div class="card border-0 bg-light-subtle rounded-3 p-3 mt-4 border border-secondary-subtle">
-      <h6 class="fw-bold text-dark mb-2">
-        <i class="fa-solid fa-lightbulb text-warning me-2"></i>
-        Hướng dẫn Demo Luồng 4 & Luồng 6 (Lê Thị Yến Nhi):
-      </h6>
-      <ul class="small text-muted mb-0 ps-3">
-        <li><strong>Xếp lịch AI (Luồng 4):</strong> Bấm nút <code>[ 📅 Xếp lịch AI ]</code> ở cột ngoài cùng. Hệ thống gửi yêu cầu sang n8n Workflow 4 -> AI Gemini tự động đối chiếu lịch phỏng vấn viên, chọn khung giờ phù hợp, tự động tạo link Google Meet và lưu vào MySQL.</li>
-        <li><strong>Đổi trạng thái ứng viên (Luồng 6):</strong> Thay đổi dropdown <code>[ Đạt / Phỏng vấn / Loại ]</code>. Hệ thống gọi n8n Workflow 6 -> AI Gemini tự động sinh nhận xét tuyển dụng tương ứng và ghi nhận nhật ký kiểm toán (Audit Log) vào bảng <code>candidate_history</code>.</li>
-      </ul>
-    </div>
+
 
   </div>
 
