@@ -96,10 +96,15 @@ app.get("/api/candidates", async (req, res) => {
     try {
         const [candidates] = await db.query(`
             SELECT c.id, c.job_id, 
-                   COALESCE(c.full_name, c.name) as full_name,
+                   COALESCE(c.full_name, c.name, 'N/A') as full_name,
                    c.name, c.email, c.cv_content, c.match_score, 
                    c.approval_status, 
-                   COALESCE(c.status, CASE WHEN c.approval_status = 'APPROVED' THEN 'Đạt' ELSE 'Loại' END) as status,
+                   CASE 
+                     WHEN c.approval_status = 'REJECTED' OR c.status = 'Loại' OR c.status = 'Không đạt' THEN 'Loại'
+                     WHEN c.approval_status = 'INTERVIEW_SCHEDULED' OR c.status = 'Phỏng vấn' THEN 'Phỏng vấn'
+                     WHEN c.approval_status = 'APPROVED' OR c.status = 'Đạt' THEN 'Đạt'
+                     ELSE COALESCE(c.status, 'Loại')
+                   END as status,
                    c.ai_evaluation, c.interview_time, c.interviewer_name, c.meeting_link, c.created_at,
                    COALESCE(c.applied_position, j.position, CONCAT('Vị trí #', c.job_id)) as position,
                    COALESCE(c.applied_position, j.position, CONCAT('Vị trí #', c.job_id)) as applied_position
@@ -163,14 +168,30 @@ app.post("/api/candidates/update-status", async (req, res) => {
         return res.status(400).json({ success: false, message: "Thiếu thông tin bắt buộc" });
     }
 
+    // Luôn bảo đảm có full_name và applied_position từ MySQL để AI không bị lỗi "null"
+    let candName = full_name;
+    let candPos = applied_position;
+    try {
+        const [cRows] = await db.query(
+            "SELECT COALESCE(c.full_name, c.name, 'Ứng viên') as full_name, COALESCE(c.applied_position, j.position, 'Chuyên viên') as applied_position FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+            [Number(targetId)]
+        );
+        if (cRows && cRows.length > 0) {
+            if (!candName || candName === 'null') candName = cRows[0].full_name;
+            if (!candPos || candPos === 'null') candPos = cRows[0].applied_position;
+        }
+    } catch (e) {
+        console.warn("Lỗi tra cứu ứng viên:", e.message);
+    }
+
     try {
         const response = await fetch("http://localhost:5678/webhook/update-candidate-status", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 candidate_id: Number(targetId),
-                full_name,
-                applied_position,
+                full_name: candName,
+                applied_position: candPos,
                 new_status
             })
         });
@@ -186,8 +207,8 @@ app.post("/api/candidates/update-status", async (req, res) => {
 
         try {
             await db.query(
-                "UPDATE candidates SET approval_status = ?, status = ? WHERE id = ?",
-                [appStatus, new_status, Number(targetId)]
+                "UPDATE candidates SET approval_status = ?, status = ?, full_name = COALESCE(full_name, ?), applied_position = COALESCE(applied_position, ?) WHERE id = ?",
+                [appStatus, new_status, candName, candPos, Number(targetId)]
             );
         } catch (dbErr) {
             console.warn("Lỗi sync DB:", dbErr.message);

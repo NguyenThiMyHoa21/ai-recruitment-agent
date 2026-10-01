@@ -55,7 +55,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, full_name, applied_position, status, email FROM candidates WHERE id = {{ $('Step 1: Webhook').item.json.body.candidate_id }};",
+        "query": "SELECT c.id, COALESCE(c.full_name, c.name, 'Ứng viên') AS full_name, COALESCE(c.applied_position, j.position, 'Chuyên viên') AS applied_position, c.status, c.email FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = {{ $('Step 1: Webhook').item.json.body.candidate_id }};",
         "options": {}
       },
       "id": "f5e15e90-73b1-49b8-be67-c218ddc691a7",
@@ -109,7 +109,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const candidate = $('Step 3: Fetch Current Candidate').item.json;\nconst newStatus =$('Step 1: Webhook').item.json.body.new_status || 'Đang xem xét';\nconst prompt = `Ứng viên ${candidate.full_name} ứng tuyển vị trí ${candidate.applied_position} vừa được cập nhật sang trạng thái: \"${newStatus}\". Hãy viết một nhận xét tuyển dụng ngắn gọn dưới 25 từ bằng tiếng Việt cho HR.`;\n\nreturn [{\n  json: {\n    candidate_id: candidate.id,\n    full_name: candidate.full_name,\n    applied_position: candidate.applied_position,\n    new_status: newStatus,\n    ai_prompt: prompt\n  }\n}];"
+        "jsCode": "const candidate = $('Step 3: Fetch Current Candidate').item.json || {};\nconst newStatus = $('Step 1: Webhook').item.json.body.new_status || 'Đang xem xét';\nconst fullName = candidate.full_name || candidate.name || $('Step 1: Webhook').item.json.body.full_name || 'Ứng viên';\nconst pos = candidate.applied_position || $('Step 1: Webhook').item.json.body.applied_position || 'vị trí tuyển dụng';\nconst prompt = `Ứng viên ${fullName} ứng tuyển vị trí ${pos} vừa được cập nhật sang trạng thái: \"${newStatus}\". Hãy viết một nhận xét tuyển dụng ngắn gọn dưới 25 từ bằng tiếng Việt cho HR.`;\n\nreturn [{\n  json: {\n    candidate_id: candidate.id || $('Step 1: Webhook').item.json.body.candidate_id,\n    full_name: fullName,\n    applied_position: pos,\n    new_status: newStatus,\n    ai_prompt: prompt\n  }\n}];"
       },
       "id": "391c744f-3604-4070-a4d5-e5f0c431d9e5",
       "name": "Step 5: Build AI Prompt",
@@ -154,7 +154,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const candidate = $('Step 5: Build AI Prompt').item.json;\nlet aiNote = '';\n\ntry {\n  if ($json.candidates && $json.candidates[0].content.parts[0].text) {\n    aiNote = $json.candidates[0].content.parts[0].text.trim();\n  } else {\n    throw new Error('Fallback needed');\n  }\n} catch (err) {\n  if (candidate.new_status === 'Đạt') {\n    aiNote = `Hồ sơ ${candidate.full_name} đạt chuẩn vị trí ${candidate.applied_position}. Đề xuất HR liên hệ gửi offer.`;\n  } else if (candidate.new_status === 'Phỏng vấn') {\n    aiNote = `Ứng viên ${candidate.full_name} phù hợp tiêu chí ban đầu. Đề xuất xếp lịch phỏng vấn.`;\n  } else {\n    aiNote = `Hồ sơ ${candidate.full_name} chưa phù hợp đợt tuyển dụng này. Lưu hồ sơ ứng viên.`;\n  }\n}\n\nreturn [{\n  json: {\n    candidate_id: candidate.candidate_id,\n    new_status: candidate.new_status,\n    ai_evaluation: aiNote\n  }\n}];"
+        "jsCode": "const candidate = $('Step 5: Build AI Prompt').item.json || {};\nlet aiNote = '';\nconst fullName = candidate.full_name || 'Ứng viên';\nconst pos = candidate.applied_position || 'vị trí tuyển dụng';\n\ntry {\n  if ($json.candidates && $json.candidates[0].content.parts[0].text) {\n    aiNote = $json.candidates[0].content.parts[0].text.trim();\n  } else {\n    throw new Error('Fallback needed');\n  }\n} catch (err) {\n  if (candidate.new_status === 'Đạt') {\n    aiNote = `Hồ sơ ${fullName} đạt chuẩn vị trí ${pos}. Đề xuất HR liên hệ gửi offer.`;\n  } else if (candidate.new_status === 'Phỏng vấn') {\n    aiNote = `Ứng viên ${fullName} phù hợp tiêu chí ban đầu. Đề xuất xếp lịch phỏng vấn.`;\n  } else {\n    aiNote = `Hồ sơ ${fullName} chưa phù hợp đợt tuyển dụng này. Lưu hồ sơ ứng viên.`;\n  }\n}\n\nreturn [{\n  json: {\n    candidate_id: candidate.candidate_id,\n    new_status: candidate.new_status,\n    ai_evaluation: aiNote\n  }\n}];"
       },
       "id": "1b034803-8a69-4a01-98c6-6cbec1d3eea6",
       "name": "Step 7: Catch & Fallback Review",

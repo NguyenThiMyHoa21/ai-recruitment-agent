@@ -213,9 +213,14 @@
       let countLoai = 0;
       allCandidates.forEach(c => {
         const s = (c.status || '').trim();
-        if (s === 'Phỏng vấn') countPv++;
-        else if (s === 'Đạt' || s === 'APPROVED') countDat++;
-        else if (s === 'Loại' || s === 'Không đạt' || s === 'REJECTED') countLoai++;
+        const app = (c.approval_status || '').trim();
+        if (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED') {
+          countLoai++;
+        } else if (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED') {
+          countPv++;
+        } else {
+          countDat++;
+        }
       });
       const elAll = document.getElementById('count-all');
       const elPv = document.getElementById('count-pv');
@@ -248,9 +253,15 @@
       if (currentFilter !== 'ALL') {
         filtered = allCandidates.filter(c => {
           const s = (c.status || '').trim();
-          if (currentFilter === 'Đạt') return s === 'Đạt' || s === 'APPROVED';
-          if (currentFilter === 'Loại') return s === 'Loại' || s === 'Không đạt' || s === 'REJECTED';
-          return s === currentFilter;
+          const app = (c.approval_status || '').trim();
+          const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
+          const isInterview = (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED');
+          const isApproved = (s === 'Đạt' || app === 'APPROVED') && !isRejected && !isInterview;
+
+          if (currentFilter === 'Đạt') return isApproved;
+          if (currentFilter === 'Loại') return isRejected;
+          if (currentFilter === 'Phỏng vấn') return isInterview;
+          return true;
         });
       }
       renderRows(filtered);
@@ -275,12 +286,23 @@
 
       tbody.innerHTML = candidates.map(c => {
         const s = (c.status || '').trim();
+        const app = (c.approval_status || '').trim();
+        const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
+        const isInterview = (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED');
+        const isApproved = (s === 'Đạt' || app === 'APPROVED') && !isRejected && !isInterview;
+
         let badgeClass = 'badge-phong-van';
-        if (s === 'Đạt' || s === 'APPROVED') badgeClass = 'badge-dat';
-        else if (s === 'Loại' || s === 'Không đạt' || s === 'REJECTED') badgeClass = 'badge-loai';
+        let displayStatus = 'Phỏng vấn';
+        if (isRejected) {
+          badgeClass = 'badge-loai';
+          displayStatus = 'Loại';
+        } else if (isApproved) {
+          badgeClass = 'badge-dat';
+          displayStatus = 'Đạt';
+        }
 
         let scheduleCol = '';
-        if (s === 'Loại' || s === 'Không đạt' || s === 'REJECTED') {
+        if (isRejected) {
           // Ứng viên bị Loại -> Không xếp lịch phỏng vấn
           scheduleCol = '<span class="text-muted small"><i class="fa-solid fa-ban me-1 text-secondary"></i>Không khả dụng</span>';
         } else if (c.interview_time) {
@@ -298,12 +320,12 @@
                 </button>
               </div>
             </div>`;
-        } else if (s === 'Phỏng vấn') {
+        } else if (isInterview) {
           // Trạng thái Phỏng vấn -> Nút Xếp lịch AI màu xanh chính thức
           scheduleCol = `<button class="btn btn-sm btn-primary btn-schedule px-3 py-1 rounded-pill shadow-sm" data-id="${c.id}">
             <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch AI
           </button>`;
-        } else if (s === 'Đạt' || s === 'APPROVED') {
+        } else if (isApproved) {
           // Trạng thái Đạt vòng CV -> Nút Xếp lịch phỏng vấn
           scheduleCol = `<button class="btn btn-sm btn-outline-primary btn-schedule px-3 py-1 rounded-pill shadow-sm" data-id="${c.id}">
             <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch AI
@@ -322,13 +344,13 @@
               <div class="small text-muted">${c.email || ''}</div>
             </td>
             <td class="small fw-semibold text-secondary">${c.applied_position || c.position || ''}</td>
-            <td><span class="badge ${badgeClass} rounded-pill px-2 py-1">${c.status}</span></td>
+            <td><span class="badge ${badgeClass} rounded-pill px-2 py-1">${displayStatus}</span></td>
             <td><span class="ai-review">${reviewText ? '“' + reviewText + '”' : '<span class="text-muted">Chưa có đánh giá</span>'}</span></td>
             <td>
               <select class="status-select form-select form-select-sm" data-id="${c.id}">
-                <option value="Đạt" ${c.status === 'Đạt' || c.status === 'APPROVED' ? 'selected' : ''}>🟢 Đạt</option>
-                <option value="Phỏng vấn" ${c.status === 'Phỏng vấn' ? 'selected' : ''}>🔵 Phỏng vấn</option>
-                <option value="Loại" ${c.status === 'Loại' || c.status === 'REJECTED' ? 'selected' : ''}>🔴 Loại</option>
+                <option value="Đạt" ${isApproved ? 'selected' : ''}>🟢 Đạt</option>
+                <option value="Phỏng vấn" ${isInterview ? 'selected' : ''}>🔵 Phỏng vấn</option>
+                <option value="Loại" ${isRejected ? 'selected' : ''}>🔴 Loại</option>
               </select>
             </td>
             <td class="pe-3" id="schedule-cell-${c.id}">${scheduleCol}</td>
