@@ -1,0 +1,419 @@
+{
+  "name": "Luong 5 - Automated Candidate Notification & Interview Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-interview-invite",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "step-1-webhook",
+      "name": "1. Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.candidate_email }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "step-2-validate",
+      "name": "2. Validate Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM candidates WHERE email = '{{ $(\"1. Webhook Trigger\").first().json.body.candidate_email }}' LIMIT 1;"
+      },
+      "id": "step-3-get-db",
+      "name": "3. Query Candidate DB",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.1,
+      "position": [
+        580,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "candidate_name",
+              "value": "={{ $json.name \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.candidate_name }}"
+            },
+            {
+              "name": "candidate_email",
+              "value": "={{ $json.email \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.candidate_email }}"
+            },
+            {
+              "name": "position",
+              "value": "={{ $json.position \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.position }}"
+            },
+            {
+              "name": "interview_time",
+              "value": "={{ $json.interview_time \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.interview_time || \"09:30 02/10/2026\" }}"
+            },
+            {
+              "name": "interviewer",
+              "value": "={{ $json.interviewer \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.interviewer || \"Trần Văn Tech\" }}"
+            },
+            {
+              "name": "meet_link",
+              "value": "={{ $json.meet_link \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.meet_link || \"https://meet.google.com/abc-defg-hij\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "step-4-set-data",
+      "name": "4. Normalize Candidate Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst prompt = `Soạn thảo thư mời phỏng vấn cho ${item.candidate_name} ứng tuyển ${item.position} vào lúc ${item.interview_time}`;\nreturn [{ json: { ...item, prompt: prompt } }];"
+      },
+      "id": "step-5-gemini-prompt",
+      "name": "5. Gemini AI Prompt Generator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst subject = `[VKU Recruitment] Thư mời phỏng vấn vị trí ${d.position} - ${d.candidate_name}`;\nconst html_content = `<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\"><h2 style=\"color: #2563eb;\">THƯ MỜI PHỎNG VẤN ỨNG VIÊN</h2><p>Chào <b>${d.candidate_name}</b>,</p><p>Hội đồng tuyển dụng chúc mừng bạn đã vượt qua vòng sơ loại hồ sơ cho vị trí <b>${d.position}</b>.</p><div style=\"background: #f1f5f9; padding: 15px; border-radius: 8px;\"><p><b>Thời gian:</b> ${d.interview_time}</p><p><b>Người phỏng vấn:</b> ${d.interviewer}</p><p><b>Phòng họp trực tuyến:</b> <a href=\"${d.meet_link}\" style=\"color: #2563eb; font-weight: bold;\">${d.meet_link}</a></p></div><p>Vui lòng chuẩn bị đường truyền internet ổn định và tham gia trước 5 phút.</p><p>Trân trọng,<br><b>Phòng Nhân sự Tuyển dụng</b></p></div>`;\nreturn [{ json: { ...d, subject, html_content } }];"
+      },
+      "id": "step-6-parse-invite",
+      "name": "6. Parse Invite Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.candidate_email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html_content }}",
+        "options": {}
+      },
+      "id": "step-7-send-invite",
+      "name": "7. Send Official Invite Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1380,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list"
+        },
+        "start": "={{ new Date().toISOString() }}",
+        "end": "={{ new Date(Date.now() + 3600000).toISOString() }}",
+        "summary": "=Phỏng vấn tuyển dụng: {{ $(\"4. Normalize Candidate Data\").first().json.candidate_name }} ({{ $(\"4. Normalize Candidate Data\").first().json.position }})",
+        "description": "=Link Meet: {{ $(\"4. Normalize Candidate Data\").first().json.meet_link }} | Người PV: {{ $(\"4. Normalize Candidate Data\").first().json.interviewer }}",
+        "options": {}
+      },
+      "id": "step-8-google-calendar",
+      "name": "8. Sync Google Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [
+        1580,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst reminder_subject = `[Nhắc lịch] Buổi phỏng vấn vị trí ${d.position} sắp diễn ra`;\nconst reminder_body = `<p>Xin chào <b>${d.candidate_name}</b>, đừng quên lịch hẹn phỏng vấn lúc <b>${d.interview_time}</b> tại: <a href=\"${d.meet_link}\">${d.meet_link}</a>.</p>`;\nreturn [{ json: { ...d, reminder_subject, reminder_body } }];"
+      },
+      "id": "step-9-gemini-reminder",
+      "name": "9. Gemini AI Gen Reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "id": "step-10-parse-reminder",
+      "name": "10. Parse Reminder Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "unit": "seconds",
+        "amount": 5
+      },
+      "id": "step-11-wait-delay",
+      "name": "11. Schedule Wait Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2180,
+        200
+      ],
+      "webhookId": "schedule-reminder-wait"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.candidate_email }}",
+        "subject": "={{ $json.reminder_subject }}",
+        "message": "={{ $json.reminder_body }}",
+        "options": {}
+      },
+      "id": "step-12-send-reminder",
+      "name": "12. Dispatch Reminder Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2380,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE candidates SET notification_status = 'Sent', updated_at = NOW() WHERE email = '{{ $json.candidate_email }}';"
+      },
+      "id": "step-13-update-db",
+      "name": "13. Update Notification Status DB",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.1,
+      "position": [
+        2580,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Hoàn tất quy trình 15 bước: gửi thư mời, đồng bộ calendar và đặt lịch nhắc nhở!\",\n  \"candidate\": $(\"4. Normalize Candidate Data\").first().json.candidate_name,\n  \"email\": $(\"4. Normalize Candidate Data\").first().json.candidate_email,\n  \"interview_time\": $(\"4. Normalize Candidate Data\").first().json.interview_time,\n  \"executed_at\": new Date().toISOString()\n}",
+        "options": {}
+      },
+      "id": "step-14-respond-success",
+      "name": "14. Final Respond to Backend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"error\",\n  \"message\": \"Dữ liệu ứng viên không hợp lệ hoặc thiếu candidate_email.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "step-15-error-handler",
+      "name": "15. Error Handler Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "1. Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "2. Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Validate Input": {
+      "main": [
+        [
+          {
+            "node": "3. Query Candidate DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "15. Error Handler Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Query Candidate DB": {
+      "main": [
+        [
+          {
+            "node": "4. Normalize Candidate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Normalize Candidate Data": {
+      "main": [
+        [
+          {
+            "node": "5. Gemini AI Prompt Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Gemini AI Prompt Generator": {
+      "main": [
+        [
+          {
+            "node": "6. Parse Invite Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Parse Invite Content": {
+      "main": [
+        [
+          {
+            "node": "7. Send Official Invite Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Send Official Invite Email": {
+      "main": [
+        [
+          {
+            "node": "8. Sync Google Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Sync Google Calendar": {
+      "main": [
+        [
+          {
+            "node": "9. Gemini AI Gen Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9. Gemini AI Gen Reminder": {
+      "main": [
+        [
+          {
+            "node": "10. Parse Reminder Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10. Parse Reminder Message": {
+      "main": [
+        [
+          {
+            "node": "11. Schedule Wait Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11. Schedule Wait Delay": {
+      "main": [
+        [
+          {
+            "node": "12. Dispatch Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12. Dispatch Reminder Email": {
+      "main": [
+        [
+          {
+            "node": "13. Update Notification Status DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13. Update Notification Status DB": {
+      "main": [
+        [
+          {
+            "node": "14. Final Respond to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

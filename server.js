@@ -78,7 +78,38 @@ app.post('/api/schedule-interview', async (req, res) => {
     res.status(500).json({ success: false, message: 'Lỗi khi xếp lịch phỏng vấn qua n8n' });
   }
 });
+// API Luồng 5: Kích hoạt gửi thư mời & nhắc lịch qua n8n
+app.post('/api/candidates/:id/send-invite', async (req, res) => {
+    try {
+        const candidateId = req.params.id;
+        const [rows] = await pool.query('SELECT * FROM candidates WHERE id = ?', [candidateId]);
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy ứng viên' });
+        }
 
+        const candidate = rows[0];
+        const n8nWebhookUrl = 'http://localhost:5678/webhook/send-interview-invite';
+
+        const response = await fetch(n8nWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                candidate_name: candidate.name,
+                candidate_email: candidate.email,
+                position: candidate.position,
+                interview_time: candidate.interview_time || '09:30 02/10/2026',
+                interviewer: candidate.interviewer || 'Trần Văn Tech',
+                meet_link: candidate.meet_link || 'https://meet.google.com/abc-defg-hij'
+            })
+        });
+
+        const data = await response.json();
+        return res.json({ success: true, data });
+    } catch (err) {
+        console.error('Lỗi khi kích hoạt Luồng 5:', err);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Backend đang chạy tại: http://localhost:${PORT}`);
