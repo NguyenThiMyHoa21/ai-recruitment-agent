@@ -92,17 +92,24 @@ app.post("/api/jobs", async (req, res) => {
 app.get("/api/candidates", async (req, res) => {
     try {
         const [candidates] = await db.query(`
-            SELECT c.id, c.job_id, c.name, c.email, c.cv_content, c.match_score, c.approval_status, c.ai_evaluation, c.created_at,
-                   COALESCE(j.position, CONCAT('Vị trí #', c.job_id)) as position
+            SELECT c.id, c.job_id, 
+                   COALESCE(c.full_name, c.name) as full_name,
+                   c.name, c.email, c.cv_content, c.match_score, 
+                   c.approval_status, 
+                   COALESCE(c.status, CASE WHEN c.approval_status = 'APPROVED' THEN 'Đạt' ELSE 'Loại' END) as status,
+                   c.ai_evaluation, c.interview_time, c.interviewer_name, c.meeting_link, c.created_at,
+                   COALESCE(c.applied_position, j.position, CONCAT('Vị trí #', c.job_id)) as position,
+                   COALESCE(c.applied_position, j.position, CONCAT('Vị trí #', c.job_id)) as applied_position
             FROM candidates c
             LEFT JOIN jobs j ON c.job_id = j.id
             ORDER BY c.id DESC
-            LIMIT 30
+            LIMIT 50
         `);
 
         res.json({
             success: true,
-            candidates: candidates
+            candidates: candidates,
+            data: candidates
         });
     } catch (error) {
         console.error("Error loading candidates:", error);
@@ -111,6 +118,53 @@ app.get("/api/candidates", async (req, res) => {
             message: "Cannot load candidates",
             error: error.message
         });
+    }
+});
+
+// Route API xếp lịch phỏng vấn qua Luồng 4 n8n
+app.post("/api/schedule-interview", async (req, res) => {
+    const { candidate_id, requested_by } = req.body;
+    try {
+        const response = await fetch("http://localhost:5678/webhook/interview-schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                candidate_id: Number(candidate_id),
+                requested_by: requested_by || "HR_Web_Admin"
+            })
+        });
+        const result = await response.json();
+        res.json(result);
+    } catch (error) {
+        console.error("Lỗi gọi Luồng 4 n8n:", error.message);
+        res.status(500).json({ success: false, message: "Lỗi khi xếp lịch phỏng vấn qua n8n" });
+    }
+});
+
+// Route API cập nhật trạng thái ứng viên qua Luồng 6 n8n
+app.post("/api/candidates/update-status", async (req, res) => {
+    const { id, candidate_id, full_name, applied_position, new_status } = req.body;
+    const targetId = candidate_id || id;
+    if (!targetId || !new_status) {
+        return res.status(400).json({ success: false, message: "Thiếu thông tin bắt buộc" });
+    }
+
+    try {
+        const response = await fetch("http://localhost:5678/webhook/update-candidate-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                candidate_id: Number(targetId),
+                full_name,
+                applied_position,
+                new_status
+            })
+        });
+        const result = await response.json();
+        res.json(result);
+    } catch (error) {
+        console.error("Lỗi gọi Luồng 6 n8n:", error.message);
+        res.status(500).json({ success: false, message: "Lỗi kết nối n8n cập nhật trạng thái" });
     }
 });
 

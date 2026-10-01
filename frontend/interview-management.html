@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý ứng viên & Xếp lịch phỏng vấn - AI Multi-Agent</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  >
+  <style>
+    body {
+      background-color: #f4f6f9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .main-card {
+      border-radius: 14px;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      background: #ffffff;
+    }
+    .badge-dat { background-color: #d1e7dd; color: #0f5132; }
+    .badge-phong-van { background-color: #cff4fc; color: #055160; }
+    .badge-loai { background-color: #f8d7da; color: #842029; }
+    .ai-review {
+      font-style: italic;
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.4;
+      display: inline-block;
+      max-width: 260px;
+    }
+    .status-select {
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      background-color: #ffffff;
+      cursor: pointer;
+    }
+    .meet-btn {
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+    .table-hover tbody tr:hover {
+      background-color: #f8fafc;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================= -->
+  <!-- THANH ĐIỀU HƯỚNG CHUNG (NAVBAR) -->
+  <!-- ========================================================= -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4 py-2">
+    <div class="container" style="max-width: 1100px;">
+      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
+        <i class="fa-solid fa-robot me-2 fs-4"></i>
+        <span>AI Recruitment System</span>
+      </a>
+
+      <div class="navbar-nav d-flex flex-row flex-wrap gap-2 ms-auto">
+        <a class="nav-link px-3 text-white" href="index.html">
+          <i class="fa-solid fa-file-circle-plus me-1"></i> 1. Đăng tin tuyển dụng
+        </a>
+        <a class="nav-link px-3 text-white" href="cv-screening.html">
+          <i class="fa-solid fa-file-lines me-1"></i> 2. Sàng lọc CV
+        </a>
+        <a class="nav-link px-3 text-white" href="recruitment-report.html">
+          <i class="fa-solid fa-chart-pie me-1"></i> 3. Báo cáo tuyển dụng
+        </a>
+        <a class="nav-link px-3 active bg-white text-primary rounded-pill fw-bold shadow-sm" href="interview-management.html">
+          <i class="fa-solid fa-calendar-check me-1"></i> 4. Xếp lịch & Quản lý
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========================================================= -->
+  <!-- NỘI DUNG CHÍNH (WORKFLOW 4 & 6: CANDIDATE & INTERVIEW) -->
+  <!-- ========================================================= -->
+  <div class="container pb-5" style="max-width: 1100px;">
+
+    <!-- TIÊU ĐỀ TRANG -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h3 class="fw-bold text-dark mb-1">
+          <i class="fa-solid fa-users-gear text-primary me-2"></i>
+          Quản Lý Ứng Viên & Xếp Lịch Phỏng Vấn AI
+        </h3>
+        <p class="text-muted small mb-0">
+          Tự động điều phối lịch phỏng vấn (Luồng 4) và cập nhật trạng thái ứng viên qua AI (Luồng 6) • Nghiên cứu & phát triển: <strong>Lê Thị Yến Nhi</strong>
+        </p>
+      </div>
+      <div>
+        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="fetchCandidates()">
+          <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
+        </button>
+      </div>
+    </div>
+
+    <!-- TOAST THÔNG BÁO -->
+    <div id="toastAlert" class="alert alert-success alert-dismissible fade show d-none shadow-sm py-2 px-3 small" role="alert">
+      <i class="fa-solid fa-circle-check me-2"></i>
+      <span id="toastMsg">Thao tác thành công!</span>
+      <button type="button" class="btn-close py-2" onclick="document.getElementById('toastAlert').classList.add('d-none')"></button>
+    </div>
+
+    <!-- CARD BẢNG DANH SÁCH -->
+    <div class="card main-card">
+      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-dark mb-0">
+          <i class="fa-solid fa-list-check text-primary me-2"></i>
+          Danh sách ứng viên trong phễu tuyển dụng
+        </h5>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2">
+          ● n8n Workflow 4 & 6 Active
+        </span>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr class="small text-muted text-uppercase">
+                <th class="ps-3" style="width: 60px;">ID</th>
+                <th style="min-width: 170px;">Họ tên & Email</th>
+                <th style="min-width: 140px;">Vị trí</th>
+                <th style="width: 110px;">Trạng thái</th>
+                <th style="min-width: 220px;">Đánh giá AI (Gemini)</th>
+                <th style="width: 130px;">Cập nhật (L6)</th>
+                <th class="pe-3" style="min-width: 180px;">Lịch phỏng vấn (L4)</th>
+              </tr>
+            </thead>
+            <tbody id="candidate-list">
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">
+                  <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                  Đang tải dữ liệu ứng viên từ MySQL...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- HƯỚNG DẪN DEMO NHANH CHO THẦY CÔ -->
+    <div class="card border-0 bg-light-subtle rounded-3 p-3 mt-4 border border-secondary-subtle">
+      <h6 class="fw-bold text-dark mb-2">
+        <i class="fa-solid fa-lightbulb text-warning me-2"></i>
+        Hướng dẫn Demo Luồng 4 & Luồng 6 (Lê Thị Yến Nhi):
+      </h6>
+      <ul class="small text-muted mb-0 ps-3">
+        <li><strong>Xếp lịch AI (Luồng 4):</strong> Bấm nút <code>[ 📅 Xếp lịch AI ]</code> ở cột ngoài cùng. Hệ thống gửi yêu cầu sang n8n Workflow 4 -> AI Gemini tự động đối chiếu lịch phỏng vấn viên, chọn khung giờ phù hợp, tự động tạo link Google Meet và lưu vào MySQL.</li>
+        <li><strong>Đổi trạng thái ứng viên (Luồng 6):</strong> Thay đổi dropdown <code>[ Đạt / Phỏng vấn / Loại ]</code>. Hệ thống gọi n8n Workflow 6 -> AI Gemini tự động sinh nhận xét tuyển dụng tương ứng và ghi nhận nhật ký kiểm toán (Audit Log) vào bảng <code>candidate_history</code>.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- CHÂN TRANG (FOOTER) CHUNG -->
+  <!-- ========================================================= -->
+  <footer class="text-center py-3 text-muted border-top bg-white mt-auto">
+    <div class="container small">
+      © 2026 AI Recruitment Multi-Agent System • Hệ Thống Tuyển Dụng Thông Minh Đa Tác Tử • Nghiên cứu & Phát triển bởi: <strong>Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi</strong>
+    </div>
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:3000';
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastAlert');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.innerText = msg;
+      toast.classList.remove('d-none');
+      setTimeout(() => toast.classList.add('d-none'), 5000);
+    }
+
+    async function fetchCandidates() {
+      const tbody = document.getElementById('candidate-list');
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now());
+        const json = await res.json();
+        const list = Array.isArray(json) ? json : (json.data || json.candidates || []);
+        renderRows(list);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Lỗi kết nối máy chủ backend: ${err.message}</td></tr>`;
+      }
+    }
+
+    function formatTime(dtStr) {
+      if (!dtStr) return '';
+      const d = new Date(dtStr);
+      if (isNaN(d.getTime())) return dtStr;
+      return d.toLocaleString('vi-VN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      });
+    }
+
+    function renderRows(candidates) {
+      const tbody = document.getElementById('candidate-list');
+      if (!candidates || candidates.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Chưa có ứng viên nào trong hệ thống.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = candidates.map(c => {
+        let badgeClass = 'badge-phong-van';
+        if (c.status === 'Đạt' || c.status === 'APPROVED') badgeClass = 'badge-dat';
+        else if (c.status === 'Loại' || c.status === 'REJECTED') badgeClass = 'badge-loai';
+
+        let scheduleCol = '';
+        if (c.status === 'Phỏng vấn' || c.status === 'APPROVED' || c.status === 'Đạt') {
+          if (c.interview_time) {
+            scheduleCol = `
+              <div class="small">
+                <div class="fw-bold text-dark"><i class="fa-regular fa-clock text-primary me-1"></i>${formatTime(c.interview_time)}</div>
+                <div class="text-muted"><i class="fa-solid fa-user-tie text-secondary me-1"></i>${c.interviewer_name || 'HR Manager'}</div>
+                <a href="${c.meeting_link}" target="_blank" class="btn btn-sm btn-outline-success meet-btn mt-1 py-0 px-2">
+                  <i class="fa-solid fa-video me-1"></i> Google Meet
+                </a>
+              </div>`;
+          } else {
+            scheduleCol = `<button class="btn btn-sm btn-primary btn-schedule px-3 py-1 rounded-pill" data-id="${c.id}">
+              <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch AI
+            </button>`;
+          }
+        } else {
+          scheduleCol = '<span class="text-muted small"><em>(Đã loại)</em></span>';
+        }
+
+        const reviewText = c.ai_evaluation || c.ai_review || '';
+
+        return `
+          <tr data-id="${c.id}">
+            <td class="ps-3 fw-bold text-secondary">#${c.id}</td>
+            <td>
+              <div class="fw-bold text-dark">${c.full_name || c.name || 'N/A'}</div>
+              <div class="small text-muted">${c.email || ''}</div>
+            </td>
+            <td class="small fw-semibold text-secondary">${c.applied_position || c.position || ''}</td>
+            <td><span class="badge ${badgeClass} rounded-pill px-2 py-1">${c.status}</span></td>
+            <td><span class="ai-review">${reviewText ? '“' + reviewText + '”' : '<span class="text-muted">Chưa có đánh giá</span>'}</span></td>
+            <td>
+              <select class="status-select form-select form-select-sm" data-id="${c.id}">
+                <option value="Đạt" ${c.status === 'Đạt' || c.status === 'APPROVED' ? 'selected' : ''}>🟢 Đạt</option>
+                <option value="Phỏng vấn" ${c.status === 'Phỏng vấn' ? 'selected' : ''}>🔵 Phỏng vấn</option>
+                <option value="Loại" ${c.status === 'Loại' || c.status === 'REJECTED' ? 'selected' : ''}>🔴 Loại</option>
+              </select>
+            </td>
+            <td class="pe-3" id="schedule-cell-${c.id}">${scheduleCol}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Xử lý nút Xếp lịch phỏng vấn (Luồng 4)
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-schedule');
+      if (btn) {
+        const candidateId = btn.getAttribute('data-id');
+        const cell = document.getElementById('schedule-cell-' + candidateId);
+        if (cell) cell.innerHTML = '<span class="text-primary small fw-semibold"><i class="fa-solid fa-spinner fa-spin me-1"></i> AI đang xếp lịch...</span>';
+
+        try {
+          const res = await fetch(`${API_BASE}/api/schedule-interview`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ candidate_id: Number(candidateId), requested_by: 'HR_Web_Demo' })
+          });
+          const result = await res.json();
+          if (result.success) {
+            showToast(`Đã xếp lịch phỏng vấn thành công cho ứng viên #${candidateId} qua AI!`);
+          } else {
+            showToast(`Lỗi: ${result.message || 'Không thể xếp lịch'}`);
+          }
+          fetchCandidates();
+        } catch (err) {
+          alert('Lỗi kết nối máy chủ khi xếp lịch phỏng vấn!');
+          fetchCandidates();
+        }
+      }
+    });
+
+    // Xử lý đổi trạng thái ứng viên (Luồng 6)
+    document.addEventListener('change', async (e) => {
+      if (e.target && e.target.classList.contains('status-select')) {
+        const select = e.target;
+        const candidateId = select.getAttribute('data-id');
+        const newStatus = select.value;
+        const row = select.closest('tr');
+        const fullName = row.cells[1].querySelector('.text-dark').innerText.trim();
+        const position = row.cells[2].innerText.trim();
+
+        try {
+          const res = await fetch(`${API_BASE}/api/candidates/update-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: Number(candidateId),
+              candidate_id: Number(candidateId),
+              full_name: fullName,
+              applied_position: position,
+              new_status: newStatus
+            })
+          });
+          const result = await res.json();
+          if (result.success || res.ok) {
+            showToast(`Đã cập nhật trạng thái ứng viên #${candidateId} sang "${newStatus}" và AI đã sinh nhận xét mới!`);
+            fetchCandidates();
+          } else {
+            alert('Lỗi cập nhật: ' + (result.message || 'Không xác định'));
+          }
+        } catch (err) {
+          alert('Lỗi kết nối máy chủ!');
+        }
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', fetchCandidates);
+  </script>
+</body>
+</html>

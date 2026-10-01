@@ -68,7 +68,7 @@
       ],
       "credentials": {
         "mySql": {
-          "id": "zaF7raRXbUaS8A8L",
+          "id": "HB0gY7Viximx0kLY",
           "name": "MySQL account"
         }
       }
@@ -181,8 +181,8 @@
       ],
       "credentials": {
         "mySql": {
-          "id": "Nj2c67pO83lf0sbL",
-          "name": "MySQL account 2"
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
         }
       }
     },
@@ -202,7 +202,7 @@
       ],
       "credentials": {
         "mySql": {
-          "id": "zaF7raRXbUaS8A8L",
+          "id": "HB0gY7Viximx0kLY",
           "name": "MySQL account"
         }
       }
