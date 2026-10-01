@@ -114,7 +114,9 @@ function renderRows(candidates) {
 
     let scheduleCol = '';
     const s = (c.status || '').trim();
-    if (c.interview_time) {
+    if (s === 'Loại' || s === 'Không đạt' || s === 'REJECTED') {
+      scheduleCol = '<span style="color: #94a3b8; font-size: 13px;">— Không khả dụng —</span>';
+    } else if (c.interview_time) {
       scheduleCol = `
         <div style="font-size: 13px;">
           <strong>${formatTime(c.interview_time)}</strong><br>
@@ -124,7 +126,7 @@ function renderRows(candidates) {
     } else if (s === 'Phỏng vấn' || s === 'Đạt' || s === 'APPROVED') {
       scheduleCol = `<button class="btn-schedule" data-id="${c.id}">📅 Xếp lịch ngay</button>`;
     } else {
-      scheduleCol = '<span style="color: #94a3b8; font-size: 13px;">— Không khả dụng —</span>';
+      scheduleCol = '<span style="color: #94a3b8; font-size: 13px;">— Chưa xếp lịch —</span>';
     }
 
     // Lấy chính xác cột ai_evaluation từ database
