@@ -137,6 +137,17 @@ app.post("/api/schedule-interview", async (req, res) => {
             })
         });
         const result = await response.json();
+
+        // Đồng bộ trạng thái phỏng vấn vào MySQL để Trang 3 & Trang 4 liên thông 100%
+        try {
+            await db.query(
+                "UPDATE candidates SET approval_status = 'INTERVIEW_SCHEDULED', status = 'Phỏng vấn' WHERE id = ?",
+                [Number(candidate_id)]
+            );
+        } catch (dbErr) {
+            console.warn("Lỗi sync DB:", dbErr.message);
+        }
+
         res.json(result);
     } catch (error) {
         console.error("Lỗi gọi Luồng 4 n8n:", error.message);
@@ -164,6 +175,24 @@ app.post("/api/candidates/update-status", async (req, res) => {
             })
         });
         const result = await response.json();
+
+        // Đồng bộ cả approval_status và status để Trang 3 và Trang 4 khớp nhau hoàn toàn
+        let appStatus = 'APPROVED';
+        if (new_status === 'Loại' || new_status === 'Không đạt' || new_status === 'REJECTED') {
+            appStatus = 'REJECTED';
+        } else if (new_status === 'Phỏng vấn' || new_status === 'INTERVIEW_SCHEDULED') {
+            appStatus = 'INTERVIEW_SCHEDULED';
+        }
+
+        try {
+            await db.query(
+                "UPDATE candidates SET approval_status = ?, status = ? WHERE id = ?",
+                [appStatus, new_status, Number(targetId)]
+            );
+        } catch (dbErr) {
+            console.warn("Lỗi sync DB:", dbErr.message);
+        }
+
         res.json(result);
     } catch (error) {
         console.error("Lỗi gọi Luồng 6 n8n:", error.message);

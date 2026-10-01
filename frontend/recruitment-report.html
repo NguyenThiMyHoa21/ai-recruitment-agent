@@ -953,7 +953,11 @@ async function loadRecentCandidates() {
       window.candidatesCache = data.candidates;
 
       const total = data.candidates.length;
-      const approvedCount = data.candidates.filter(c => c.approval_status === "APPROVED").length;
+      const approvedCount = data.candidates.filter(c => {
+        const s = (c.status || '').trim();
+        const app = (c.approval_status || '').trim();
+        return app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn";
+      }).length;
       const rejectedCount = total - approvedCount;
 
       if (countBadge) {
@@ -997,12 +1001,21 @@ function renderCandidatesTable(candidatesList) {
   }
 
   tbody.innerHTML = candidatesList.map(c => {
-    const isApproved = c.approval_status === "APPROVED";
+    const s = (c.status || '').trim();
+    const app = (c.approval_status || '').trim();
+    const isApproved = (app === "APPROVED" || s === "Đạt");
+    const isInterview = (app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
     const score = Number(c.match_score) || 0;
-    const scoreClass = isApproved ? "bg-success" : (score >= 40 ? "bg-warning text-dark" : "bg-danger");
-    const statusBadge = isApproved 
-      ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">APPROVED</span>'
-      : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">REJECTED</span>';
+    const scoreClass = (isApproved || isInterview) ? "bg-success" : (score >= 40 ? "bg-warning text-dark" : "bg-danger");
+    
+    let statusBadge = '';
+    if (isInterview) {
+      statusBadge = '<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">PHỎNG VẤN</span>';
+    } else if (isApproved) {
+      statusBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">APPROVED</span>';
+    } else {
+      statusBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">REJECTED</span>';
+    }
 
     return `
       <tr>
@@ -1053,9 +1066,17 @@ function filterCandidates(status) {
 
   let filtered = window.candidatesCache || [];
   if (status === 'APPROVED') {
-    filtered = filtered.filter(c => c.approval_status === 'APPROVED');
+    filtered = filtered.filter(c => {
+      const s = (c.status || '').trim();
+      const app = (c.approval_status || '').trim();
+      return app === 'APPROVED' || s === 'Đạt' || app === 'INTERVIEW_SCHEDULED' || s === 'Phỏng vấn';
+    });
   } else if (status === 'REJECTED') {
-    filtered = filtered.filter(c => c.approval_status !== 'APPROVED');
+    filtered = filtered.filter(c => {
+      const s = (c.status || '').trim();
+      const app = (c.approval_status || '').trim();
+      return !(app === 'APPROVED' || s === 'Đạt' || app === 'INTERVIEW_SCHEDULED' || s === 'Phỏng vấn');
+    });
   }
 
   renderCandidatesTable(filtered);
@@ -1075,14 +1096,25 @@ function viewCandidateDetail(candidateId) {
   document.getElementById("modalCandidateDate").innerText = candidate.created_at ? new Date(candidate.created_at).toLocaleString("vi-VN") : "-";
 
   const score = Number(candidate.match_score) || 0;
-  const isApproved = candidate.approval_status === "APPROVED";
-  const scoreBadge = document.getElementById("modalCandidateScore");
+  const s = (candidate.status || '').trim();
+  const app = (candidate.approval_status || '').trim();
+  const isApproved = (app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
+  const isInterview = (app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
+
   scoreBadge.innerText = score + " / 100";
   scoreBadge.className = "fs-4 fw-bold px-3 py-1 rounded-pill text-white shadow-sm " + (isApproved ? "bg-success" : (score >= 40 ? "bg-warning text-dark" : "bg-danger"));
 
   const statusBadge = document.getElementById("modalCandidateStatus");
-  statusBadge.innerText = candidate.approval_status || "-";
-  statusBadge.className = "badge px-3 py-2 rounded-pill fs-6 shadow-sm " + (isApproved ? "bg-success" : "bg-danger");
+  if (isInterview) {
+    statusBadge.innerText = "PHỎNG VẤN";
+    statusBadge.className = "badge bg-info text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
+  } else if (isApproved) {
+    statusBadge.innerText = "APPROVED (Đạt)";
+    statusBadge.className = "badge bg-success text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
+  } else {
+    statusBadge.innerText = "REJECTED (Loại)";
+    statusBadge.className = "badge bg-danger text-white px-3 py-2 rounded-pill fs-6 shadow-sm";
+  }
 
   document.getElementById("modalCandidateEvaluation").innerText = candidate.ai_evaluation || "Chưa có nhận định từ AI.";
   document.getElementById("modalCandidateCv").innerText = candidate.cv_content || "(Chưa có nội dung văn bản CV)";
