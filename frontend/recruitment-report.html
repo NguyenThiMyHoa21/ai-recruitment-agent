@@ -103,9 +103,33 @@
   </style>
 </head>
 
-<body class="py-5">
+<body>
 
-<div class="container main-container">
+  <!-- ========================================================= -->
+  <!-- THANH ĐIỀU HƯỚNG CHUNG (NAVBAR) -->
+  <!-- ========================================================= -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4 py-2">
+    <div class="container" style="max-width: 1100px;">
+      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
+        <i class="fa-solid fa-robot me-2 fs-4"></i>
+        <span>AI Recruitment System</span>
+      </a>
+
+      <div class="navbar-nav d-flex flex-row flex-wrap gap-2 ms-auto">
+        <a class="nav-link px-3 text-white" href="index.html">
+          <i class="fa-solid fa-file-circle-plus me-1"></i> 1. Đăng tin tuyển dụng
+        </a>
+        <a class="nav-link px-3 text-white" href="cv-screening.html">
+          <i class="fa-solid fa-file-lines me-1"></i> 2. Sàng lọc CV
+        </a>
+        <a class="nav-link px-3 active bg-white text-primary rounded-pill fw-bold shadow-sm" href="recruitment-report.html">
+          <i class="fa-solid fa-chart-pie me-1"></i> 3. Báo cáo tuyển dụng
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container main-container pb-5">
 
   <!-- HEADER -->
   <div class="card header-card p-4 mb-4">
