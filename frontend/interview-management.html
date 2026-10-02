@@ -149,12 +149,13 @@
                 <th style="width: 110px;">Trạng thái</th>
                 <th style="min-width: 220px;">Đánh giá AI (Gemini)</th>
                 <th style="width: 130px;">Cập nhật (L6)</th>
-                <th class="pe-3" style="min-width: 180px;">Lịch phỏng vấn (L4)</th>
+                <th style="min-width: 180px;">Lịch phỏng vấn (L4)</th>
+                <th class="pe-3 text-end" style="width: 50px;">Xóa</th>
               </tr>
             </thead>
             <tbody id="candidate-list">
               <tr>
-                <td colspan="7" class="text-center py-4 text-muted">
+                <td colspan="8" class="text-center py-4 text-muted">
                   <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                   Đang tải dữ liệu ứng viên từ MySQL...
                 </td>
@@ -280,7 +281,7 @@
     function renderRows(candidates) {
       const tbody = document.getElementById('candidate-list');
       if (!candidates || candidates.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Chưa có ứng viên nào trong hệ thống.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Chưa có ứng viên nào trong hệ thống.</td></tr>';
         return;
       }
 
@@ -356,7 +357,12 @@
                 <option value="Loại" ${isRejected ? 'selected' : ''}>🔴 Loại</option>
               </select>
             </td>
-            <td class="pe-3" id="schedule-cell-${c.id}">${scheduleCol}</td>
+            <td id="schedule-cell-${c.id}">${scheduleCol}</td>
+            <td class="pe-3 text-end">
+              <button class="btn btn-sm btn-outline-danger border-0 py-1 px-2" onclick="deleteCandidateRow(${c.id}, '${(c.full_name || c.name || 'Ứng viên').replace(/'/g, "\\'")}')" title="Xóa hồ sơ">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -444,6 +450,23 @@
         }
       } catch (err) {
         showToast('Lỗi gọi Luồng 5: ' + err.message);
+      }
+    };
+
+    // Hàm xóa hồ sơ ứng viên
+    window.deleteCandidateRow = async function(candidateId, candidateName) {
+      if (!confirm(`Bạn có chắc muốn xóa ứng viên "${candidateName}" (#${candidateId}) khỏi hệ thống?`)) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates/${candidateId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`Đã xóa hồ sơ ứng viên #${candidateId}`);
+          fetchCandidates();
+        } else {
+          alert('Lỗi khi xóa: ' + (data.message || 'Không thể xóa'));
+        }
+      } catch (e) {
+        alert('Lỗi kết nối khi xóa: ' + e.message);
       }
     };
 

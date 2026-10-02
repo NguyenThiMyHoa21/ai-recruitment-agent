@@ -132,13 +132,15 @@ function copyJdContent() {
 // 3. TẢI DANH SÁCH VỊ TRÍ ĐANG TUYỂN DỤNG
 // =========================================================
 const defaultJobsFallback = [
-    { id: 16, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND" },
-    { id: 15, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND" },
-    { id: 14, position: "Senior Backend Engineer Test 2", department: "Engineering", salary: "35 - 50 Triệu VND" },
-    { id: 13, position: "Nhân viên chăm sóc khách hàng", department: "CSKH", salary: "8 - 12 Triệu VND" },
-    { id: 12, position: "Kỹ sư Công nghệ thông tin", department: "IT Software", salary: "15 - 25 Triệu VND" },
-    { id: 11, position: "Nhân viên kinh doanh", department: "Kinh doanh", salary: "10 - 20 Triệu VND" },
-    { id: 10, position: "Frontend Developer", department: "Engineering", salary: "18 - 28 Triệu VND" }
+    { id: 18, position: "Chuyên viên Digital Marketing", department: "Truyền thông", salary: "18 - 25 Triệu VND", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI" },
+    { id: 17, position: "Product Manager", department: "Product", salary: "30 - 45 Triệu VND", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis" },
+    { id: 16, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO" },
+    { id: 15, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Content, Facebook Ads, SEO" },
+    { id: 14, position: "Senior Backend Engineer Test 2", department: "Engineering", salary: "35 - 50 Triệu VND", requirements: "Node.js, Golang, Docker, Microservices" },
+    { id: 13, position: "Nhân viên chăm sóc khách hàng", department: "CSKH", salary: "8 - 12 Triệu VND", requirements: "Kỹ năng giao tiếp, chăm sóc khách hàng, nhiệt tình" },
+    { id: 12, position: "Kỹ sư Công nghệ thông tin", department: "IT Software", salary: "15 - 25 Triệu VND", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật" },
+    { id: 11, position: "Nhân viên kinh doanh", department: "Kinh doanh", salary: "10 - 20 Triệu VND", requirements: "Kỹ năng bán hàng, giao tiếp, tìm kiếm khách hàng" },
+    { id: 8,  position: "Frontend Developer", department: "Engineering", salary: "18 - 28 Triệu VND", requirements: "Thạo ReactJS, HTML, CSS" }
 ];
 
 async function loadActiveJobs() {

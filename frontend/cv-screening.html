@@ -291,16 +291,19 @@
             </div>
           </div>
 
+          <!-- KHUNG TỰ ĐỘNG XẾP LỊCH & GỬI THƯ MỜI (LUỒNG 4 & 5 LIÊN HOÀN) -->
+          <div id="resAutoScheduleBox" class="p-3 rounded-3 mb-3 border d-none">
+          </div>
+
           <!-- NÚT ĐIỀU HƯỚNG LIÊN HOÀN -->
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 border-top">
-            <button
-              type="button"
+            <a
+              href="interview-management.html"
               class="btn btn-success btn-sm fw-semibold shadow-sm px-3 py-2"
               id="btnInterviewNext"
-              onclick="proceedToInterview()"
             >
-              <i class="fa-solid fa-calendar-check me-1"></i> Chuyển sang Luồng 4: Lên lịch phỏng vấn
-            </button>
+              <i class="fa-solid fa-calendar-check me-1"></i> Xem Bảng Lịch Phỏng Vấn (Luồng 4 & 5)
+            </a>
             <a href="recruitment-report.html" class="btn btn-outline-primary btn-sm fw-semibold px-3 py-2">
               <i class="fa-solid fa-chart-pie me-1"></i> Sang Luồng 3: Xem Báo Cáo
             </a>
@@ -329,13 +332,15 @@
     // =========================================================
 
     const fallbackJobs = [
-      { id: 16, position: "Chuyên viên Marketing" },
-      { id: 15, position: "Chuyên viên Marketing" },
-      { id: 14, position: "Senior Backend Engineer Test 2" },
-      { id: 13, position: "Nhân viên chăm sóc khách hàng" },
-      { id: 12, position: "Kỹ sư Công nghệ thông tin" },
-      { id: 11, position: "Nhân viên kinh doanh" },
-      { id: 10, position: "Frontend Developer", requirements: "Thạo ReactJS, HTML, CSS" },
+      { id: 18, position: "Chuyên viên Digital Marketing", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI" },
+      { id: 17, position: "Product Manager", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis" },
+      { id: 16, position: "Chuyên viên Marketing", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO" },
+      { id: 15, position: "Chuyên viên Marketing", requirements: "Content, Facebook Ads, SEO" },
+      { id: 14, position: "Senior Backend Engineer Test 2", requirements: "Node.js, Golang, Docker, Microservices" },
+      { id: 13, position: "Nhân viên chăm sóc khách hàng", requirements: "Kỹ năng giao tiếp, chăm sóc khách hàng, nhiệt tình" },
+      { id: 12, position: "Kỹ sư Công nghệ thông tin", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật" },
+      { id: 11, position: "Nhân viên kinh doanh", requirements: "Kỹ năng bán hàng, giao tiếp, tìm kiếm khách hàng" },
+      { id: 8,  position: "Frontend Developer", requirements: "Thạo ReactJS, HTML, CSS" },
       { id: 1,  position: "Lập trình viên Phần mềm", requirements: "Java, MySQL, Git, OOP" }
     ];
 
@@ -701,6 +706,80 @@
 
               // AI Evaluation
               document.getElementById("resEvaluation").innerText = data.evaluation || "Hồ sơ đã được hệ thống phân tích và xếp loại tự động.";
+
+              // TỰ ĐỘNG XẾP LỊCH & GỬI THƯ MỜI PHỎNG VẤN (LUỒNG 4 & 5 LIÊN HOÀN)
+              const autoBox = document.getElementById("resAutoScheduleBox");
+              if (isApproved) {
+                if (autoBox) {
+                  autoBox.classList.remove("d-none");
+                  autoBox.className = "p-3 rounded-3 mb-3 border bg-info-subtle border-info";
+                  autoBox.innerHTML = `
+                    <div class="d-flex align-items-center">
+                      <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                      <span class="fw-semibold text-primary">⚡ Hồ sơ ĐẠT chuẩn! Hệ thống đang tự động điều phối Luồng 4 (Xếp lịch AI) & Luồng 5 (Gửi thư mời qua Gmail)...</span>
+                    </div>
+                  `;
+
+                  fetch("http://localhost:3000/api/auto-schedule-pass", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      candidate_name: data.candidate || payload.candidate_name,
+                      candidate_email: payload.candidate_email,
+                      job_id: payload.job_id
+                    })
+                  })
+                  .then(res => res.json())
+                  .then(sched => {
+                    if (sched.success) {
+                      autoBox.className = "p-3 rounded-3 mb-3 border bg-success-subtle border-success shadow-sm";
+                      autoBox.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                          <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-2 px-2 py-1"><i class="fa-solid fa-bolt me-1"></i> TỰ ĐỘNG LIÊN HOÀN</span>
+                            <strong class="text-success"><i class="fa-solid fa-circle-check me-1"></i> ĐÃ TỰ ĐỘNG XẾP LỊCH & GỬI THƯ MỜI PHỎNG VẤN</strong>
+                          </div>
+                          <span class="badge bg-white text-success border border-success-subtle px-2 py-1 small">
+                            <i class="fa-solid fa-envelope-circle-check me-1"></i> Gmail Sent
+                          </span>
+                        </div>
+                        <div class="row g-2 small text-dark mt-1">
+                          <div class="col-md-6">
+                            <i class="fa-regular fa-calendar-check text-primary me-1"></i> <strong>Thời gian phỏng vấn:</strong> <span class="fw-bold">${sched.interview_time || '2026-10-04 09:30:00'}</span>
+                          </div>
+                          <div class="col-md-6">
+                            <i class="fa-solid fa-user-tie text-primary me-1"></i> <strong>Người phỏng vấn:</strong> <span class="fw-bold">${sched.interviewer || 'Nguyễn HR'}</span>
+                          </div>
+                          <div class="col-md-12 mt-2 d-flex align-items-center flex-wrap gap-2">
+                            <div>
+                              <i class="fa-solid fa-video text-success me-1"></i> <strong>Link Google Meet:</strong>
+                              <a href="${sched.meeting_link || 'https://meet.google.com/dfj-amei-jzt'}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold ms-1">
+                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Vào phòng họp Google Meet
+                              </a>
+                            </div>
+                          </div>
+                          <div class="col-12 mt-2 pt-2 border-top border-success-subtle text-muted">
+                            <i class="fa-solid fa-envelope text-primary me-1"></i> Thư mời phỏng vấn và nhắc lịch kèm link họp đã được <strong>Luồng 5 tự động gửi qua Gmail</strong> tới ứng viên: <code>${payload.candidate_email}</code>.
+                          </div>
+                        </div>
+                      `;
+                    } else {
+                      autoBox.className = "p-3 rounded-3 mb-3 border bg-warning-subtle border-warning";
+                      autoBox.innerHTML = `<i class="fa-solid fa-circle-info me-1 text-warning"></i> ${sched.message || 'Chưa thể tự động xếp lịch'}`;
+                    }
+                  })
+                  .catch(err => {
+                    autoBox.className = "p-3 rounded-3 mb-3 border bg-warning-subtle border-warning";
+                    autoBox.innerHTML = `<i class="fa-solid fa-circle-info me-1 text-warning"></i> Lỗi tự động xếp lịch: ${err.message}`;
+                  });
+                }
+              } else {
+                if (autoBox) {
+                  autoBox.classList.remove("d-none");
+                  autoBox.className = "p-3 rounded-3 mb-3 border bg-light text-muted small";
+                  autoBox.innerHTML = `<i class="fa-solid fa-ban me-1 text-secondary"></i> <strong>Thông báo:</strong> Hồ sơ chưa đạt điểm chuẩn đầu vào (Điểm < 70). Hệ thống không kích hoạt quy trình xếp lịch phỏng vấn.`;
+                }
+              }
 
               // Next step button
               const btnNext = document.getElementById("btnInterviewNext");
