@@ -16,3 +16,4 @@ backend/node_modules/
 
 # Temporary workflow exports
 My workflow*.json
+backend.log

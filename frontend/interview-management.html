@@ -422,6 +422,9 @@
         } catch (err) {
           alert('Lỗi kết nối máy chủ!');
         }
+      }
+    });
+
     // Xử lý gửi thư mời phỏng vấn & nhắc lịch (Luồng 5 - Lê Thị Yến Nhi)
     window.sendInterviewInvite = async function(candidateId) {
       if (!confirm(`Bạn có muốn kích hoạt Luồng 5 (Lê Thị Yến Nhi) gửi thư mời phỏng vấn & đặt nhắc lịch tự động qua AI n8n cho ứng viên #${candidateId}?`)) return;
