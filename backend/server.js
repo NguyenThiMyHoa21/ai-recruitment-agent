@@ -221,6 +221,43 @@ app.post("/api/candidates/update-status", async (req, res) => {
     }
 });
 
+// API Luồng 5: Kích hoạt gửi thư mời & nhắc lịch qua n8n (Lê Thị Yến Nhi)
+app.post("/api/candidates/:id/send-invite", async (req, res) => {
+    try {
+        const candidateId = req.params.id;
+        const [rows] = await db.query(
+            "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+            [candidateId]
+        );
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hồ sơ ứng viên" });
+        }
+
+        const candidate = rows[0];
+        const n8nWebhookUrl = "http://localhost:5678/webhook/send-interview-invite";
+
+        const response = await fetch(n8nWebhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                candidate_id: Number(candidate.id),
+                candidate_name: candidate.full_name || candidate.name,
+                candidate_email: candidate.email,
+                position: candidate.job_title || candidate.position,
+                interview_time: candidate.interview_time || "09:30 03/10/2026",
+                interviewer: candidate.interviewer_name || "Nguyễn HR Manager",
+                meet_link: candidate.meeting_link || "https://meet.google.com/dfj-amei-jzt"
+            })
+        });
+
+        const data = await response.json();
+        return res.json({ success: true, message: "Đã gửi thư mời phỏng vấn thành công qua Luồng 5!", data });
+    } catch (err) {
+        console.error("Lỗi khi kích hoạt Luồng 5:", err);
+        return res.status(500).json({ success: false, message: "Lỗi kết nối n8n Luồng 5", error: err.message });
+    }
+});
+
 // API xóa hồ sơ ứng viên
 app.delete("/api/candidates/:id", async (req, res) => {
     try {

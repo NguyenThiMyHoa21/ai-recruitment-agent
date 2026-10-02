@@ -57,27 +57,27 @@
           "string": [
             {
               "name": "candidate_name",
-              "value": "={{ $json.name \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.candidate_name }}"
+              "value": "={{ $json.name || $(\"1. Webhook Trigger\").first().json.body.candidate_name }}"
             },
             {
               "name": "candidate_email",
-              "value": "={{ $json.email \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.candidate_email }}"
+              "value": "={{ $json.email || $(\"1. Webhook Trigger\").first().json.body.candidate_email }}"
             },
             {
               "name": "position",
-              "value": "={{ $json.position \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.position }}"
+              "value": "={{ $json.position || $(\"1. Webhook Trigger\").first().json.body.position }}"
             },
             {
               "name": "interview_time",
-              "value": "={{ $json.interview_time \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.interview_time || \"09:30 02/10/2026\" }}"
+              "value": "={{ $json.interview_time || $(\"1. Webhook Trigger\").first().json.body.interview_time || \"09:30 02/10/2026\" }}"
             },
             {
               "name": "interviewer",
-              "value": "={{ $json.interviewer \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.interviewer || \"Trần Văn Tech\" }}"
+              "value": "={{ $json.interviewer || $(\"1. Webhook Trigger\").first().json.body.interviewer || \"Trần Văn Tech\" }}"
             },
             {
               "name": "meet_link",
-              "value": "={{ $json.meet_link \u000bert{}\u000bert{}$(\"1. Webhook Trigger\").first().json.body.meet_link || \"https://meet.google.com/abc-defg-hij\" }}"
+              "value": "={{ $json.meet_link || $(\"1. Webhook Trigger\").first().json.body.meet_link || \"https://meet.google.com/abc-defg-hij\" }}"
             }
           ]
         },
@@ -230,7 +230,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Hoàn tất quy trình 15 bước: gửi thư mời, đồng bộ calendar và đặt lịch nhắc nhở!\",\n  \"candidate\": $(\"4. Normalize Candidate Data\").first().json.candidate_name,\n  \"email\": $(\"4. Normalize Candidate Data\").first().json.candidate_email,\n  \"interview_time\": $(\"4. Normalize Candidate Data\").first().json.interview_time,\n  \"executed_at\": new Date().toISOString()\n}",
+        "responseBody": "={{ JSON.stringify({\n  status: \"success\",\n  message: \"Hoàn tất quy trình 15 bước: gửi thư mời, đồng bộ calendar và đặt lịch nhắc nhở!\",\n  candidate: $(\"4. Normalize Candidate Data\").first().json.candidate_name,\n  email: $(\"4. Normalize Candidate Data\").first().json.candidate_email,\n  interview_time: $(\"4. Normalize Candidate Data\").first().json.interview_time,\n  executed_at: new Date().toISOString()\n}) }}",
         "options": {}
       },
       "id": "step-14-respond-success",

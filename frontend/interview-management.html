@@ -311,10 +311,13 @@
             <div class="small">
               <div class="fw-bold text-dark"><i class="fa-regular fa-clock text-primary me-1"></i>${formatTime(c.interview_time)}</div>
               <div class="text-muted"><i class="fa-solid fa-user-tie text-secondary me-1"></i>${c.interviewer_name || 'HR Manager'}</div>
-              <div class="d-flex align-items-center gap-1 mt-1">
+              <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
                 <a href="${c.meeting_link}" target="_blank" class="btn btn-sm btn-outline-success meet-btn py-0 px-2">
                   <i class="fa-solid fa-video me-1"></i> Google Meet
                 </a>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="sendInterviewInvite(${c.id})" title="Gửi thư mời & nhắc lịch (Luồng 5 - Lê Thị Yến Nhi)">
+                  <i class="fa-solid fa-envelope me-1"></i> Thư mời
+                </button>
                 <button class="btn btn-sm btn-light border btn-schedule py-0 px-2 text-muted" title="Xếp lại lịch phỏng vấn" data-id="${c.id}">
                   <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
@@ -419,8 +422,24 @@
         } catch (err) {
           alert('Lỗi kết nối máy chủ!');
         }
+    // Xử lý gửi thư mời phỏng vấn & nhắc lịch (Luồng 5 - Lê Thị Yến Nhi)
+    window.sendInterviewInvite = async function(candidateId) {
+      if (!confirm(`Bạn có muốn kích hoạt Luồng 5 (Lê Thị Yến Nhi) gửi thư mời phỏng vấn & đặt nhắc lịch tự động qua AI n8n cho ứng viên #${candidateId}?`)) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates/${candidateId}/send-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await res.json();
+        if (result.success || res.ok) {
+          showToast(`Đã kích hoạt Luồng 5 gửi thư mời và đặt nhắc lịch thành công cho ứng viên #${candidateId}!`);
+        } else {
+          showToast('Thông báo Luồng 5: ' + (result.message || result.error || 'Đã gửi yêu cầu'));
+        }
+      } catch (err) {
+        showToast('Lỗi gọi Luồng 5: ' + err.message);
       }
-    });
+    };
 
     document.addEventListener('DOMContentLoaded', fetchCandidates);
   </script>

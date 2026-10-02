@@ -164,7 +164,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/interview-notification",
+        "url": "http://localhost:5678/webhook/send-interview-invite",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($(\"Step 8: Parse AI Result & Fallback\").first().json) }}",
