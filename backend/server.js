@@ -153,6 +153,32 @@ app.post("/api/schedule-interview", async (req, res) => {
             console.warn("Lỗi sync DB:", dbErr.message);
         }
 
+        // TỰ ĐỘNG GỬI THƯ MỜI PHỎNG VẤN QUA LUỒNG 5 (Không cần bấm nút thủ công)
+        try {
+            const [cRows] = await db.query(
+                "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+                [Number(candidate_id)]
+            );
+            if (cRows && cRows.length > 0) {
+                const cand = cRows[0];
+                fetch("http://localhost:5678/webhook/send-interview-invite", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        candidate_id: Number(cand.id),
+                        candidate_name: cand.full_name || cand.name,
+                        candidate_email: cand.email,
+                        position: cand.job_title || cand.position,
+                        interview_time: cand.interview_time || (result.data && result.data.interview_time) || "09:30 04/10/2026",
+                        interviewer: cand.interviewer_name || (result.data && result.data.interviewer) || "Nguyễn HR",
+                        meet_link: cand.meeting_link || (result.data && result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt"
+                    })
+                }).catch(err => console.warn("Lỗi auto-dispatch Luồng 5:", err.message));
+            }
+        } catch (autoInviteErr) {
+            console.warn("Lỗi chuẩn bị dữ liệu gửi thư mời:", autoInviteErr.message);
+        }
+
         res.json(result);
     } catch (error) {
         console.error("Lỗi gọi Luồng 4 n8n:", error.message);
@@ -212,6 +238,22 @@ app.post("/api/candidates/update-status", async (req, res) => {
             );
         } catch (dbErr) {
             console.warn("Lỗi sync DB:", dbErr.message);
+        }
+
+        // Nếu chuyển sang Phỏng vấn và chưa có lịch -> Tự động xếp lịch & gửi thư mời luôn
+        if (new_status === 'Phỏng vấn' || new_status === 'INTERVIEW_SCHEDULED') {
+            try {
+                const [checkRows] = await db.query("SELECT interview_time FROM candidates WHERE id = ?", [Number(targetId)]);
+                if (checkRows && checkRows.length > 0 && !checkRows[0].interview_time) {
+                    fetch("http://localhost:3000/api/schedule-interview", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ candidate_id: Number(targetId), requested_by: "Auto_Status_Change" })
+                    }).catch(e => console.warn("Lỗi auto schedule:", e.message));
+                }
+            } catch (errCheck) {
+                console.warn("Lỗi check lịch auto:", errCheck.message);
+            }
         }
 
         res.json(result);

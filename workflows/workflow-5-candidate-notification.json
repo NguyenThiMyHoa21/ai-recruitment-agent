@@ -237,7 +237,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=UPDATE candidates SET notification_status = 'Sent' WHERE email = '{{ $json.candidate_email }}';"
+        "query": "=UPDATE candidates SET notification_status = 'Sent' WHERE email = '{{ $(\"4. Normalize Candidate Data\").first().json.candidate_email }}';"
       },
       "id": "step-13-update-db",
       "name": "13. Update Notification Status DB",

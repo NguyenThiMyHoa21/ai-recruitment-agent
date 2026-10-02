@@ -315,9 +315,9 @@
                 <a href="${c.meeting_link}" target="_blank" class="btn btn-sm btn-outline-success meet-btn py-0 px-2">
                   <i class="fa-solid fa-video me-1"></i> Google Meet
                 </a>
-                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="sendInterviewInvite(${c.id})" title="Gửi thư mời & nhắc lịch (Luồng 5 - Lê Thị Yến Nhi)">
-                  <i class="fa-solid fa-envelope me-1"></i> Thư mời
-                </button>
+                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 d-inline-flex align-items-center gap-1" title="Thư mời phỏng vấn & lịch nhắc nhở đã được AI tự động gửi qua Luồng 5">
+                  <i class="fa-solid fa-envelope-circle-check"></i> Đã gửi thư mời
+                </span>
                 <button class="btn btn-sm btn-light border btn-schedule py-0 px-2 text-muted" title="Xếp lại lịch phỏng vấn" data-id="${c.id}">
                   <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
@@ -378,7 +378,7 @@
           });
           const result = await res.json();
           if (result.success) {
-            showToast(`Đã xếp lịch phỏng vấn thành công cho ứng viên #${candidateId} qua AI!`);
+            showToast(`Đã xếp lịch và AI đã tự động gửi thư mời phỏng vấn cho ứng viên #${candidateId}!`);
           } else {
             showToast(`Lỗi: ${result.message || 'Không thể xếp lịch'}`);
           }
@@ -414,7 +414,11 @@
           });
           const result = await res.json();
           if (result.success || res.ok) {
-            showToast(`Đã cập nhật trạng thái ứng viên #${candidateId} sang "${newStatus}" và AI đã sinh nhận xét mới!`);
+            if (newStatus === 'Phỏng vấn') {
+              showToast(`Đã chuyển sang "Phỏng vấn", AI đang tự động xếp lịch & gửi thư mời cho #${candidateId}!`);
+            } else {
+              showToast(`Đã cập nhật trạng thái ứng viên #${candidateId} sang "${newStatus}" và AI đã sinh nhận xét mới!`);
+            }
             fetchCandidates();
           } else {
             alert('Lỗi cập nhật: ' + (result.message || 'Không xác định'));
@@ -425,9 +429,8 @@
       }
     });
 
-    // Xử lý gửi thư mời phỏng vấn & nhắc lịch (Luồng 5 - Lê Thị Yến Nhi)
+    // Xử lý gửi thư mời phỏng vấn & nhắc lịch (Luồng 5 - Lê Thị Yến Nhi) - Tự động không popup
     window.sendInterviewInvite = async function(candidateId) {
-      if (!confirm(`Bạn có muốn kích hoạt Luồng 5 (Lê Thị Yến Nhi) gửi thư mời phỏng vấn & đặt nhắc lịch tự động qua AI n8n cho ứng viên #${candidateId}?`)) return;
       try {
         const res = await fetch(`${API_BASE}/api/candidates/${candidateId}/send-invite`, {
           method: 'POST',
@@ -435,7 +438,7 @@
         });
         const result = await res.json();
         if (result.success || res.ok) {
-          showToast(`Đã kích hoạt Luồng 5 gửi thư mời và đặt nhắc lịch thành công cho ứng viên #${candidateId}!`);
+          showToast(`Đã tự động gửi thư mời và đặt nhắc lịch thành công cho ứng viên #${candidateId}!`);
         } else {
           showToast('Thông báo Luồng 5: ' + (result.message || result.error || 'Đã gửi yêu cầu'));
         }
