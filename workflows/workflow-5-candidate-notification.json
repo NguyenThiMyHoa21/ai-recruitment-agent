@@ -49,7 +49,13 @@
       "position": [
         580,
         200
-      ]
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
     },
     {
       "parameters": {
@@ -132,7 +138,14 @@
       "position": [
         1380,
         200
-      ]
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qz5j6p9UxXAmNUJx",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -154,7 +167,8 @@
       "position": [
         1580,
         200
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -211,12 +225,19 @@
       "position": [
         2380,
         200
-      ]
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qz5j6p9UxXAmNUJx",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=UPDATE candidates SET notification_status = 'Sent', updated_at = NOW() WHERE email = '{{ $json.candidate_email }}';"
+        "query": "=UPDATE candidates SET notification_status = 'Sent' WHERE email = '{{ $json.candidate_email }}';"
       },
       "id": "step-13-update-db",
       "name": "13. Update Notification Status DB",
@@ -225,7 +246,13 @@
       "position": [
         2580,
         200
-      ]
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
     },
     {
       "parameters": {
