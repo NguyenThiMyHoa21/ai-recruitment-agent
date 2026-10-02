@@ -774,10 +774,59 @@
                   });
                 }
               } else {
+                // TỰ ĐỘNG GỬI EMAIL THÔNG BÁO TỪ CHỐI / THƯ CẢM ƠN (LUỒNG 5)
                 if (autoBox) {
                   autoBox.classList.remove("d-none");
-                  autoBox.className = "p-3 rounded-3 mb-3 border bg-light text-muted small";
-                  autoBox.innerHTML = `<i class="fa-solid fa-ban me-1 text-secondary"></i> <strong>Thông báo:</strong> Hồ sơ chưa đạt điểm chuẩn đầu vào (Điểm < 70). Hệ thống không kích hoạt quy trình xếp lịch phỏng vấn.`;
+                  autoBox.className = "p-3 rounded-3 mb-3 border bg-warning-subtle border-warning";
+                  autoBox.innerHTML = `
+                    <div class="d-flex align-items-center">
+                      <div class="spinner-border spinner-border-sm text-danger me-2"></div>
+                      <span class="fw-semibold text-danger">⏳ Hồ sơ chưa đạt tiêu chuẩn! Hệ thống đang tự động gửi thư cảm ơn & thông báo kết quả (Luồng 5)...</span>
+                    </div>
+                  `;
+
+                  fetch("http://localhost:3000/api/auto-notify-reject", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      candidate_name: data.candidate || payload.candidate_name,
+                      candidate_email: payload.candidate_email,
+                      position: data.position || ('Vị trí #' + payload.job_id),
+                      evaluation: data.evaluation,
+                      job_id: payload.job_id
+                    })
+                  })
+                  .then(res => res.json())
+                  .then(rej => {
+                    autoBox.className = "p-3 rounded-3 mb-3 border bg-danger-subtle border-danger shadow-sm";
+                    autoBox.innerHTML = `
+                      <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                        <div class="d-flex align-items-center">
+                          <span class="badge bg-danger me-2 px-2 py-1"><i class="fa-solid fa-envelope me-1"></i> TỰ ĐỘNG GỬI MAIL</span>
+                          <strong class="text-danger"><i class="fa-solid fa-circle-xmark me-1"></i> ĐÃ TỰ ĐỘNG GỬI THƯ CẢM ƠN & THÔNG BÁO KẾT QUẢ</strong>
+                        </div>
+                        <span class="badge bg-white text-danger border border-danger-subtle px-2 py-1 small">
+                          <i class="fa-solid fa-envelope-circle-check me-1"></i> Gmail Sent
+                        </span>
+                      </div>
+                      <div class="small text-dark mt-1">
+                        <div class="text-secondary mb-1">
+                          <i class="fa-solid fa-circle-info text-danger me-1"></i> <strong>Lý do sơ loại:</strong> Hồ sơ đạt <b>${score}/100</b> điểm (dưới ngưỡng 70 điểm để vào phỏng vấn).
+                        </div>
+                        <div class="text-muted border-top border-danger-subtle pt-2 mt-2">
+                          <i class="fa-solid fa-paper-plane text-danger me-1"></i> Hệ thống đã <strong>Luồng 5 tự động gửi thư cảm ơn & thông báo kết quả chưa phù hợp</strong> (kèm lý do nhận xét chi tiết) qua Gmail đến: <code>${payload.candidate_email}</code>.
+                        </div>
+                      </div>
+                    `;
+                  })
+                  .catch(err => {
+                    autoBox.className = "p-3 rounded-3 mb-3 border bg-danger-subtle border-danger";
+                    autoBox.innerHTML = `
+                      <div class="text-danger small">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Hồ sơ không đạt yêu cầu (${score}/100). Đã ghi nhận kết quả Loại vào cơ sở dữ liệu.
+                      </div>
+                    `;
+                  });
                 }
               }
 

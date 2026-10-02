@@ -304,8 +304,18 @@
 
         let scheduleCol = '';
         if (isRejected) {
-          // Ứng viên bị Loại -> Không xếp lịch phỏng vấn
-          scheduleCol = '<span class="text-muted small"><i class="fa-solid fa-ban me-1 text-secondary"></i>Không khả dụng</span>';
+          // Ứng viên bị Loại -> Đã gửi thư cảm ơn & thông báo kết quả qua Gmail
+          scheduleCol = `
+            <div class="small">
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2 d-inline-flex align-items-center gap-1" title="Hệ thống đã tự động gửi email thông báo kết quả sơ loại & thư cảm ơn">
+                <i class="fa-solid fa-envelope-circle-check"></i> Đã gửi thư từ chối
+              </span>
+              <div class="mt-1">
+                <button class="btn btn-sm btn-light border py-0 px-2 text-danger" title="Gửi lại thư thông báo không đạt" onclick="sendRejectEmail(${c.id})">
+                  <i class="fa-solid fa-paper-plane me-1"></i> Gửi lại
+                </button>
+              </div>
+            </div>`;
         } else if (c.interview_time) {
           // Đã có lịch phỏng vấn -> Hiện ngày giờ, người PV, link Google Meet
           scheduleCol = `
@@ -467,6 +477,25 @@
         }
       } catch (e) {
         alert('Lỗi kết nối khi xóa: ' + e.message);
+      }
+    };
+
+    // Hàm gửi lại thư từ chối / cảm ơn (Luồng 5)
+    window.sendRejectEmail = async function(candidateId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/auto-notify-reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidate_id: Number(candidateId) })
+        });
+        const result = await res.json();
+        if (result.success || res.ok) {
+          showToast(`Đã gửi lại thư cảm ơn & thông báo kết quả cho ứng viên #${candidateId}!`);
+        } else {
+          showToast('Thông báo: ' + (result.message || 'Lỗi gửi mail'));
+        }
+      } catch (err) {
+        showToast('Lỗi gửi mail: ' + err.message);
       }
     };
 

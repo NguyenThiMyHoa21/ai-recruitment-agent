@@ -294,6 +294,100 @@ app.post("/api/auto-schedule-pass", async (req, res) => {
     }
 });
 
+// API Tự động gửi email thông báo kết quả (thư từ chối lịch sự & góp ý chuyên môn) cho ứng viên KHÔNG ĐẠT / BỊ LOẠI (Luồng 5)
+app.post("/api/auto-notify-reject", async (req, res) => {
+    const { candidate_id, candidate_name, candidate_email, position, evaluation, job_id } = req.body;
+    try {
+        let candName = candidate_name;
+        let candEmail = candidate_email;
+        let candPos = position;
+        let candEval = evaluation;
+        let targetId = candidate_id;
+
+        // Nếu thiếu thông tin, tìm ứng viên vừa lưu gần nhất theo email hoặc tên từ MySQL
+        if (!candEmail || !candName || !targetId) {
+            let query = "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE 1=1";
+            let params = [];
+            if (candEmail) {
+                query += " AND c.email = ?";
+                params.push(candEmail);
+            } else if (candName) {
+                query += " AND (c.full_name = ? OR c.name = ?)";
+                params.push(candName, candName);
+            } else if (targetId) {
+                query += " AND c.id = ?";
+                params.push(targetId);
+            }
+            query += " ORDER BY c.id DESC LIMIT 1";
+
+            const [rows] = await db.query(query, params);
+            if (rows && rows.length > 0) {
+                const c = rows[0];
+                targetId = c.id;
+                candName = candName || c.full_name || c.name;
+                candEmail = candEmail || c.email;
+                candPos = candPos || c.job_title;
+                candEval = candEval || c.ai_evaluation;
+            }
+        }
+
+        // Cập nhật trạng thái thông báo trong MySQL
+        try {
+            if (targetId) {
+                await db.query(
+                    "UPDATE candidates SET notification_status = 'Sent_Rejection' WHERE id = ?",
+                    [Number(targetId)]
+                );
+            } else if (candEmail) {
+                await db.query(
+                    "UPDATE candidates SET notification_status = 'Sent_Rejection' WHERE email = ?",
+                    [candEmail]
+                );
+            }
+        } catch (dbErr) {
+            console.warn("Lỗi sync DB reject status:", dbErr.message);
+        }
+
+        // Gọi Luồng 5 n8n để gửi email thông báo từ chối qua Gmail
+        const n8nWebhookUrl = "http://localhost:5678/webhook/send-interview-invite";
+        try {
+            fetch(n8nWebhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    candidate_id: Number(targetId) || 0,
+                    candidate_name: candName || "Ứng viên",
+                    candidate_email: candEmail,
+                    position: candPos || "Vị trí tuyển dụng",
+                    notification_type: "rejection",
+                    type: "rejection",
+                    status: "REJECTED",
+                    evaluation: candEval || "Hồ sơ chưa phù hợp với tiêu chí chuyên môn của vị trí."
+                })
+            }).catch(e => console.warn("Lỗi fetch Luồng 5 rejection:", e.message));
+        } catch (n8nErr) {
+            console.warn("Lỗi gọi n8n Luồng 5 rejection:", n8nErr.message);
+        }
+
+        return res.json({
+            success: true,
+            email_sent: true,
+            notification_type: "rejection",
+            candidate_name: candName,
+            candidate_email: candEmail,
+            message: `Đã tự động gửi thư cảm ơn & thông báo kết quả sơ loại đến email ${candEmail}`
+        });
+
+    } catch (error) {
+        console.error("Lỗi auto-notify-reject:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi khi gửi email thông báo từ chối",
+            error: error.message
+        });
+    }
+});
+
 // Route API cập nhật trạng thái ứng viên qua Luồng 6 n8n
 app.post("/api/candidates/update-status", async (req, res) => {
     const { id, candidate_id, full_name, applied_position, new_status } = req.body;
@@ -362,6 +456,20 @@ app.post("/api/candidates/update-status", async (req, res) => {
             } catch (errCheck) {
                 console.warn("Lỗi check lịch auto:", errCheck.message);
             }
+        }
+
+        // Nếu chuyển sang Loại -> Tự động gửi email thông báo từ chối lịch sự
+        if (new_status === 'Loại' || new_status === 'Không đạt' || new_status === 'REJECTED') {
+            fetch("http://localhost:3000/api/auto-notify-reject", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    candidate_id: Number(targetId),
+                    candidate_name: candName,
+                    position: candPos,
+                    evaluation: "Hồ sơ chưa phù hợp với tiêu chí tuyển dụng theo đánh giá của Hội đồng."
+                })
+            }).catch(e => console.warn("Lỗi auto reject email:", e.message));
         }
 
         res.json(result);

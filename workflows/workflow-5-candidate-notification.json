@@ -15,7 +15,8 @@
       "position": [
         180,
         300
-      ]
+      ],
+      "webhookId": "send-interview-invite"
     },
     {
       "parameters": {
@@ -84,6 +85,14 @@
             {
               "name": "meet_link",
               "value": "={{ $json.meet_link || $(\"1. Webhook Trigger\").first().json.body.meet_link || \"https://meet.google.com/abc-defg-hij\" }}"
+            },
+            {
+              "name": "notification_type",
+              "value": "={{ $(\"1. Webhook Trigger\").first().json.body.notification_type || $(\"1. Webhook Trigger\").first().json.body.type || ($json.approval_status === 'REJECTED' || $json.status === 'Loại' ? 'rejection' : 'invite') }}"
+            },
+            {
+              "name": "evaluation",
+              "value": "={{ $(\"1. Webhook Trigger\").first().json.body.evaluation || $json.ai_evaluation || '' }}"
             }
           ]
         },
@@ -113,7 +122,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst subject = `[VKU Recruitment] Thư mời phỏng vấn vị trí ${d.position} - ${d.candidate_name}`;\nconst html_content = `<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\"><h2 style=\"color: #2563eb;\">THƯ MỜI PHỎNG VẤN ỨNG VIÊN</h2><p>Chào <b>${d.candidate_name}</b>,</p><p>Hội đồng tuyển dụng chúc mừng bạn đã vượt qua vòng sơ loại hồ sơ cho vị trí <b>${d.position}</b>.</p><div style=\"background: #f1f5f9; padding: 15px; border-radius: 8px;\"><p><b>Thời gian:</b> ${d.interview_time}</p><p><b>Người phỏng vấn:</b> ${d.interviewer}</p><p><b>Phòng họp trực tuyến:</b> <a href=\"${d.meet_link}\" style=\"color: #2563eb; font-weight: bold;\">${d.meet_link}</a></p></div><p>Vui lòng chuẩn bị đường truyền internet ổn định và tham gia trước 5 phút.</p><p>Trân trọng,<br><b>Phòng Nhân sự Tuyển dụng</b></p></div>`;\nreturn [{ json: { ...d, subject, html_content } }];"
+        "jsCode": "let trig = {};\ntry { trig = $('1. Webhook Trigger').first().json.body || {}; } catch(e) {}\nconst d = $input.first().json;\n\nconst isRejection = Boolean(trig.notification_type === 'rejection' || trig.type === 'rejection' || trig.status === 'REJECTED' || trig.status === 'Loại' || d.notification_type === 'rejection' || d.approval_status === 'REJECTED' || d.status === 'Loại' || d.status === 'Không đạt');\n\nconst candName = trig.candidate_name || d.candidate_name || d.name || 'Ứng viên';\nconst candPos = trig.position || d.position || d.applied_position || 'Vị trí ứng tuyển';\nconst evalReason = trig.evaluation || d.evaluation || d.ai_evaluation || 'Hồ sơ chưa đáp ứng đủ tiêu chuẩn chuyên môn cốt lõi hoặc kinh nghiệm theo yêu cầu.';\n\nlet subject = '';\nlet html_content = '';\n\nif (isRejection) {\n  subject = `[VKU Recruitment] Thông báo kết quả sơ tuyển vị trí ${candPos} - ${candName}`;\n  html_content = `<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px;\"><div style=\"border-bottom: 2px solid #dc3545; padding-bottom: 15px; margin-bottom: 20px;\"><h3 style=\"color: #dc3545; margin: 0;\">THÔNG BÁO KẾT QUẢ SƠ TUYỂN HỒ SƠ</h3><span style=\"color: #64748b; font-size: 13px;\">Hệ thống Tuyển dụng Thông minh AI Recruitment System</span></div><p>Kính gửi bạn <b>${candName}</b>,</p><p>Lời đầu tiên, Hội đồng tuyển dụng xin trân trọng cảm ơn bạn đã quan tâm và nộp hồ sơ ứng tuyển vị trí <b>${candPos}</b>.</p><p>Sau khi hệ thống AI và Hội đồng tuyển dụng rà soát kỹ lưỡng các tiêu chí chuyên môn, chúng tôi rất tiếc phải thông báo rằng hiện tại hồ sơ của bạn <b>chưa phù hợp với yêu cầu trọng yếu</b> của vị trí này ở thời điểm hiện tại.</p><div style=\"background-color: #f8fafc; border-left: 4px solid #dc3545; padding: 12px 15px; margin: 15px 0; border-radius: 4px;\"><p style=\"margin: 0; color: #475569; font-size: 13px;\"><b>Nhận định đánh giá sơ loại:</b></p><p style=\"margin: 5px 0 0 0; color: #334155; font-style: italic; font-size: 14px;\">${evalReason}</p></div><p>Thông tin của bạn đã được lưu giữ trong hệ sinh thái dữ liệu nhân tài của chúng tôi để ưu tiên liên hệ cho các cơ hội nghề nghiệp phù hợp hơn trong tương lai.</p><p>Chúc bạn luôn nhiều sức khỏe và gặt hái nhiều thành công trên con đường sự nghiệp!</p><hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;\"><p style=\"font-size: 13px; color: #64748b; margin: 0;\">Trân trọng,<br><b style=\"color: #1e293b;\">Ban Tuyển Dụng & Phát Triển Nhân Tài</b><br>AI Recruitment Multi-Agent System</p></div>`;\n} else {\n  subject = `[VKU Recruitment] Thư mời phỏng vấn vị trí ${candPos} - ${candName}`;\n  html_content = `<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\"><h2 style=\"color: #2563eb;\">THƯ MỜI PHỎNG VẤN ỨNG VIÊN</h2><p>Chào <b>${candName}</b>,</p><p>Hội đồng tuyển dụng chúc mừng bạn đã vượt qua vòng sơ loại hồ sơ cho vị trí <b>${candPos}</b>.</p><div style=\"background: #f1f5f9; padding: 15px; border-radius: 8px;\"><p><b>Thời gian:</b> ${d.interview_time}</p><p><b>Người phỏng vấn:</b> ${d.interviewer}</p><p><b>Phòng họp trực tuyến:</b> <a href=\"${d.meet_link}\" style=\"color: #2563eb; font-weight: bold;\">${d.meet_link}</a></p></div><p>Vui lòng chuẩn bị đường truyền internet ổn định và tham gia trước 5 phút.</p><p>Trân trọng,<br><b>Phòng Nhân sự Tuyển dụng</b></p></div>`;\n}\n\nreturn [{ json: { ...d, candidate_name: candName, position: candPos, is_rejection: isRejection, subject: subject, html_content: html_content } }];"
       },
       "id": "step-6-parse-invite",
       "name": "6. Parse Invite Content",
@@ -237,7 +246,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=UPDATE candidates SET notification_status = 'Sent' WHERE email = '{{ $(\"4. Normalize Candidate Data\").first().json.candidate_email }}';"
+        "query": "=UPDATE candidates SET notification_status = '{{ $(\"6. Parse Invite Content\").first().json.is_rejection ? \"Sent_Rejection\" : \"Sent\" }}' WHERE email = '{{ $(\"4. Normalize Candidate Data\").first().json.candidate_email }}';"
       },
       "id": "step-13-update-db",
       "name": "13. Update Notification Status DB",
@@ -257,7 +266,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({\n  status: \"success\",\n  message: \"Hoàn tất quy trình 15 bước: gửi thư mời, đồng bộ calendar và đặt lịch nhắc nhở!\",\n  candidate: $(\"4. Normalize Candidate Data\").first().json.candidate_name,\n  email: $(\"4. Normalize Candidate Data\").first().json.candidate_email,\n  interview_time: $(\"4. Normalize Candidate Data\").first().json.interview_time,\n  executed_at: new Date().toISOString()\n}) }}",
+        "responseBody": "={{ JSON.stringify({\n  status: \"success\",\n  message: $(\"6. Parse Invite Content\").first().json.is_rejection ? \"Đã gửi thư cảm ơn & thông báo kết quả sơ tuyển không đạt qua Gmail thành công\" : \"Hoàn tất quy trình: gửi thư mời, đồng bộ calendar và đặt lịch nhắc nhở!\",\n  notification_type: $(\"6. Parse Invite Content\").first().json.is_rejection ? \"rejection\" : \"invite\",\n  candidate: $(\"4. Normalize Candidate Data\").first().json.candidate_name,\n  email: $(\"4. Normalize Candidate Data\").first().json.candidate_email,\n  interview_time: $(\"4. Normalize Candidate Data\").first().json.interview_time,\n  executed_at: new Date().toISOString()\n}) }}",
         "options": {}
       },
       "id": "step-14-respond-success",
