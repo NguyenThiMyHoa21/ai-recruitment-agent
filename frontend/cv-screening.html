@@ -43,6 +43,27 @@
       padding: 8px 16px;
       border-radius: 20px;
     }
+    .card {
+      border-radius: 14px;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      background: #ffffff;
+    }
+    .navbar-nav .nav-link {
+      font-size: 13.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      border-radius: 50rem;
+      padding: 6px 14px;
+    }
+    .navbar-nav .nav-link:hover:not(.active) {
+      background-color: rgba(255, 255, 255, 0.15);
+      color: #ffffff !important;
+    }
+    .navbar-nav .nav-link.active {
+      padding: 6px 16px;
+    }
   </style>
 </head>
 
@@ -52,30 +73,30 @@
   <!-- THANH ĐIỀU HƯỚNG CHUNG (NAVBAR) -->
   <!-- ========================================================= -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4 py-2">
-    <div class="container" style="max-width: 1050px;">
+    <div class="container" style="max-width: 1240px;">
       <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
         <i class="fa-solid fa-robot me-2 fs-4"></i>
         <span>AI Recruitment System</span>
       </a>
 
-      <div class="navbar-nav d-flex flex-row flex-wrap gap-2 ms-auto">
-        <a class="nav-link px-3 text-white" href="index.html">
+      <div class="navbar-nav d-flex flex-row flex-nowrap align-items-center gap-1 gap-md-2 ms-auto overflow-auto">
+        <a class="nav-link text-white" href="index.html">
           <i class="fa-solid fa-file-circle-plus me-1"></i> 1. Đăng tin tuyển dụng
         </a>
-        <a class="nav-link px-3 active bg-white text-primary rounded-pill fw-bold shadow-sm" href="cv-screening.html">
+        <a class="nav-link active bg-white text-primary rounded-pill fw-bold shadow-sm" href="cv-screening.html">
           <i class="fa-solid fa-file-lines me-1"></i> 2. Sàng lọc CV
         </a>
-        <a class="nav-link px-3 text-white" href="recruitment-report.html">
+        <a class="nav-link text-white" href="recruitment-report.html">
           <i class="fa-solid fa-chart-pie me-1"></i> 3. Báo cáo tuyển dụng
         </a>
-        <a class="nav-link px-3 text-white" href="interview-management.html">
+        <a class="nav-link text-white" href="interview-management.html">
           <i class="fa-solid fa-calendar-check me-1"></i> 4. Xếp lịch & Quản lý
         </a>
       </div>
     </div>
   </nav>
 
-  <div class="container pb-5" style="max-width: 920px;">
+  <div class="container pb-5" style="max-width: 960px;">
 
     <div class="card p-4 p-md-5">
 
