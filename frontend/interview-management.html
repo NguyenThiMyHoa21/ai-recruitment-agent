@@ -38,10 +38,18 @@
       font-size: 13px;
       font-weight: 600;
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 6px 30px 6px 10px;
       border: 1px solid #cbd5e1;
       background-color: #ffffff;
       cursor: pointer;
+      min-width: 148px;
+      width: 100%;
+      white-space: nowrap;
+    }
+    .status-select:focus {
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+      outline: 0;
     }
     .meet-btn {
       font-size: 12px;
@@ -60,7 +68,7 @@
   <!-- THANH ĐIỀU HƯỚNG CHUNG (NAVBAR) -->
   <!-- ========================================================= -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4 py-2">
-    <div class="container" style="max-width: 1100px;">
+    <div class="container" style="max-width: 1220px;">
       <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
         <i class="fa-solid fa-robot me-2 fs-4"></i>
         <span>AI Recruitment System</span>
@@ -86,7 +94,7 @@
   <!-- ========================================================= -->
   <!-- NỘI DUNG CHÍNH (WORKFLOW 4 & 6: CANDIDATE & INTERVIEW) -->
   <!-- ========================================================= -->
-  <div class="container pb-5" style="max-width: 1100px;">
+  <div class="container pb-5" style="max-width: 1220px;">
 
     <!-- TIÊU ĐỀ TRANG -->
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -140,16 +148,16 @@
 
       <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0" style="min-width: 1080px;">
             <thead class="table-light">
               <tr class="small text-muted text-uppercase">
-                <th class="ps-3" style="width: 60px;">ID</th>
-                <th style="min-width: 170px;">Họ tên & Email</th>
+                <th class="ps-3" style="width: 55px;">ID</th>
+                <th style="min-width: 175px;">Họ tên & Email</th>
                 <th style="min-width: 140px;">Vị trí</th>
                 <th style="width: 110px;">Trạng thái</th>
-                <th style="min-width: 220px;">Đánh giá AI (Gemini)</th>
-                <th style="width: 130px;">Cập nhật (L6)</th>
-                <th style="min-width: 180px;">Lịch phỏng vấn (L4)</th>
+                <th style="min-width: 230px;">Đánh giá AI (Gemini)</th>
+                <th style="min-width: 165px; width: 170px;">Cập nhật (L6)</th>
+                <th style="min-width: 195px;">Lịch phỏng vấn (L4)</th>
                 <th class="pe-3 text-end" style="width: 50px;">Xóa</th>
               </tr>
             </thead>
