@@ -15,8 +15,9 @@
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
   >
-  <!-- Trích xuất text từ file docx trực tiếp trên trình duyệt -->
+  <!-- Trích xuất text từ file docx và pdf trực tiếp trên trình duyệt -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
   <style>
     body {
@@ -160,31 +161,34 @@
 
         <!-- FILE CV -->
         <div class="mb-3">
-
           <label class="form-label fw-semibold">
-            Chọn file CV (.txt, .docx)
+            <i class="fa-solid fa-file-arrow-up me-1 text-primary"></i> Cách 1: Chọn file CV (.pdf, .docx, .txt)
           </label>
-
           <input
             type="file"
             class="form-control"
             id="cvFile"
-            accept=".txt,.docx"
+            accept=".txt,.docx,.pdf"
           >
-
           <div class="form-text">
-            Hỗ trợ tự động đọc văn bản từ file `.txt`, `.docx` hoặc dán trực tiếp nội dung CV vào ô bên dưới.
+            Hỗ trợ tự động trích xuất nội dung từ file <code>.pdf</code>, <code>.docx</code>, <code>.txt</code>.
           </div>
-
         </div>
 
+        <!-- DIVIDER HOẶC -->
+        <div class="d-flex align-items-center my-3">
+          <hr class="flex-grow-1 my-0 text-muted">
+          <span class="badge bg-secondary-subtle text-secondary border px-3 py-1 mx-2">
+            HOẶC
+          </span>
+          <hr class="flex-grow-1 my-0 text-muted">
+        </div>
 
         <!-- CV TEXT -->
         <div class="mb-4">
-
           <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
             <label class="form-label fw-semibold mb-0">
-              Nội dung CV (Trích xuất văn bản)
+              <i class="fa-solid fa-file-lines me-1 text-primary"></i> Cách 2: Dán nội dung CV (Trích xuất văn bản)
             </label>
             <div class="d-flex gap-1">
               <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 fw-semibold" onclick="fillCvSample(true)">
@@ -200,10 +204,11 @@
             class="form-control"
             id="cvText"
             rows="5"
-            placeholder="Kỹ sư kiểm thử phần mềm, thành thạo Automation Test, CI/CD, Docker và SQL..."
-            required
+            placeholder="Dán nội dung kỹ năng, kinh nghiệm của ứng viên vào đây nếu không tải tệp lên..."
           ></textarea>
-
+          <div class="form-text text-muted">
+            <i class="fa-solid fa-circle-info me-1 text-info"></i> Bạn chỉ cần <strong>Tải file CV</strong> hoặc <strong>Dán nội dung CV</strong> (không bắt buộc cả hai).
+          </div>
         </div>
 
 
@@ -459,47 +464,94 @@
     // 2. ĐỌC FILE CV .TXT
     // =========================================================
 
-    document
-      .getElementById("cvFile")
-      .addEventListener("change", function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    // =========================================================
+    // 2. HÀM TRÍCH XUẤT VĂN BẢN TỪ FILE (.txt, .docx, .pdf)
+    // =========================================================
 
-        const fileName = file.name.toLowerCase();
+    async function extractTextFromFile(file) {
+      if (!file) return "";
+      const fileName = file.name.toLowerCase();
 
-        if (fileName.endsWith('.docx')) {
+      // 1. File .txt
+      if (fileName.endsWith('.txt')) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result.trim());
+          reader.onerror = () => resolve("");
+          reader.readAsText(file);
+        });
+      }
+
+      // 2. File .docx qua Mammoth.js
+      if (fileName.endsWith('.docx')) {
+        return new Promise((resolve) => {
           const reader = new FileReader();
           reader.onload = function(e) {
-            const arrayBuffer = e.target.result;
             if (window.mammoth) {
-              mammoth.extractRawText({ arrayBuffer: arrayBuffer })
-                .then(function(result) {
-                  document.getElementById("cvText").value = result.value.trim();
-                })
-                .catch(function(err) {
-                  console.error("Lỗi đọc docx:", err);
-                  alert("Không thể trích xuất file .docx. Vui lòng mở file, copy nội dung và dán vào ô bên dưới!");
-                });
+              mammoth.extractRawText({ arrayBuffer: e.target.result })
+                .then(res => resolve(res.value.trim()))
+                .catch(() => resolve(""));
             } else {
-              alert("Thư viện giải mã .docx chưa tải xong. Vui lòng dán trực tiếp nội dung CV vào ô bên dưới!");
+              resolve("");
             }
           };
+          reader.onerror = () => resolve("");
           reader.readAsArrayBuffer(file);
-        } else if (fileName.endsWith('.txt')) {
+        });
+      }
+
+      // 3. File .pdf qua PDF.js
+      if (fileName.endsWith('.pdf')) {
+        return new Promise((resolve) => {
           const reader = new FileReader();
-          reader.onload = function(e) {
-            document.getElementById("cvText").value = e.target.result.trim();
+          reader.onload = async function(e) {
+            try {
+              if (window.pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                const typedarray = new Uint8Array(e.target.result);
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let fullText = "";
+                for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+                  const page = await pdf.getPage(i);
+                  const textContent = await page.getTextContent();
+                  fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+                }
+                resolve(fullText.trim());
+              } else {
+                resolve("");
+              }
+            } catch(err) {
+              console.warn("Lỗi đọc PDF:", err);
+              resolve("");
+            }
           };
-          reader.readAsText(file);
-        } else {
-          alert("Hệ thống hỗ trợ đọc file .txt và .docx. Nếu CV của bạn là PDF hoặc Ảnh, hãy copy nội dung văn bản và dán vào ô bên dưới nhé!");
-        }
-      });
+          reader.onerror = () => resolve("");
+          reader.readAsArrayBuffer(file);
+        });
+      }
+
+      return "";
+    }
+
+    // Tự động trích xuất nội dung khi chọn file (người dùng có thể xem trước hoặc sửa)
+    document.getElementById("cvFile").addEventListener("change", async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const cvTextEl = document.getElementById("cvText");
+      cvTextEl.placeholder = "⏳ Đang trích xuất văn bản từ tệp " + file.name + "...";
+
+      const extracted = await extractTextFromFile(file);
+      if (extracted) {
+        cvTextEl.value = extracted;
+      }
+      cvTextEl.placeholder = "Dán nội dung kỹ năng, kinh nghiệm của ứng viên vào đây nếu không tải tệp lên...";
+    });
 
 
 
     // =========================================================
-    // 3. GỬI CV SANG N8N
+    // 3. GỬI CV SANG N8N (Chấp nhận File CV HOẶC Nội dung CV)
     // =========================================================
 
     document
@@ -510,66 +562,57 @@
 
           event.preventDefault();
 
+          const btn = document.getElementById("btnSubmit");
+          const resultBox = document.getElementById("resultBox");
+          const errorBox = document.getElementById("errorBox");
 
-          const btn =
-            document.getElementById("btnSubmit");
-
-          const resultBox =
-            document.getElementById("resultBox");
-
-          const errorBox =
-            document.getElementById("errorBox");
-
-
-          // Khóa nút
           btn.disabled = true;
+          btn.innerText = "⏳ Đang xử lý hồ sơ...";
 
-          btn.innerText =
-            "⏳ Đang trích xuất & chấm điểm qua AI...";
+          resultBox.style.display = "none";
+          errorBox.style.display = "none";
 
+          const fileInput = document.getElementById("cvFile");
+          const file = fileInput.files[0];
+          let cvText = document.getElementById("cvText").value.trim();
 
-          resultBox.style.display =
-            "none";
+          // Nếu ô nội dung trống nhưng có chọn file -> Tự động trích xuất ngay trước khi gửi
+          if (!cvText && file) {
+            btn.innerText = "⏳ Đang đọc nội dung từ file " + file.name + "...";
+            cvText = await extractTextFromFile(file);
+            if (cvText) {
+              document.getElementById("cvText").value = cvText;
+            } else {
+              // Fallback mô tả file nếu không trích xuất text được trong trình duyệt
+              cvText = `Hồ sơ ứng viên đính kèm: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+              document.getElementById("cvText").value = cvText;
+            }
+          }
 
-          errorBox.style.display =
-            "none";
+          // Kiểm tra: Bắt buộc người dùng phải có 1 trong 2 (File HOẶC Text)
+          if (!cvText && !file) {
+            alert("⚠️ Vui lòng chọn File CV (.pdf, .docx, .txt) HOẶC dán Nội dung CV vào ô bên dưới!");
+            btn.disabled = false;
+            btn.innerText = "🚀 BẮT ĐẦU SÀNG LỌC CV";
+            return;
+          }
 
+          btn.innerText = "⏳ Đang trích xuất & chấm điểm qua AI...";
 
           // =================================================
           // TẠO PAYLOAD
           // =================================================
 
           const payload = {
-
-            job_id: parseInt(
-              document
-                .getElementById("jobId")
-                .value
-            ),
-
-            candidate_name:
-              document
-                .getElementById("candidateName")
-                .value
-                .trim(),
-
-            candidate_email:
-              document
-                .getElementById("candidateEmail")
-                .value
-                .trim(),
-
-            cv_text:
-              document
-                .getElementById("cvText")
-                .value
-                .trim()
-
+            job_id: parseInt(document.getElementById("jobId").value),
+            candidate_name: document.getElementById("candidateName").value.trim(),
+            candidate_email: document.getElementById("candidateEmail").value.trim(),
+            cv_text: cvText
           };
 
           // Chặn chuỗi nhị phân rác (nếu đọc lỗi)
           if (payload.cv_text.startsWith('PK') || payload.cv_text.startsWith('%PDF') || payload.cv_text.includes('\uFFFD') || payload.cv_text.includes('\u001e')) {
-            alert('⚠️ Nội dung CV chứa mã nhị phân không hợp lệ. Vui lòng nhập hoặc dán nội dung văn bản (text) của CV!');
+            alert('⚠️ Nội dung CV chứa mã nhị phân không hợp lệ. Vui lòng kiểm tra lại file hoặc dán trực tiếp văn bản CV!');
             btn.disabled = false;
             btn.innerText = "🚀 BẮT ĐẦU SÀNG LỌC CV";
             return;
