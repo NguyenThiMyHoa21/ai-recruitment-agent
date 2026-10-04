@@ -117,6 +117,12 @@
       padding: 7px 12px;
       border-radius: 20px;
     }
+    @media print {
+      body { background-color: #ffffff !important; }
+      nav, footer, .btn, #loading, .no-print { display: none !important; }
+      .main-container { max-width: 100% !important; padding: 0 !important; }
+      .card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+    }
   </style>
 </head>
 
@@ -169,10 +175,10 @@
 
       <div class="d-flex gap-2">
         <button
-          class="btn btn-outline-secondary px-3 py-2 fw-semibold"
+          class="btn btn-success px-3 py-2 fw-semibold"
           onclick="window.print()"
         >
-          <i class="fa-solid fa-print me-1"></i> In Báo Cáo
+          <i class="fa-solid fa-file-pdf me-1"></i> Xuất PDF Báo Cáo (Leader)
         </button>
         <button
           class="btn btn-primary px-4 py-2 fw-semibold"

@@ -129,25 +129,63 @@ app.get("/api/candidates", async (req, res) => {
     }
 });
 
+// Helper: Tự động tính toán thời gian phỏng vấn giãn cách 45 phút cho các ứng viên trong cùng ngày
+async function getSmartStaggeredInterviewTime(candidateId) {
+    try {
+        if (candidateId) {
+            const [cRows] = await db.query("SELECT interview_time FROM candidates WHERE id = ?", [candidateId]);
+            if (cRows && cRows.length > 0 && cRows[0].interview_time) {
+                return cRows[0].interview_time;
+            }
+        }
+        const [maxRows] = await db.query(
+            "SELECT MAX(interview_time) as max_time FROM candidates WHERE interview_time IS NOT NULL AND status IN ('Phỏng vấn', 'Đạt')"
+        );
+        let baseDate = new Date();
+        baseDate.setDate(baseDate.getDate() + 1);
+        baseDate.setHours(9, 0, 0, 0);
+
+        if (maxRows && maxRows[0] && maxRows[0].max_time) {
+            const maxTime = new Date(maxRows[0].max_time);
+            if (!isNaN(maxTime.getTime()) && maxTime > new Date()) {
+                maxTime.setMinutes(maxTime.getMinutes() + 45);
+                if (maxTime.getHours() >= 17) {
+                    maxTime.setDate(maxTime.getDate() + 1);
+                    maxTime.setHours(9, 0, 0, 0);
+                }
+                baseDate = maxTime;
+            }
+        }
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${baseDate.getFullYear()}-${pad(baseDate.getMonth()+1)}-${pad(baseDate.getDate())} ${pad(baseDate.getHours())}:${pad(baseDate.getMinutes())}:00`;
+    } catch (e) {
+        console.warn("Lỗi tính smart interview time:", e.message);
+        return "2026-10-05 09:30:00";
+    }
+}
+
 // Route API xếp lịch phỏng vấn qua Luồng 4 n8n
 app.post("/api/schedule-interview", async (req, res) => {
     const { candidate_id, requested_by } = req.body;
     try {
+        const smartTime = await getSmartStaggeredInterviewTime(Number(candidate_id));
+
         const response = await fetch("http://localhost:5678/webhook/interview-schedule", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 candidate_id: Number(candidate_id),
-                requested_by: requested_by || "HR_Web_Admin"
+                requested_by: requested_by || "HR_Web_Admin",
+                interview_time: smartTime
             })
         });
         const result = await response.json();
 
-        // Đồng bộ trạng thái phỏng vấn vào MySQL để Trang 3 & Trang 4 liên thông 100%
+        // Đồng bộ trạng thái phỏng vấn & thời gian giãn cách thông minh vào MySQL
         try {
             await db.query(
-                "UPDATE candidates SET approval_status = 'INTERVIEW_SCHEDULED', status = 'Phỏng vấn' WHERE id = ?",
-                [Number(candidate_id)]
+                "UPDATE candidates SET approval_status = 'INTERVIEW_SCHEDULED', status = 'Phỏng vấn', interview_time = COALESCE(interview_time, ?) WHERE id = ?",
+                [smartTime, Number(candidate_id)]
             );
         } catch (dbErr) {
             console.warn("Lỗi sync DB:", dbErr.message);
@@ -169,7 +207,7 @@ app.post("/api/schedule-interview", async (req, res) => {
                         candidate_name: cand.full_name || cand.name,
                         candidate_email: cand.email,
                         position: cand.job_title || cand.position,
-                        interview_time: cand.interview_time || (result.data && result.data.interview_time) || "09:30 04/10/2026",
+                        interview_time: cand.interview_time || smartTime,
                         interviewer: cand.interviewer_name || (result.data && result.data.interviewer) || "Nguyễn HR",
                         meet_link: cand.meeting_link || (result.data && result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt"
                     })
@@ -183,6 +221,55 @@ app.post("/api/schedule-interview", async (req, res) => {
     } catch (error) {
         console.error("Lỗi gọi Luồng 4 n8n:", error.message);
         res.status(500).json({ success: false, message: "Lỗi khi xếp lịch phỏng vấn qua n8n" });
+    }
+});
+
+// Route API dời/đổi giờ phỏng vấn linh hoạt cho ứng viên (Reschedule)
+app.post("/api/reschedule-interview", async (req, res) => {
+    const { candidate_id, new_interview_time, reason } = req.body;
+    try {
+        if (!candidate_id || !new_interview_time) {
+            return res.status(400).json({ success: false, message: "Thiếu candidate_id hoặc new_interview_time" });
+        }
+
+        await db.query(
+            "UPDATE candidates SET interview_time = ?, approval_status = 'INTERVIEW_SCHEDULED', status = 'Phỏng vấn' WHERE id = ?",
+            [new_interview_time, Number(candidate_id)]
+        );
+
+        const [cRows] = await db.query(
+            "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí tuyển dụng') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+            [Number(candidate_id)]
+        );
+
+        if (cRows && cRows.length > 0) {
+            const cand = cRows[0];
+            fetch("http://localhost:5678/webhook/send-interview-invite", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    candidate_id: Number(cand.id),
+                    candidate_name: cand.full_name || cand.name,
+                    candidate_email: cand.email,
+                    position: cand.job_title || cand.position,
+                    interview_time: new_interview_time,
+                    interviewer: cand.interviewer_name || "Nguyễn HR Manager",
+                    meet_link: cand.meeting_link || "https://meet.google.com/dfj-amei-jzt",
+                    notification_type: "reschedule",
+                    subject_prefix: "[CẬP NHẬT LỊCH PHỎNG VẤN mới]"
+                })
+            }).catch(err => console.warn("Lỗi gửi mail cập nhật lịch:", err.message));
+        }
+
+        res.json({
+            success: true,
+            message: `Đã cập nhật lịch phỏng vấn mới sang ${new_interview_time} và gửi Email thông báo cập nhật tới ứng viên thành công!`,
+            candidate_id: Number(candidate_id),
+            new_interview_time: new_interview_time
+        });
+    } catch (error) {
+        console.error("Lỗi dời lịch phỏng vấn:", error.message);
+        res.status(500).json({ success: false, message: "Lỗi dời lịch phỏng vấn: " + error.message });
     }
 });
 

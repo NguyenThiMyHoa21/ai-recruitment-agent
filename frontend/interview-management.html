@@ -60,6 +60,14 @@
     .table-hover tbody tr:hover {
       background-color: #f8fafc;
     }
+    @media print {
+      body { background-color: #ffffff !important; }
+      nav, footer, .btn, .filter-btn, #toastAlert, .pe-3 { display: none !important; }
+      .main-card { box-shadow: none !important; border: none !important; }
+      .container { max-width: 100% !important; padding: 0 !important; }
+      .table-responsive { overflow: visible !important; }
+      .print-header { display: block !important; }
+    }
     .navbar-nav .nav-link {
       font-size: 13.5px;
       font-weight: 500;
@@ -122,7 +130,10 @@
           Tự động điều phối lịch phỏng vấn và cập nhật trạng thái ứng viên qua AI & n8n
         </p>
       </div>
-      <div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportDailyPdfReport()">
+          <i class="fa-solid fa-file-pdf me-1"></i> Xuất PDF Lịch PV (Leader & HR)
+        </button>
         <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="fetchCandidates()">
           <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
         </button>
@@ -191,6 +202,46 @@
 
 
 
+  </div>
+
+  <!-- MODAL ĐỔI GIỜ PHỎNG VẤN (RESCHEDULE) -->
+  <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0 rounded-4">
+        <div class="modal-header bg-primary text-white py-3">
+          <h5 class="modal-title fw-bold" id="rescheduleModalLabel">
+            <i class="fa-solid fa-calendar-pen me-2"></i> Đổi Giờ Phỏng Vấn Ứng Viên
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3">
+            Cập nhật thời gian phỏng vấn mới cho ứng viên <strong class="text-dark" id="rescheduleCandName">...</strong>. AI sẽ tự động gửi Email thông báo lịch mới tới ứng viên qua Gmail.
+          </p>
+          <input type="hidden" id="rescheduleCandId">
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">Chọn Ngày & Giờ Phỏng Vấn Mới:</label>
+            <input type="datetime-local" class="form-control form-control-lg border-primary" id="rescheduleTimeInput">
+          </div>
+          <div class="p-3 bg-light rounded-3 border mb-3">
+            <div class="small fw-semibold text-muted mb-2"><i class="fa-solid fa-clock-rotate-left me-1"></i> Chọn nhanh khung giờ tiện lợi:</div>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setReschedulePreset(1)">+1 tiếng</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setReschedulePreset(2)">+2 tiếng</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setReschedulePreset(24)">+1 ngày</button>
+              <button type="button" class="btn btn-sm btn-outline-primary" onclick="setReschedulePreset('tomorrow_am')">09:30 sáng mai</button>
+              <button type="button" class="btn btn-sm btn-outline-primary" onclick="setReschedulePreset('tomorrow_pm')">14:00 chiều mai</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light py-2">
+          <button type="button" class="btn btn-light border btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" onclick="submitReschedule()">
+            <i class="fa-solid fa-paper-plane me-1"></i> Xác Nhận & Gửi Mail Cập Nhật
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ========================================================= -->
@@ -340,23 +391,22 @@
               </div>
             </div>`;
         } else if (c.interview_time) {
-          // Đã có lịch phỏng vấn -> Hiện ngày giờ, người PV, link Google Meet
+          // Đã có lịch phỏng vấn -> Hiện ngày giờ, người PV, link Google Meet & Nút Đổi giờ PV
+          const candNameEscaped = (c.full_name || c.name || 'Ứng viên').replace(/'/g, "\\'");
           scheduleCol = `
             <div class="small">
               <div class="fw-bold text-dark"><i class="fa-regular fa-clock text-primary me-1"></i>${formatTime(c.interview_time)}</div>
               <div class="text-muted"><i class="fa-solid fa-user-tie text-secondary me-1"></i>${c.interviewer_name || 'HR Manager'}</div>
               <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
                 <a href="${c.meeting_link}" target="_blank" class="btn btn-sm btn-outline-success meet-btn py-0 px-2">
-                  <i class="fa-solid fa-video me-1"></i> Google Meet
+                  <i class="fa-solid fa-video me-1"></i> Meet
                 </a>
-                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 d-inline-flex align-items-center gap-1" title="Thư mời phỏng vấn & lịch nhắc nhở đã được AI tự động gửi qua Luồng 5">
-                  <i class="fa-solid fa-envelope-circle-check"></i> Đã gửi thư mời
-                </span>
-                <button class="btn btn-sm btn-light border btn-schedule py-0 px-2 text-muted" title="Xếp lại lịch phỏng vấn" data-id="${c.id}">
-                  <i class="fa-solid fa-arrows-rotate"></i>
+                <button class="btn btn-sm btn-outline-warning py-0 px-2 fw-semibold" style="font-size: 11px;" title="Dời/Đổi giờ phỏng vấn khi ứng viên bận" onclick="openRescheduleModal(${c.id}, '${c.interview_time || ''}', '${candNameEscaped}')">
+                  <i class="fa-solid fa-pen-to-square me-1"></i> Đổi giờ PV
                 </button>
               </div>
             </div>`;
+        }
         } else if (isInterview) {
           // Trạng thái Phỏng vấn -> Nút Xếp lịch AI màu xanh chính thức
           scheduleCol = `<button class="btn btn-sm btn-primary btn-schedule px-3 py-1 rounded-pill shadow-sm" data-id="${c.id}">
@@ -522,7 +572,103 @@
       }
     };
 
+    // Hàm mở Modal Đổi Giờ Phỏng Vấn (Reschedule)
+    window.openRescheduleModal = function(candidateId, currentTimeStr, candidateName) {
+      document.getElementById('rescheduleCandId').value = candidateId;
+      document.getElementById('rescheduleCandName').innerText = candidateName || `#${candidateId}`;
+      const input = document.getElementById('rescheduleTimeInput');
+      
+      let initDate = new Date();
+      if (currentTimeStr) {
+        const parsed = new Date(currentTimeStr);
+        if (!isNaN(parsed.getTime())) initDate = parsed;
+      } else {
+        initDate.setDate(initDate.getDate() + 1);
+        initDate.setHours(9, 30, 0, 0);
+      }
+      
+      const pad = (n) => String(n).padStart(2, '0');
+      const formatted = `${initDate.getFullYear()}-${pad(initDate.getMonth()+1)}-${pad(initDate.getDate())}T${pad(initDate.getHours())}:${pad(initDate.getMinutes())}`;
+      input.value = formatted;
+
+      const modalEl = document.getElementById('rescheduleModal');
+      const bsModal = new bootstrap.Modal(modalEl);
+      bsModal.show();
+    };
+
+    // Hàm chọn nhanh preset thời gian
+    window.setReschedulePreset = function(type) {
+      const input = document.getElementById('rescheduleTimeInput');
+      let base = input.value ? new Date(input.value) : new Date();
+      if (isNaN(base.getTime())) base = new Date();
+
+      if (typeof type === 'number') {
+        base.setHours(base.getHours() + type);
+      } else if (type === 'tomorrow_am') {
+        base.setDate(base.getDate() + 1);
+        base.setHours(9, 30, 0, 0);
+      } else if (type === 'tomorrow_pm') {
+        base.setDate(base.getDate() + 1);
+        base.setHours(14, 0, 0, 0);
+      }
+      const pad = (n) => String(n).padStart(2, '0');
+      input.value = `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}T${pad(base.getHours())}:${pad(base.getMinutes())}`;
+    };
+
+    // Hàm gửi yêu cầu đổi giờ phỏng vấn đến Backend
+    window.submitReschedule = async function() {
+      const candidateId = document.getElementById('rescheduleCandId').value;
+      const rawVal = document.getElementById('rescheduleTimeInput').value;
+      if (!rawVal) {
+        alert('Vui lòng chọn ngày giờ phỏng vấn mới!');
+        return;
+      }
+      const newTimeFormatted = rawVal.replace('T', ' ') + ':00';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/reschedule-interview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            candidate_id: Number(candidateId),
+            new_interview_time: newTimeFormatted
+          })
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+          const modalEl = document.getElementById('rescheduleModal');
+          const bsModal = bootstrap.Modal.getInstance(modalEl);
+          if (bsModal) bsModal.hide();
+
+          showToast(`Đã cập nhật lịch phỏng vấn mới sang ${newTimeFormatted} và tự động gửi Email tới ứng viên!`);
+          fetchCandidates();
+        } else {
+          alert('Lỗi đổi lịch: ' + (result.message || 'Không xác định'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối máy chủ khi dời lịch phỏng vấn!');
+      }
+    };
+
+    // Hàm Xuất Báo Cáo PDF Lịch Phỏng Vấn Trong Ngày Cho HR & Leader
+    window.exportDailyPdfReport = function() {
+      const printHeader = document.createElement('div');
+      printHeader.className = 'print-header d-none d-print-block text-center mb-4';
+      printHeader.innerHTML = `
+        <h2 class="fw-bold text-dark mb-1">BÁO CÁO LỊCH PHỎNG VẤN TRONG NGÀY</h2>
+        <p class="text-muted mb-1">Hệ Thống AI Recruitment Multi-Agent System • Dành Cho Trưởng Phòng (Leader) & HR Manager</p>
+        <div class="small text-secondary">Thời gian xuất báo cáo: ${new Date().toLocaleString('vi-VN')} • Nghiên cứu & Phát triển bởi: <strong>Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi</strong></div>
+        <hr class="my-3">
+      `;
+      document.body.prepend(printHeader);
+      window.print();
+      setTimeout(() => printHeader.remove(), 1000);
+    };
+
     document.addEventListener('DOMContentLoaded', fetchCandidates);
   </script>
+
+  <!-- Bootstrap 5 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
