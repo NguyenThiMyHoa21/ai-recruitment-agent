@@ -181,54 +181,19 @@
 
 
         <!-- FILE CV -->
-        <div class="mb-3">
+        <div class="mb-4">
           <label class="form-label fw-semibold">
-            <i class="fa-solid fa-file-arrow-up me-1 text-primary"></i> Cách 1: Chọn file CV (.pdf, .docx, .txt)
+            <i class="fa-solid fa-file-arrow-up me-1 text-primary"></i> Tải hồ sơ ứng viên (File CV: .pdf, .docx, .txt)
           </label>
           <input
             type="file"
-            class="form-control"
+            class="form-control form-control-lg"
             id="cvFile"
             accept=".txt,.docx,.pdf"
+            required
           >
           <div class="form-text">
-            Hỗ trợ tự động trích xuất nội dung từ file <code>.pdf</code>, <code>.docx</code>, <code>.txt</code>.
-          </div>
-        </div>
-
-        <!-- DIVIDER HOẶC -->
-        <div class="d-flex align-items-center my-3">
-          <hr class="flex-grow-1 my-0 text-muted">
-          <span class="badge bg-secondary-subtle text-secondary border px-3 py-1 mx-2">
-            HOẶC
-          </span>
-          <hr class="flex-grow-1 my-0 text-muted">
-        </div>
-
-        <!-- CV TEXT -->
-        <div class="mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-            <label class="form-label fw-semibold mb-0">
-              <i class="fa-solid fa-file-lines me-1 text-primary"></i> Cách 2: Dán nội dung CV (Trích xuất văn bản)
-            </label>
-            <div class="d-flex gap-1">
-              <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 fw-semibold" onclick="fillCvSample(true)">
-                <i class="fa-solid fa-check me-1"></i> Mẫu CV Đạt chuẩn (Pass)
-              </button>
-              <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 fw-semibold" onclick="fillCvSample(false)">
-                <i class="fa-solid fa-xmark me-1"></i> Mẫu Trái ngành (Fail)
-              </button>
-            </div>
-          </div>
-
-          <textarea
-            class="form-control"
-            id="cvText"
-            rows="5"
-            placeholder="Dán nội dung kỹ năng, kinh nghiệm của ứng viên vào đây nếu không tải tệp lên..."
-          ></textarea>
-          <div class="form-text text-muted">
-            <i class="fa-solid fa-circle-info me-1 text-info"></i> Bạn chỉ cần <strong>Tải file CV</strong> hoặc <strong>Dán nội dung CV</strong> (không bắt buộc cả hai).
+            Hỗ trợ tự động trích xuất nội dung từ tệp hồ sơ <code>.pdf</code>, <code>.docx</code>, <code>.txt</code>.
           </div>
         </div>
 
@@ -436,23 +401,7 @@
       }
     }
 
-    // Điền mẫu nhanh CV Đạt / Chưa đạt khi demo
-    function fillCvSample(isPass) {
-      const jobSelect = document.getElementById("jobId");
-      const selectedId = jobSelect.value;
-      const job = (window.availableJobsCache || fallbackJobs).find(j => String(j.id) === String(selectedId)) || fallbackJobs[0];
 
-      if (isPass) {
-        document.getElementById("candidateName").value = "Lê Quốc Huy";
-        document.getElementById("candidateEmail").value = "huy.le@techcorp.vn";
-        const reqKeywords = job.requirements || "Chuyên môn cao, khả năng giải quyết vấn đề và làm việc nhóm";
-        document.getElementById("cvText").value = `Tôi là ứng viên với hơn 3 năm kinh nghiệm trong ngành, luôn chủ động học hỏi và cập nhật kiến thức mới.\n\nKỹ năng chuyên môn cốt lõi:\n- Thành thạo và có kinh nghiệm thực chiến với: ${reqKeywords}.\n- Kỹ năng giao tiếp, quản lý tiến độ công việc, tinh thần trách nhiệm cao.\n- Từng hoàn thành xuất sắc các dự án đạt chỉ số hiệu quả KPI vượt 150%.`;
-      } else {
-        document.getElementById("candidateName").value = "Phạm Văn Minh";
-        document.getElementById("candidateEmail").value = "minh.pham@gmail.com";
-        document.getElementById("cvText").value = `Tốt nghiệp Cao đẳng ngành Du lịch Khách sạn.\nCó 6 tháng làm lễ tân và hỗ trợ khách hàng đặt phòng.\nTính cách hòa đồng, trung thực, mong muốn tìm kiếm môi trường làm việc mới.`;
-      }
-    }
 
     async function loadJobs() {
       const statusEl = document.getElementById("jobLoadStatus");
@@ -600,27 +549,18 @@
 
           const fileInput = document.getElementById("cvFile");
           const file = fileInput.files[0];
-          let cvText = document.getElementById("cvText").value.trim();
 
-          // Nếu ô nội dung trống nhưng có chọn file -> Tự động trích xuất ngay trước khi gửi
-          if (!cvText && file) {
-            btn.innerText = "⏳ Đang đọc nội dung từ file " + file.name + "...";
-            cvText = await extractTextFromFile(file);
-            if (cvText) {
-              document.getElementById("cvText").value = cvText;
-            } else {
-              // Fallback mô tả file nếu không trích xuất text được trong trình duyệt
-              cvText = `Hồ sơ ứng viên đính kèm: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-              document.getElementById("cvText").value = cvText;
-            }
-          }
-
-          // Kiểm tra: Bắt buộc người dùng phải có 1 trong 2 (File HOẶC Text)
-          if (!cvText && !file) {
-            alert("⚠️ Vui lòng chọn File CV (.pdf, .docx, .txt) HOẶC dán Nội dung CV vào ô bên dưới!");
+          if (!file) {
+            alert("⚠️ Vui lòng chọn tệp hồ sơ ứng viên (.pdf, .docx, .txt)!");
             btn.disabled = false;
             btn.innerText = "🚀 BẮT ĐẦU SÀNG LỌC CV";
             return;
+          }
+
+          btn.innerText = "⏳ Đang đọc nội dung từ file " + file.name + "...";
+          let cvText = await extractTextFromFile(file);
+          if (!cvText) {
+            cvText = `Hồ sơ ứng viên đính kèm file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
           }
 
           btn.innerText = "⏳ Đang trích xuất & chấm điểm qua AI...";
