@@ -17,6 +17,8 @@
   >
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS cho xuất file Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     body {
@@ -174,6 +176,12 @@
       </div>
 
       <div class="d-flex gap-2">
+        <button
+          class="btn btn-outline-success px-3 py-2 fw-semibold"
+          onclick="exportReportExcel()"
+        >
+          <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel Báo Cáo (.xlsx)
+        </button>
         <button
           class="btn btn-success px-3 py-2 fw-semibold"
           onclick="window.print()"
@@ -1228,6 +1236,35 @@ async function deleteCandidate(candidateId, candidateName) {
   } catch(e) {
     alert("Lỗi kết nối khi xóa hồ sơ: " + e.message);
   }
+}
+
+// Hàm Xuất Báo Cáo Tuyển Dụng Ra File Excel (.xlsx)
+function exportReportExcel() {
+  const candidates = window.candidatesCache || [];
+  if (!candidates || candidates.length === 0) {
+    alert("Chưa có dữ liệu ứng viên để xuất Excel!");
+    return;
+  }
+  
+  const excelData = candidates.map((c, idx) => ({
+    "STT": idx + 1,
+    "Mã ID": c.id,
+    "Họ và Tên": c.name || c.full_name || 'N/A',
+    "Email": c.email || '',
+    "Vị Trí Tuyển Dụng": c.position || c.applied_position || (`Vị trí #${c.job_id}`),
+    "Điểm Đánh Giá AI": c.match_score ? `${c.match_score}/100` : 'N/A',
+    "Trạng Thái Sàng Lọc": c.status || '',
+    "Phê Duyệt HR/Leader": c.approval_status || '',
+    "Khung Giờ Phỏng Vấn": c.interview_time ? new Date(c.interview_time).toLocaleString('vi-VN') : 'Chưa xếp',
+    "Đánh Giá AI": c.ai_evaluation || ''
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Bao_Cao_Tuyendung");
+  
+  const fileName = `Bao_Cao_Tuyendung_Tong_Quan_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
 }
 
 // Tự động tải dữ liệu ngay khi tải trang

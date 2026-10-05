@@ -208,7 +208,7 @@ app.post("/api/schedule-interview", async (req, res) => {
                         candidate_email: cand.email,
                         position: cand.job_title || cand.position,
                         interview_time: cand.interview_time || smartTime,
-                        interviewer: cand.interviewer_name || (result.data && result.data.interviewer) || "Nguyễn HR",
+                        interviewer: cand.interviewer_name || (result.data && result.data.interviewer) || "Hội Đồng Phỏng Vấn & Ban Tuyển Dụng",
                         meet_link: cand.meeting_link || (result.data && result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt"
                     })
                 }).catch(err => console.warn("Lỗi auto-dispatch Luồng 5:", err.message));
@@ -253,7 +253,7 @@ app.post("/api/reschedule-interview", async (req, res) => {
                     candidate_email: cand.email,
                     position: cand.job_title || cand.position,
                     interview_time: new_interview_time,
-                    interviewer: cand.interviewer_name || "Nguyễn HR Manager",
+                    interviewer: cand.interviewer_name || "Hội Đồng Phỏng Vấn & Ban Tuyển Dụng",
                     meet_link: cand.meeting_link || "https://meet.google.com/dfj-amei-jzt",
                     notification_type: "reschedule",
                     subject_prefix: "[CẬP NHẬT LỊCH PHỎNG VẤN mới]"
