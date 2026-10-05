@@ -147,7 +147,7 @@
         <button class="btn btn-success btn-sm rounded-pill px-4 shadow-sm fw-semibold" onclick="openExcelPreviewModal()">
           <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel Lịch PV (.xlsx)
         </button>
-        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="fetchCandidates()">
+        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="fetchCandidates(true)">
           <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
         </button>
       </div>
@@ -336,7 +336,7 @@
     let currentFilter = 'ALL';
     let allCandidates = [];
 
-    async function fetchCandidates() {
+    async function fetchCandidates(userClick = false) {
       const tbody = document.getElementById('candidate-list');
       try {
         const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now());
@@ -344,6 +344,9 @@
         allCandidates = Array.isArray(json) ? json : (json.data || json.candidates || []);
         updateCounts();
         applyFilter();
+        if (userClick) {
+          showToast('🔄 Đã cập nhật và làm mới dữ liệu ứng viên mới nhất từ MySQL!');
+        }
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Lỗi kết nối máy chủ backend: ${err.message}</td></tr>`;
       }
