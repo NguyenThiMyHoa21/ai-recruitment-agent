@@ -813,6 +813,7 @@
       
       const fileName = `Danh_Sach_Phong_Van_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
       XLSX.writeFile(workbook, fileName);
+      alert(`📊 ĐÃ XUẤT THÀNH CÔNG FILE EXCEL LỊCH PHỎNG VẤN!\n\n📁 Tên file: ${fileName}\n\nFile đã được tải về máy tính. Bạn có thể mở bằng Excel hoặc tải lên Google Drive / Sheets!`);
     };
 
     document.addEventListener('DOMContentLoaded', fetchCandidates);
