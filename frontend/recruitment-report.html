@@ -177,19 +177,13 @@
 
       <div class="d-flex gap-2">
         <button
-          class="btn btn-outline-success px-3 py-2 fw-semibold"
-          onclick="openReportExportModal('EXCEL')"
+          class="btn btn-success px-4 py-2 fw-semibold shadow-sm"
+          onclick="openExcelPreviewModal()"
         >
-          <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel Báo Cáo (.xlsx)
+          <i class="fa-solid fa-file-excel me-2"></i> Xuất Excel Báo Cáo (.xlsx)
         </button>
         <button
-          class="btn btn-success px-3 py-2 fw-semibold"
-          onclick="openReportExportModal('PDF')"
-        >
-          <i class="fa-solid fa-file-pdf me-1"></i> Xuất PDF Báo Cáo (Leader)
-        </button>
-        <button
-          class="btn btn-primary px-4 py-2 fw-semibold"
+          class="btn btn-primary px-4 py-2 fw-semibold shadow-sm"
           id="btnGenerate"
           onclick="generateReport()"
         >
@@ -706,110 +700,54 @@
   </div>
 </div>
 
-<!-- MODAL XEM TRƯỚC BÁO CÁO PDF TRÌNH LEADER & BAN GIÁM ĐỐC (A4 PRINT) -->
-<div class="modal fade" id="leaderPdfReportModal" tabindex="-1" aria-labelledby="leaderPdfReportModalLabel" aria-hidden="true">
+<!-- MODAL XEM TRƯỚC BẢNG DỮ LIỆU EXCEL (.XLSX) -->
+<div class="modal fade" id="excelPreviewModal" tabindex="-1" aria-labelledby="excelPreviewModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content shadow-lg border-0 rounded-4">
-      <div class="modal-header bg-dark text-white py-3">
-        <h5 class="modal-title fw-bold" id="leaderPdfReportModalLabel">
-          <i class="fa-solid fa-file-pdf text-danger me-2"></i> Mẫu Văn Bản Báo Cáo PDF Trình Leader & Ban Giám Đốc
+      <div class="modal-header bg-success text-white py-3">
+        <h5 class="modal-title fw-bold" id="excelPreviewModalLabel">
+          <i class="fa-solid fa-file-excel me-2"></i> Xem Trước Bảng Dữ Liệu Excel Tuyển Dụng (.xlsx)
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-5 bg-white text-dark" id="pdfReportPrintArea">
-        <!-- HEADER BÁO CÁO PHONG CÁCH VĂN BẢN CHÍNH THỨC -->
-        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+      <div class="modal-body p-4 bg-light">
+        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-3 py-2 px-3 small">
+          <i class="fa-solid fa-circle-check fs-5 me-2 text-success"></i>
           <div>
-            <h6 class="fw-bold text-uppercase text-primary mb-1">CÔNG TY CỔ PHẦN CÔNG NGHỆ AI RECRUITMENT</h6>
-            <div class="small text-muted">Phòng Quản Trị Nhân Sự & Ban Tuyển Dụng</div>
-          </div>
-          <div class="text-end small text-muted">
-            <div>Mẫu báo cáo: <strong>BC-TD-2026/01</strong></div>
-            <div>Ngày lập: <span id="pdfReportDate">-</span></div>
+            <strong>Xem trước bảng tính Excel:</strong> Kiểm tra danh sách <span id="excelTotalRows" class="fw-bold text-dark">0</span> hồ sơ ứng viên dưới đây trước khi tải file <strong id="excelFileName">Danh_Sach_Tuyen_Dung.xlsx</strong> về máy.
           </div>
         </div>
 
-        <div class="text-center mb-4">
-          <h3 class="fw-bold text-uppercase text-dark mb-1">BÁO CÁO TỔNG QUAN HỆ THỐNG TUYỂN DỤNG & SÀNG LỌC AI</h3>
-          <p class="text-muted small">Phân tích kết quả phễu tuyển dụng và nhận định chiến lược từ AI Gemini</p>
-        </div>
-
-        <!-- TÓM TẮT CHỈ SỐ -->
-        <div class="row g-3 mb-4 text-center">
-          <div class="col-md-3">
-            <div class="p-3 bg-light rounded border">
-              <small class="text-muted fw-bold">TỔNG HỒ SƠ ỨNG VIÊN</small>
-              <h3 class="fw-bold text-primary mb-0 mt-1" id="pdfTotalCand">0</h3>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="p-3 bg-light rounded border">
-              <small class="text-muted fw-bold">ỨNG VIÊN ĐẠT SƠ LOẠI</small>
-              <h3 class="fw-bold text-success mb-0 mt-1" id="pdfApprovedCand">0</h3>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="p-3 bg-light rounded border">
-              <small class="text-muted fw-bold">ỨNG VIÊN KHÔNG ĐẠT</small>
-              <h3 class="fw-bold text-danger mb-0 mt-1" id="pdfRejectedCand">0</h3>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="p-3 bg-light rounded border">
-              <small class="text-muted fw-bold">TỶ LỆ ĐẠT (PASS RATE)</small>
-              <h3 class="fw-bold text-dark mb-0 mt-1" id="pdfPassRate">0%</h3>
-            </div>
-          </div>
-        </div>
-
-        <!-- NHẬN ĐỊNH CỦA AI -->
-        <div class="p-3 bg-light rounded border mb-4">
-          <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-brain me-2"></i> Nhận định & Đề xuất Chiến lược từ AI Agent:</h6>
-          <div class="small text-secondary" id="pdfAiInsightsText">Đang nạp nhận định AI...</div>
-        </div>
-
-        <!-- BẢNG DANH SÁCH ỨNG VIÊN -->
-        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-list-check me-2"></i> Danh Sách Chi Tiết Hồ Sơ Tuyển Dụng:</h6>
-        <div class="table-responsive mb-4">
-          <table class="table table-bordered align-middle text-start mb-0 small">
-            <thead class="table-secondary text-uppercase fw-bold">
+        <!-- KHUNG XEM TRƯỚC BẢNG TÍNH EXCEL -->
+        <div class="table-responsive bg-white rounded-3 border shadow-sm p-2" style="max-height: 480px; overflow-y: auto;">
+          <table class="table table-bordered table-striped table-hover align-middle mb-0 small" style="border-color: #cbd5e1;">
+            <thead class="table-success text-uppercase text-dark small fw-bold">
               <tr>
-                <th class="text-center" style="width: 40px;">STT</th>
-                <th>Họ và Tên & Email</th>
-                <th>Vị trí ứng tuyển</th>
-                <th class="text-center" style="width: 90px;">Điểm AI</th>
-                <th class="text-center" style="width: 110px;">Trạng Thái</th>
-                <th>Khung Giờ Phỏng Vấn</th>
-                <th>Ghi Chú Đánh Giá</th>
+                <th class="text-center" style="width: 45px; background-color: #d1e7dd;">STT</th>
+                <th style="width: 60px; background-color: #d1e7dd;">Mã ID</th>
+                <th style="min-width: 160px; background-color: #d1e7dd;">Họ và Tên</th>
+                <th style="min-width: 170px; background-color: #d1e7dd;">Email</th>
+                <th style="min-width: 140px; background-color: #d1e7dd;">Vị Trí Tuyển Dụng</th>
+                <th class="text-center" style="width: 95px; background-color: #d1e7dd;">Điểm AI</th>
+                <th class="text-center" style="width: 110px; background-color: #d1e7dd;">Trạng Thái</th>
+                <th style="min-width: 150px; background-color: #d1e7dd;">Khung Giờ PV</th>
+                <th style="min-width: 180px; background-color: #d1e7dd;">Người PV</th>
+                <th style="min-width: 170px; background-color: #d1e7dd;">Link Google Meet</th>
+                <th style="min-width: 220px; background-color: #d1e7dd;">Nhận Đánh Giá AI</th>
               </tr>
             </thead>
-            <tbody id="pdfCandidateTableBody">
-              <!-- JS render candidate list -->
+            <tbody id="excelPreviewTableBody">
+              <!-- JS render spreadsheet preview rows -->
             </tbody>
           </table>
         </div>
-
-        <!-- CHỮ KÝ PHÊ DUYỆT LEADER & HR -->
-        <div class="row text-center mt-5 pt-4">
-          <div class="col-6">
-            <div class="fw-bold text-dark">NGƯỜI LẬP BÁO CÁO (HR)</div>
-            <div class="small text-muted italic mb-5">(Ký và ghi rõ họ tên)</div>
-            <div class="fw-bold text-primary">Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi</div>
-          </div>
-          <div class="col-6">
-            <div class="fw-bold text-dark">BAN GIÁM ĐỐC / TRƯỞNG PHÒNG</div>
-            <div class="small text-muted italic mb-5">(Ký duyệt báo cáo)</div>
-            <div class="fw-bold text-dark">__________________________</div>
-          </div>
-        </div>
       </div>
-
-      <div class="modal-footer bg-light py-2 justify-content-between">
-        <span class="small text-muted"><i class="fa-solid fa-circle-info me-1"></i> Kiểm tra nội dung báo cáo trước khi in hoặc lưu dưới dạng file PDF</span>
+      <div class="modal-footer bg-white py-2 justify-content-between">
+        <span class="small text-muted"><i class="fa-solid fa-file-shield me-1"></i> Định dạng chuẩn .xlsx mở mượt trên Microsoft Excel, Google Sheets, LibreOffice</span>
         <div>
-          <button type="button" class="btn btn-light border btn-sm px-3 me-2" data-bs-dismiss="modal">Đóng</button>
-          <button type="button" class="btn btn-danger btn-sm px-4 fw-bold shadow-sm" onclick="window.print()">
-            <i class="fa-solid fa-print me-1"></i> In / Tải PDF Cho Leader
+          <button type="button" class="btn btn-light border btn-sm px-3 me-2" data-bs-dismiss="modal">Hủy / Đóng</button>
+          <button type="button" class="btn btn-success btn-sm px-4 fw-bold shadow-sm" onclick="downloadExcelFile()">
+            <i class="fa-solid fa-download me-1"></i> Xác Nhận Tải File Excel (.xlsx)
           </button>
         </div>
       </div>
@@ -1349,85 +1287,71 @@ async function deleteCandidate(candidateId, candidateName) {
   }
 }
 
-// Hàm mở Modal Xem Trước Báo Cáo PDF Cho Leader (A4 Printable Document)
-function openPdfReportModal() {
+// Hàm mở Modal Xem Trước Bảng Dữ Liệu Excel trước khi tải xuống
+function openExcelPreviewModal() {
   const candidates = window.candidatesCache || [];
   if (!candidates || candidates.length === 0) {
-    alert("Chưa có dữ liệu ứng viên để xem trước báo cáo PDF!");
+    alert("Chưa có dữ liệu ứng viên để xuất Excel. Vui lòng làm mới danh sách!");
     return;
   }
 
-  document.getElementById("pdfReportDate").innerText = new Date().toLocaleString("vi-VN");
-  
-  const total = candidates.length;
-  const approvedCount = candidates.filter(c => {
-    const s = (c.status || '').trim();
-    const app = (c.approval_status || '').trim();
-    return app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn";
-  }).length;
-  const rejectedCount = total - approvedCount;
-  const passRate = total > 0 ? Math.round((approvedCount / total) * 100) : 0;
+  const fileName = `Bao_Cao_Tuyendung_Tong_Quan_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
+  const elFileName = document.getElementById("excelFileName");
+  if (elFileName) elFileName.innerText = fileName;
 
-  document.getElementById("pdfTotalCand").innerText = total;
-  document.getElementById("pdfApprovedCand").innerText = approvedCount;
-  document.getElementById("pdfRejectedCand").innerText = rejectedCount;
-  document.getElementById("pdfPassRate").innerText = passRate + "%";
+  const elTotal = document.getElementById("excelTotalRows");
+  if (elTotal) elTotal.innerText = candidates.length;
 
-  const insightsEl = document.getElementById("aiInsights");
-  if (insightsEl) {
-    document.getElementById("pdfAiInsightsText").innerHTML = insightsEl.innerHTML;
-  }
-
-  const tbody = document.getElementById("pdfCandidateTableBody");
+  const tbody = document.getElementById("excelPreviewTableBody");
   if (tbody) {
     tbody.innerHTML = candidates.map((c, idx) => {
       const s = (c.status || '').trim();
       const app = (c.approval_status || '').trim();
       const isApproved = (app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
       const isInterview = (app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
-      const score = Number(c.match_score) || 0;
+      const score = c.match_score ? `${c.match_score}/100` : 'N/A';
 
-      let statusBadge = '';
-      if (isInterview) {
-        statusBadge = '<span class="badge bg-info text-white">Phỏng vấn</span>';
-      } else if (isApproved) {
-        statusBadge = '<span class="badge bg-success text-white">Đạt</span>';
-      } else {
-        statusBadge = '<span class="badge bg-danger text-white">Loại</span>';
-      }
+      let statusBadge = 'Sơ loại';
+      if (isInterview) statusBadge = 'Phỏng vấn';
+      else if (isApproved) statusBadge = 'Đạt';
+      else if (s === 'Loại' || app === 'REJECTED') statusBadge = 'Loại';
 
       const timeStr = c.interview_time ? new Date(c.interview_time).toLocaleString("vi-VN") : 'Chưa xếp';
+      const interviewer = c.interviewer_name || 'Hội Đồng Phỏng Vấn & Ban Tuyển Dụng';
+      const meet = c.meeting_link || 'https://meet.google.com/dfj-amei-jzt';
+      const evaluation = c.ai_evaluation || c.ai_review || 'Đã phân tích tự động';
 
       return `
         <tr>
-          <td class="text-center fw-bold">${idx + 1}</td>
-          <td>
-            <div class="fw-bold text-dark">${c.name || c.full_name || 'N/A'}</div>
-            <div class="text-muted small">${c.email || ''}</div>
-          </td>
+          <td class="text-center fw-bold bg-light">${idx + 1}</td>
+          <td class="fw-semibold text-secondary">#${c.id}</td>
+          <td class="fw-bold text-dark">${c.name || c.full_name || 'N/A'}</td>
+          <td>${c.email || ''}</td>
           <td>${c.position || c.applied_position || ('Vị trí #' + c.job_id)}</td>
-          <td class="text-center fw-bold">${score}/100</td>
-          <td class="text-center">${statusBadge}</td>
-          <td>${timeStr}</td>
-          <td class="text-muted small">[ Ghi chú Leader ]</td>
+          <td class="text-center font-monospace fw-bold">${score}</td>
+          <td class="text-center"><span class="badge ${isInterview || isApproved ? 'bg-success' : 'bg-danger'}">${statusBadge}</span></td>
+          <td class="small text-nowrap">${timeStr}</td>
+          <td class="small text-muted">${interviewer}</td>
+          <td class="small"><a href="${meet}" target="_blank" class="text-truncate d-inline-block" style="max-width: 160px;">${meet}</a></td>
+          <td class="small text-muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${evaluation}">${evaluation}</td>
         </tr>
       `;
     }).join("");
   }
 
   try {
-    const modalEl = document.getElementById("leaderPdfReportModal");
+    const modalEl = document.getElementById("excelPreviewModal");
     if (modalEl && window.bootstrap && bootstrap.Modal) {
       const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
       modal.show();
     }
-  } catch(err) {
-    console.warn("Lỗi mở modal PDF:", err);
+  } catch (err) {
+    console.warn("Lỗi mở modal Excel:", err);
   }
 }
 
-// Hàm Xuất Báo Cáo Tuyển Dụng Ra File Excel (.xlsx) - Tải file ngay lập tức
-function exportReportExcel() {
+// Hàm tải file Excel (.xlsx) chính thức sau khi bấm nút xác nhận
+function downloadExcelFile() {
   const candidates = window.candidatesCache || [];
   if (!candidates || candidates.length === 0) {
     alert("Chưa có dữ liệu ứng viên để xuất Excel!");
@@ -1440,21 +1364,43 @@ function exportReportExcel() {
     "Họ và Tên": c.name || c.full_name || 'N/A',
     "Email": c.email || '',
     "Vị Trí Tuyển Dụng": c.position || c.applied_position || (`Vị trí #${c.job_id}`),
-    "Điểm Đánh Giá AI": c.match_score ? `${c.match_score}/100` : 'N/A',
-    "Trạng Thái Sàng Lọc": c.status || '',
-    "Phê Duyệt HR/Leader": c.approval_status || '',
-    "Khung Giờ Phỏng Vấn": c.interview_time ? new Date(c.interview_time).toLocaleString('vi-VN') : 'Chưa xếp',
-    "Đánh Giá AI": c.ai_evaluation || ''
+    "Điểm AI (Gemini)": c.match_score ? `${c.match_score}/100` : 'N/A',
+    "Trạng Thái Sàng Lọc": c.status || c.approval_status || 'Sơ loại',
+    "Khung Giờ Phỏng Vấn": c.interview_time ? new Date(c.interview_time).toLocaleString("vi-VN") : 'Chưa xếp',
+    "Người Phỏng Vấn": c.interviewer_name || 'Hội Đồng Phỏng Vấn & Ban Tuyển Dụng',
+    "Link Google Meet": c.meeting_link || 'https://meet.google.com/dfj-amei-jzt',
+    "Nhận Đánh Giá AI": c.ai_evaluation || c.ai_review || ''
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+  worksheet['!cols'] = [
+    { wch: 6 },  // STT
+    { wch: 8 },  // Mã ID
+    { wch: 22 }, // Họ và Tên
+    { wch: 28 }, // Email
+    { wch: 22 }, // Vị Trí
+    { wch: 16 }, // Điểm AI
+    { wch: 14 }, // Trạng Thái
+    { wch: 22 }, // Khung Giờ PV
+    { wch: 32 }, // Người PV
+    { wch: 35 }, // Link Meet
+    { wch: 45 }  // Nhận Đánh Giá AI
+  ];
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Bao_Cao_Tuyendung");
   
   const fileName = `Bao_Cao_Tuyendung_Tong_Quan_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 
-  alert(`📊 ĐÃ XUẤT THÀNH CÔNG FILE EXCEL BÁO CÁO TUYỂN DỤNG!\n\n📁 Tên file: ${fileName}\n\nFile đã được tải xuống máy tính. Bạn có thể mở trực tiếp bằng Microsoft Excel hoặc tải lên Google Drive / Sheets!`);
+  const modalEl = document.getElementById("excelPreviewModal");
+  if (modalEl && window.bootstrap && bootstrap.Modal) {
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+  }
+
+  alert(`📊 ĐÃ TẢI FILE EXCEL THÀNH CÔNG!\n\n📁 Tên file: ${fileName}\n\nFile đã sẵn sàng để mở bằng Microsoft Excel hoặc tải lên Google Drive / Sheets!`);
 }
 
 // Tự động tải dữ liệu ngay khi tải trang

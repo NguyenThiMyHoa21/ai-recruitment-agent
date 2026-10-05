@@ -144,11 +144,8 @@
         </p>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportDailyPdfReport()">
+        <button class="btn btn-success btn-sm rounded-pill px-4 shadow-sm fw-semibold" onclick="openExcelPreviewModal()">
           <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel Lịch PV (.xlsx)
-        </button>
-        <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportDailyPdfReport()">
-          <i class="fa-solid fa-file-pdf me-1"></i> Xuất PDF Lịch PV (Leader & HR)
         </button>
         <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="fetchCandidates()">
           <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
@@ -260,58 +257,54 @@
     </div>
   </div>
 
-  <!-- MODAL XEM TRƯỚC LỊCH PHỎNG VẤN DÀNH CHO LEADER (PDF EXPORT) -->
-  <div class="modal fade" id="leaderModal" tabindex="-1" aria-hidden="true">
+  <!-- MODAL XEM TRƯỚC BẢNG DỮ LIỆU EXCEL (.XLSX) -->
+  <div class="modal fade" id="excelPreviewModal" tabindex="-1" aria-labelledby="excelPreviewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
       <div class="modal-content shadow-lg border-0 rounded-4">
-        <div class="modal-header bg-dark text-white py-3">
-          <h5 class="modal-title fw-bold" id="leaderModalLabel">
-            <i class="fa-solid fa-file-pdf text-danger me-2"></i> Lịch Phỏng Vấn Dành Cho Leader & Hội Đồng Phỏng Vấn
+        <div class="modal-header bg-success text-white py-3">
+          <h5 class="modal-title fw-bold" id="excelPreviewModalLabel">
+            <i class="fa-solid fa-file-excel me-2"></i> Xem Trước Bảng Dữ Liệu Excel Phỏng Vấn (.xlsx)
           </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body p-4" id="leaderPrintArea">
-          <!-- HEADER BÁO CÁO -->
-          <div class="text-center mb-4">
-            <h3 class="fw-bold text-uppercase text-dark mb-1">BẢNG TỔNG HỢP LỊCH PHỎNG VẤN TRONG NGÀY</h3>
-            <p class="text-muted mb-1">Hệ Thống Tuyển Dụng Thông Minh Đa Tác Tử (AI Multi-Agent Recruitment System)</p>
-            <div class="small text-secondary">
-              <strong>Thời gian xuất:</strong> <span id="leaderPrintDate">-</span> | 
-              <strong>Đơn vị:</strong> HR Manager & Hội Đồng Phỏng Vấn |
-              <strong>Tác giả:</strong> Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi
+        <div class="modal-body p-4 bg-light">
+          <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-3 py-2 px-3 small">
+            <i class="fa-solid fa-circle-check fs-5 me-2 text-success"></i>
+            <div>
+              <strong>Xem trước bảng tính Excel:</strong> Kiểm tra danh sách <span id="excelTotalRows" class="fw-bold text-dark">0</span> ứng viên phỏng vấn dưới đây trước khi xuất file <strong id="excelFileName">Danh_Sach_Phong_Van.xlsx</strong>.
             </div>
-            <hr class="my-3">
           </div>
 
-          <!-- BẢNG LỊCH CHI TIẾT SẮP XẾP THEO GIỜ PV -->
-          <div class="table-responsive">
-            <table class="table table-bordered align-middle text-start mb-0">
-              <thead class="table-secondary text-uppercase small fw-bold">
+          <!-- KHUNG XEM TRƯỚC BẢNG TÍNH EXCEL -->
+          <div class="table-responsive bg-white rounded-3 border shadow-sm p-2" style="max-height: 480px; overflow-y: auto;">
+            <table class="table table-bordered table-striped table-hover align-middle mb-0 small" style="border-color: #cbd5e1;">
+              <thead class="table-success text-uppercase text-dark small fw-bold">
                 <tr>
-                  <th class="text-center" style="width: 50px;">STT</th>
-                  <th style="width: 145px;">Khung Giờ PV</th>
-                  <th style="min-width: 180px;">Họ tên & Email</th>
-                  <th style="min-width: 150px;">Vị trí tuyển dụng</th>
-                  <th class="text-center" style="width: 110px;">Điểm AI CV</th>
-                  <th style="min-width: 160px;">Link Phòng Meet</th>
-                  <th style="min-width: 180px;">Ghi chú & Đánh giá của Leader</th>
+                  <th class="text-center" style="width: 45px; background-color: #d1e7dd;">STT</th>
+                  <th style="width: 60px; background-color: #d1e7dd;">Mã ID</th>
+                  <th style="min-width: 160px; background-color: #d1e7dd;">Họ và Tên</th>
+                  <th style="min-width: 170px; background-color: #d1e7dd;">Email</th>
+                  <th style="min-width: 140px; background-color: #d1e7dd;">Vị Trí Tuyển Dụng</th>
+                  <th class="text-center" style="width: 95px; background-color: #d1e7dd;">Điểm AI</th>
+                  <th class="text-center" style="width: 110px; background-color: #d1e7dd;">Trạng Thái</th>
+                  <th style="min-width: 150px; background-color: #d1e7dd;">Khung Giờ PV</th>
+                  <th style="min-width: 180px; background-color: #d1e7dd;">Người PV</th>
+                  <th style="min-width: 170px; background-color: #d1e7dd;">Link Google Meet</th>
+                  <th style="min-width: 220px; background-color: #d1e7dd;">Nhận Đánh Giá AI</th>
                 </tr>
               </thead>
-              <tbody id="leaderCandidateList">
-                <!-- JS render danh sách sắp xếp theo thời gian -->
+              <tbody id="excelPreviewTableBody">
+                <!-- JS render spreadsheet preview rows -->
               </tbody>
             </table>
           </div>
         </div>
-        <div class="modal-footer bg-light py-2 justify-content-between">
-          <span class="small text-muted"><i class="fa-solid fa-circle-info me-1"></i> Bấm "Tải Excel" hoặc "In / Tải PDF" sau khi đã kiểm tra danh sách</span>
+        <div class="modal-footer bg-white py-2 justify-content-between">
+          <span class="small text-muted"><i class="fa-solid fa-file-shield me-1"></i> Định dạng chuẩn .xlsx mở mượt trên Microsoft Excel, Google Sheets, LibreOffice</span>
           <div>
-            <button type="button" class="btn btn-light border btn-sm px-3 me-2" data-bs-dismiss="modal">Đóng</button>
-            <button type="button" class="btn btn-outline-success btn-sm px-3 fw-bold me-2" onclick="exportInterviewExcel()">
-              <i class="fa-solid fa-file-excel me-1"></i> Tải Excel Lịch PV (.xlsx)
-            </button>
-            <button type="button" class="btn btn-success btn-sm px-4 fw-bold shadow-sm" onclick="printLeaderSchedule()">
-              <i class="fa-solid fa-print me-1"></i> In / Tải PDF Lịch Cho Leader
+            <button type="button" class="btn btn-light border btn-sm px-3 me-2" data-bs-dismiss="modal">Hủy / Đóng</button>
+            <button type="button" class="btn btn-success btn-sm px-4 fw-bold shadow-sm" onclick="downloadExcelFile()">
+              <i class="fa-solid fa-download me-1"></i> Xác Nhận Tải File Excel (.xlsx)
             </button>
           </div>
         </div>
@@ -724,96 +717,120 @@
       }
     };
 
-    // Hàm Xuất Báo Cáo / Lịch Phỏng Vấn Dành Cho Leader & Hội Đồng Phỏng Vấn
-    window.exportDailyPdfReport = function() {
-      // Lọc các ứng viên đã được xếp lịch phỏng vấn
-      const scheduledList = allCandidates.filter(c => {
-        const s = (c.status || '').trim();
-        const app = (c.approval_status || '').trim();
-        return c.interview_time || s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED';
-      });
-
-      if (!scheduledList || scheduledList.length === 0) {
-        alert('Hiện chưa có ứng viên nào được xếp lịch phỏng vấn để xuất báo cáo cho Leader!');
+    // Hàm mở Modal Xem Trước Bảng Excel Lịch Phỏng Vấn
+    window.openExcelPreviewModal = function() {
+      const candidates = allCandidates || window.candidatesCache || [];
+      if (!candidates || candidates.length === 0) {
+        alert("Chưa có dữ liệu ứng viên để xuất Excel. Vui lòng bấm 'Làm mới danh sách'!");
         return;
       }
 
-      // Sắp xếp tăng dần theo khung giờ phỏng vấn (Ví dụ: 09:00 -> 09:45 -> 10:30...)
-      scheduledList.sort((a, b) => {
-        const tA = a.interview_time ? new Date(a.interview_time).getTime() : 0;
-        const tB = b.interview_time ? new Date(b.interview_time).getTime() : 0;
-        return tA - tB;
-      });
+      const fileName = `Danh_Sach_Phong_Van_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
+      const elFileName = document.getElementById("excelFileName");
+      if (elFileName) elFileName.innerText = fileName;
 
-      document.getElementById('leaderPrintDate').innerText = new Date().toLocaleString('vi-VN');
-      const tbody = document.getElementById('leaderCandidateList');
+      const elTotal = document.getElementById("excelTotalRows");
+      if (elTotal) elTotal.innerText = candidates.length;
 
-      tbody.innerHTML = scheduledList.map((c, idx) => {
-        const timeStr = formatTime(c.interview_time) || '09:30 AM';
-        const score = c.match_score ? `${c.match_score}/100` : '80/100';
-        return `
-          <tr>
-            <td class="text-center fw-bold">${idx + 1}</td>
-            <td>
-              <div class="fw-bold text-primary fs-6"><i class="fa-regular fa-clock me-1"></i>${timeStr}</div>
-              <small class="text-muted">Người PV: ${c.interviewer_name || 'HR Manager'}</small>
-            </td>
-            <td>
-              <div class="fw-bold text-dark">${c.full_name || c.name || 'N/A'}</div>
-              <div class="small text-muted">${c.email || ''}</div>
-            </td>
-            <td class="fw-semibold text-secondary">${c.applied_position || c.position || 'N/A'}</td>
-            <td class="text-center">
-              <span class="badge bg-success-subtle text-success border px-2 py-1">${score}</span>
-            </td>
-            <td>
-              <a href="${c.meeting_link}" target="_blank" class="small text-primary text-break">${c.meeting_link || 'Google Meet'}</a>
-            </td>
-            <td style="min-height: 45px;">
-              <div class="small text-muted italic" style="border: 1px dashed #cbd5e1; border-radius: 4px; padding: 6px; min-height: 40px;">
-                [ Leader ghi chú đánh giá ]
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
+      const tbody = document.getElementById("excelPreviewTableBody");
+      if (tbody) {
+        tbody.innerHTML = candidates.map((c, idx) => {
+          const s = (c.status || '').trim();
+          const app = (c.approval_status || '').trim();
+          const isApproved = (app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
+          const isInterview = (app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
+          const score = c.match_score ? `${c.match_score}/100` : 'N/A';
 
-      const modalEl = document.getElementById('leaderModal');
-      const bsModal = new bootstrap.Modal(modalEl);
-      bsModal.show();
+          let statusBadge = 'Sơ loại';
+          if (isInterview) statusBadge = 'Phỏng vấn';
+          else if (isApproved) statusBadge = 'Đạt';
+          else if (s === 'Loại' || app === 'REJECTED') statusBadge = 'Loại';
+
+          const timeStr = c.interview_time ? formatTime(c.interview_time) : 'Chưa xếp';
+          const interviewer = c.interviewer_name || 'Hội Đồng Phỏng Vấn & Ban Tuyển Dụng';
+          const meet = c.meeting_link || 'https://meet.google.com/dfj-amei-jzt';
+          const evaluation = c.ai_evaluation || c.ai_review || 'Đã phân tích tự động';
+
+          return `
+            <tr>
+              <td class="text-center fw-bold bg-light">${idx + 1}</td>
+              <td class="fw-semibold text-secondary">#${c.id}</td>
+              <td class="fw-bold text-dark">${c.full_name || c.name || 'N/A'}</td>
+              <td>${c.email || ''}</td>
+              <td>${c.applied_position || c.position || ('Vị trí #' + c.job_id)}</td>
+              <td class="text-center font-monospace fw-bold">${score}</td>
+              <td class="text-center"><span class="badge ${isInterview || isApproved ? 'bg-success' : 'bg-danger'}">${statusBadge}</span></td>
+              <td class="small text-nowrap">${timeStr}</td>
+              <td class="small text-muted">${interviewer}</td>
+              <td class="small"><a href="${meet}" target="_blank" class="text-truncate d-inline-block" style="max-width: 160px;">${meet}</a></td>
+              <td class="small text-muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${evaluation}">${evaluation}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      try {
+        const modalEl = document.getElementById("excelPreviewModal");
+        if (modalEl && window.bootstrap && bootstrap.Modal) {
+          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+          modal.show();
+        }
+      } catch (err) {
+        console.warn("Lỗi mở modal Excel:", err);
+      }
     };
 
-    window.printLeaderSchedule = function() {
-      window.print();
-    };
-
-    // Hàm Xuất Báo Cáo Lịch Phỏng Vấn Ra File Excel (.xlsx)
-    window.exportInterviewExcel = function() {
-      if (!allCandidates || allCandidates.length === 0) {
+    // Hàm Tải File Excel (.xlsx) Chính Thức
+    window.downloadExcelFile = function() {
+      const candidates = allCandidates || window.candidatesCache || [];
+      if (!candidates || candidates.length === 0) {
         alert("Chưa có dữ liệu ứng viên để xuất Excel!");
         return;
       }
       
-      const excelData = allCandidates.map((c, idx) => ({
+      const excelData = candidates.map((c, idx) => ({
         "STT": idx + 1,
         "Mã ID": c.id,
         "Họ và Tên": c.full_name || c.name || 'N/A',
         "Email": c.email || '',
         "Vị Trí Tuyển Dụng": c.applied_position || c.position || '',
+        "Điểm AI (Gemini)": c.match_score ? `${c.match_score}/100` : 'N/A',
         "Trạng Thái": c.status || 'Phỏng vấn',
         "Khung Giờ Phỏng Vấn": c.interview_time ? formatTime(c.interview_time) : 'Chưa xếp',
         "Người Phỏng Vấn": c.interviewer_name || 'Hội Đồng Phỏng Vấn & Ban Tuyển Dụng',
-        "Link Google Meet": c.meeting_link || '',
-        "Đánh Giá AI (Gemini)": c.ai_evaluation || c.ai_review || ''
+        "Link Google Meet": c.meeting_link || 'https://meet.google.com/dfj-amei-jzt',
+        "Nhận Đánh Giá AI": c.ai_evaluation || c.ai_review || ''
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      worksheet['!cols'] = [
+        { wch: 6 },  // STT
+        { wch: 8 },  // Mã ID
+        { wch: 22 }, // Họ và Tên
+        { wch: 28 }, // Email
+        { wch: 22 }, // Vị Trí
+        { wch: 16 }, // Điểm AI
+        { wch: 14 }, // Trạng Thái
+        { wch: 22 }, // Khung Giờ PV
+        { wch: 32 }, // Người PV
+        { wch: 35 }, // Link Meet
+        { wch: 45 }  // Nhận Đánh Giá AI
+      ];
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Lich_Phong_Van");
       
       const fileName = `Danh_Sach_Phong_Van_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
       XLSX.writeFile(workbook, fileName);
-      alert(`📊 ĐÃ XUẤT THÀNH CÔNG FILE EXCEL LỊCH PHỎNG VẤN!\n\n📁 Tên file: ${fileName}\n\nFile đã được tải về máy tính. Bạn có thể mở bằng Excel hoặc tải lên Google Drive / Sheets!`);
+
+      const modalEl = document.getElementById("excelPreviewModal");
+      if (modalEl && window.bootstrap && bootstrap.Modal) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+      }
+
+      alert(`📊 ĐÃ TẢI FILE EXCEL LỊCH PHỎNG VẤN THÀNH CÔNG!\n\n📁 Tên file: ${fileName}\n\nFile đã được tải về máy tính. Bạn có thể mở bằng Excel hoặc tải lên Google Drive / Sheets!`);
     };
 
     document.addEventListener('DOMContentLoaded', fetchCandidates);
