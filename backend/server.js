@@ -88,6 +88,9 @@ app.post("/api/jobs", async (req, res) => {
             message: "Cannot connect to n8n",
             error: error.message
         });
+    }
+});
+
 // API nhận hồ sơ ứng tuyển từ Candidate Portal -> Gửi sang Webhook Luồng 2 n8n (cv-screening-clean)
 app.post("/api/screen-cv", async (req, res) => {
     try {

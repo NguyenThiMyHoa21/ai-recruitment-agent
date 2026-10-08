@@ -86,14 +86,33 @@
       </div>
     </div>
 
-    <!-- TIÊU ĐỀ DANH SÁCH JOB -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4 class="fw-bold text-dark mb-0">
-        <i class="fa-solid fa-briefcase text-primary me-2"></i> Việc Làm Đang Tuyển Dụng (<span id="jobCount">0</span>)
-      </h4>
-      <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="loadJobs()">
-        <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
-      </button>
+    <!-- TIÊU ĐỀ DANH SÁCH JOB & BỘ LỌC TRẠNG THÁI -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+      <div>
+        <h4 class="fw-bold text-dark mb-1">
+          <i class="fa-solid fa-briefcase text-primary me-2"></i> Danh Sách Vị Trí Tuyển Dụng (<span id="jobCount">11</span>)
+        </h4>
+        <small class="text-muted">Hiển thị danh sách vị trí đang mở tuyển và vị trí đã tạm ngưng tiếp nhận hồ sơ.</small>
+      </div>
+
+      <!-- FILTER TABS & NÚT LÀM MỚI -->
+      <div class="d-flex align-items-center flex-wrap gap-2">
+        <div class="btn-group btn-group-sm shadow-sm" role="group" id="statusFilterGroup">
+          <button type="button" class="btn btn-primary fw-semibold px-3 active" onclick="filterJobs('all', this)">
+            Tất cả (<span id="countAll">11</span>)
+          </button>
+          <button type="button" class="btn btn-outline-primary fw-semibold px-3" onclick="filterJobs('published', this)">
+            🟢 Đang tuyển (<span id="countPublished">8</span>)
+          </button>
+          <button type="button" class="btn btn-outline-primary fw-semibold px-3" onclick="filterJobs('closed', this)">
+            🔴 Tạm ngưng (<span id="countClosed">3</span>)
+          </button>
+        </div>
+
+        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm" onclick="loadJobs()">
+          <i class="fa-solid fa-rotate me-1"></i> Làm mới
+        </button>
+      </div>
     </div>
 
     <!-- CONTAINER DANH SÁCH JOBS -->
@@ -178,20 +197,19 @@
   <script>
     const API_BASE = 'http://localhost:3000';
     let availableJobs = [];
+    let currentFilter = 'all';
 
     // Tải danh sách công việc đang đăng tuyển từ Backend MySQL
     async function loadJobs() {
-      const container = document.getElementById('jobListContainer');
       try {
         const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now());
         const data = await res.json();
         
         if (res.ok && data.success && data.jobs && data.jobs.length > 0) {
           availableJobs = data.jobs;
-          document.getElementById('jobCount').innerText = availableJobs.length;
-          renderJobs(availableJobs);
+          updateCounts(availableJobs);
+          renderJobsFiltered();
         } else {
-          // Dữ liệu mẫu khởi tạo nếu DB chưa có
           renderDefaultJobs();
         }
       } catch (err) {
@@ -208,7 +226,8 @@
           department: "Phòng Công Nghệ IT",
           location: "Đà Nẵng / Remote",
           salary: "15 - 25 triệu",
-          requirements: "Thành thạo Java, Spring Boot, MySQL, REST API, Git. Có tư duy lập trình tốt."
+          requirements: "Thành thạo Java, Spring Boot, MySQL, REST API, Git. Có tư duy lập trình tốt.",
+          status: "published"
         },
         {
           id: 2,
@@ -216,7 +235,8 @@
           department: "Phòng Truyền Thông",
           location: "Đà Nẵng",
           salary: "10 - 15 triệu",
-          requirements: "Kinh nghiệm Facebook Ads, Google Ads, SEO, Content Copywriting, đo lường KPI."
+          requirements: "Kinh nghiệm Facebook Ads, Google Ads, SEO, Content Copywriting, đo lường KPI.",
+          status: "published"
         },
         {
           id: 3,
@@ -224,35 +244,160 @@
           department: "Phòng Kiểm Thử Phần Mềm",
           location: "Đà Nẵng",
           salary: "12 - 18 triệu",
-          requirements: "Kinh nghiệm Selenium, Postman API, Test Case Execution, Cypress, Unit Test."
+          requirements: "Kinh nghiệm Selenium, Postman API, Test Case Execution, Cypress, Unit Test.",
+          status: "published"
+        },
+        {
+          id: 4,
+          position: "Senior Backend Engineer (Node.js / Go)",
+          department: "Phòng Công Nghệ IT",
+          location: "Đà Nẵng / Hà Nội",
+          salary: "30 - 45 triệu",
+          requirements: "Thành thạo Node.js, Golang, Microservices, Redis, Docker, System Architecture.",
+          status: "published"
+        },
+        {
+          id: 5,
+          position: "Frontend Developer (ReactJS / VueJS)",
+          department: "Phòng Công Nghệ IT",
+          location: "Đà Nẵng",
+          salary: "18 - 28 triệu",
+          requirements: "Tốt nghiệp IT, 2+ năm kinh nghiệm ReactJS, Next.js, Redux Toolkit, Webpack.",
+          status: "published"
+        },
+        {
+          id: 6,
+          position: "Product Manager (Quản Lý Sản Phẩm)",
+          department: "Phòng Quản Lý Sản Phẩm",
+          location: "Đà Nẵng / TP.HCM",
+          salary: "35 - 50 triệu",
+          requirements: "Quản trị sản phẩm phần mềm, Agile/Scrum, User Journey, Data-driven Analysis.",
+          status: "published"
+        },
+        {
+          id: 7,
+          position: "UI/UX Designer (Thiết Kế Trải Nghiệm)",
+          department: "Phòng Thiết Kế",
+          location: "Đà Nẵng",
+          salary: "15 - 22 triệu",
+          requirements: "Sử dụng thành thạo Figma, Adobe XD, Wireframing, User Research, Prototype.",
+          status: "published"
+        },
+        {
+          id: 8,
+          position: "Chuyên Viên Tuyển Dụng (HR Recruiter)",
+          department: "Phòng Nhân Sự",
+          location: "Đà Nẵng",
+          salary: "12 - 18 triệu",
+          requirements: "Kinh nghiệm sourcing ứng viên IT/Tech, phỏng vấn đánh giá, đàm phán offer.",
+          status: "published"
+        },
+        {
+          id: 9,
+          position: "Nhân Viên Kinh Doanh (Sales Executive)",
+          department: "Phòng Kinh Doanh",
+          location: "Đà Nẵng",
+          salary: "10 - 20 triệu",
+          requirements: "Tìm kiếm mở rộng tệp khách hàng B2B, đàm phán hợp đồng, giao tiếp tự tin.",
+          status: "closed"
+        },
+        {
+          id: 10,
+          position: "Nhân Viên Chăm Sóc Khách Hàng (CSKH)",
+          department: "Phòng CSKH",
+          location: "Đà Nẵng",
+          salary: "8 - 12 triệu",
+          requirements: "Tiếp nhận phản hồi khách hàng qua tổng đài, giọng nói truyền cảm, giải quyết khiếu nại.",
+          status: "closed"
+        },
+        {
+          id: 11,
+          position: "Kỹ Sư Hệ Thống DevOps & Cloud",
+          department: "Phòng Hạ Tầng IT",
+          location: "Đà Nẵng / Remote",
+          salary: "25 - 35 triệu",
+          requirements: "Quản trị AWS, Kubernetes, CI/CD Pipeline, Ansible, Monitoring (Prometheus/Grafana).",
+          status: "closed"
         }
       ];
-      document.getElementById('jobCount').innerText = availableJobs.length;
-      renderJobs(availableJobs);
+      updateCounts(availableJobs);
+      renderJobsFiltered();
+    }
+
+    function updateCounts(jobs) {
+      const pubCount = jobs.filter(j => (j.status || 'published') === 'published').length;
+      const closedCount = jobs.filter(j => j.status === 'closed' || j.status === 'draft').length;
+      document.getElementById('countAll').innerText = jobs.length;
+      document.getElementById('countPublished').innerText = pubCount;
+      document.getElementById('countClosed').innerText = closedCount;
+      document.getElementById('jobCount').innerText = jobs.length;
+    }
+
+    function filterJobs(filter, btnEl) {
+      currentFilter = filter;
+      if (btnEl) {
+        document.querySelectorAll('#statusFilterGroup button').forEach(b => {
+          b.classList.remove('btn-primary', 'active');
+          b.classList.add('btn-outline-primary');
+        });
+        btnEl.classList.remove('btn-outline-primary');
+        btnEl.classList.add('btn-primary', 'active');
+      }
+      renderJobsFiltered();
+    }
+
+    function renderJobsFiltered() {
+      let filtered = availableJobs;
+      if (currentFilter === 'published') {
+        filtered = availableJobs.filter(j => (j.status || 'published') === 'published');
+      } else if (currentFilter === 'closed') {
+        filtered = availableJobs.filter(j => j.status === 'closed' || j.status === 'draft');
+      }
+      renderJobs(filtered);
     }
 
     function renderJobs(jobs) {
       const container = document.getElementById('jobListContainer');
+      if (!jobs || jobs.length === 0) {
+        container.innerHTML = `
+          <div class="col-12 text-center py-5">
+            <i class="fa-solid fa-folder-open display-4 text-muted mb-3 d-block"></i>
+            <h5 class="fw-bold text-secondary">Không tìm thấy vị trí tuyển dụng phù hợp</h5>
+            <p class="text-muted small">Vui lòng thử chọn bộ lọc khác hoặc quay lại sau.</p>
+          </div>
+        `;
+        return;
+      }
+
       container.innerHTML = jobs.map(j => {
+        const isClosed = (j.status === 'closed' || j.status === 'draft');
         const reqs = (j.requirements || '').split(/[,;.\n]+/).filter(x => x.trim().length > 1);
         const reqBadges = reqs.map(r => `<span class="skill-badge">${r.trim()}</span>`).join(' ');
 
+        const statusBadge = isClosed 
+          ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 small fw-bold"><i class="fa-solid fa-circle-xmark me-1"></i>🔴 Tạm ngưng tuyển</span>`
+          : `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small fw-bold"><i class="fa-solid fa-circle-check me-1"></i>🟢 Đang tuyển dụng</span>`;
+
+        const applyButton = isClosed
+          ? `<button class="btn btn-secondary w-100 fw-bold py-2 rounded-3 disabled" disabled><i class="fa-solid fa-ban me-1"></i> ⛔ ĐÃ TẠM NGƯNG TIẾP NHẬN HỒ SƠ</button>`
+          : `<button class="btn btn-outline-primary w-100 fw-bold py-2 rounded-3 shadow-sm" onclick="openApplyModal(${j.id}, '${j.position.replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane me-1"></i> 📤 ỨNG TUYỂN VỊ TRÍ NÀY</button>`;
+
         return `
           <div class="col-md-6 col-lg-4">
-            <div class="job-card p-4 h-100 d-flex flex-column justify-content-between">
+            <div class="job-card p-4 h-100 d-flex flex-column justify-content-between shadow-sm" style="${isClosed ? 'opacity: 0.85; background: #fafafa;' : ''}">
               <div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex justify-content-between align-items-start mb-2 gap-1 flex-wrap">
                   <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 small fw-semibold">
                     <i class="fa-solid fa-building me-1"></i>${j.department || 'Phòng Ban'}
                   </span>
-                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small fw-bold">
-                    <i class="fa-solid fa-money-bill-wave me-1"></i>${j.salary || 'Thỏa thuận'}
-                  </span>
+                  ${statusBadge}
                 </div>
 
-                <h5 class="fw-bold text-dark mb-2">${j.position}</h5>
-                <div class="small text-muted mb-3">
-                  <i class="fa-solid fa-location-dot text-danger me-1"></i>${j.location || 'Việt Nam'}
+                <h5 class="fw-bold text-dark mb-2 mt-1">${j.position}</h5>
+                
+                <div class="d-flex align-items-center gap-3 small text-muted mb-3 flex-wrap">
+                  <span><i class="fa-solid fa-location-dot text-danger me-1"></i>${j.location || 'Đà Nẵng'}</span>
+                  <span><i class="fa-solid fa-money-bill-wave text-success me-1"></i><strong class="text-dark">${j.salary || 'Thỏa thuận'}</strong></span>
                 </div>
 
                 <div class="mb-3">
@@ -264,9 +409,7 @@
               </div>
 
               <div class="pt-3 border-top mt-3">
-                <button class="btn btn-outline-primary w-100 fw-bold py-2 rounded-3" onclick="openApplyModal(${j.id}, '${j.position.replace(/'/g, "\\'")}')">
-                  <i class="fa-solid fa-paper-plane me-1"></i> 📤 ỨNG TUYỂN VỊ TRÍ NÀY
-                </button>
+                ${applyButton}
               </div>
             </div>
           </div>
