@@ -88,6 +88,38 @@ app.post("/api/jobs", async (req, res) => {
             message: "Cannot connect to n8n",
             error: error.message
         });
+// API nhận hồ sơ ứng tuyển từ Candidate Portal -> Gửi sang Webhook Luồng 2 n8n (cv-screening-clean)
+app.post("/api/screen-cv", async (req, res) => {
+    try {
+        const payload = req.body;
+        console.log("Candidate application received:", payload);
+
+        const response = await fetch("http://localhost:5678/webhook/cv-screening-clean", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const resultText = await response.text();
+        let resultJson = {};
+        try {
+            resultJson = JSON.parse(resultText);
+        } catch(e) {
+            resultJson = { raw: resultText };
+        }
+
+        res.json({
+            success: true,
+            message: "Hồ sơ ứng tuyển đã được nhận và chuyển sang AI Screening!",
+            data: resultJson
+        });
+    } catch (error) {
+        console.error("Lỗi khi gửi hồ sơ ứng tuyển sang n8n Luồng 2:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi kết nối máy chủ n8n Luồng 2",
+            error: error.message
+        });
     }
 });
 
