@@ -657,6 +657,28 @@ app.delete("/api/candidates/:id", async (req, res) => {
     }
 });
 
+// API cập nhật trạng thái tuyển dụng (published / closed) cho HR
+app.post("/api/jobs/update-status", async (req, res) => {
+    try {
+        const { id, status } = req.body;
+        if (!id || !status) {
+            return res.status(400).json({ success: false, message: "Thiếu id hoặc status" });
+        }
+        await db.query("UPDATE jobs SET status = ? WHERE id = ?", [status, id]);
+        res.json({
+            success: true,
+            message: `Đã cập nhật trạng thái vị trí #${id} thành '${status}'`
+        });
+    } catch (error) {
+        console.error("Error updating job status:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi cập nhật trạng thái vị trí tuyển dụng",
+            error: error.message
+        });
+    }
+});
+
 // API xóa tin tuyển dụng (kèm tự động cascade xóa ứng viên liên quan)
 app.delete("/api/jobs/:id", async (req, res) => {
     try {

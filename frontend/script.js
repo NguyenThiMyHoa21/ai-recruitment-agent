@@ -179,12 +179,22 @@ function renderJobsTable(jobs) {
 
     window.jobsCache = jobs;
 
-    tbody.innerHTML = jobs.map(j => `
+    tbody.innerHTML = jobs.map(j => {
+        const isPublished = (j.status !== 'closed' && j.status !== 'draft');
+        return `
         <tr>
             <td><span class="badge bg-light text-dark border">#${j.id}</span></td>
             <td class="fw-semibold text-primary">${j.position}</td>
             <td><span class="badge bg-secondary-subtle text-secondary px-2 py-1">${j.department || 'Phòng Nhân sự'}</span></td>
             <td class="text-success fw-bold">${j.salary || 'Thỏa thuận'}</td>
+            <td>
+                <select class="form-select form-select-sm fw-semibold shadow-sm ${isPublished ? 'border-success text-success' : 'border-danger text-danger'}" 
+                        style="font-size: 12px; border-radius: 20px; padding-left: 10px; cursor: pointer;" 
+                        onchange="toggleJobStatus(${j.id}, this.value, this)">
+                    <option value="published" ${isPublished ? 'selected' : ''}>🟢 Đang tuyển</option>
+                    <option value="closed" ${!isPublished ? 'selected' : ''}>🔴 Tạm ngưng</option>
+                </select>
+            </td>
             <td class="text-end text-nowrap">
                 <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold me-1" data-bs-toggle="modal" data-bs-target="#jobDetailModal" onclick="viewJobDetail(${j.id})">
                     <i class="fa-solid fa-circle-info me-1"></i> Chi tiết
@@ -197,7 +207,33 @@ function renderJobsTable(jobs) {
                 </button>
             </td>
         </tr>
-    `).join("");
+    `}).join("");
+}
+
+// Hàm đổi trạng thái tuyển dụng (HR chọn Đang tuyển / Tạm ngưng)
+async function toggleJobStatus(jobId, newStatus, selectEl) {
+    try {
+        const res = await fetch("http://localhost:3000/api/jobs/update-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: Number(jobId), status: newStatus })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (selectEl) {
+                if (newStatus === 'published') {
+                    selectEl.className = 'form-select form-select-sm fw-semibold shadow-sm border-success text-success';
+                } else {
+                    selectEl.className = 'form-select form-select-sm fw-semibold shadow-sm border-danger text-danger';
+                }
+            }
+            alert(`✅ Đã cập nhật vị trí #${jobId} sang trạng thái: ${newStatus === 'published' ? '🟢 ĐANG TUYỂN DỤNG' : '🔴 TẠM NGƯNG TIẾP NHẬN'}.\n\nCổng Ứng Viên đã được đồng bộ tự động!`);
+        } else {
+            alert("Lỗi khi cập nhật trạng thái: " + (data.message || 'Không thể đổi trạng thái'));
+        }
+    } catch (err) {
+        alert("Lỗi kết nối máy chủ: " + err.message);
+    }
 }
 
 // Hàm mở Modal xem chi tiết JD công việc
