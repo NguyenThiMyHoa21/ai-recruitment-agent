@@ -201,21 +201,37 @@
 
     // Tải danh sách công việc đang đăng tuyển từ Backend MySQL
     async function loadJobs() {
+      let customJobs = [];
+      try { customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(e) {}
+
       try {
         const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now());
-        const data = await res.json();
-        
+        const rawText = await res.text();
+        let data = {};
+        try { data = JSON.parse(rawText); } catch(e) {}
+
         if (res.ok && data.success && data.jobs && data.jobs.length > 0) {
           availableJobs = data.jobs;
-          updateCounts(availableJobs);
-          renderJobsFiltered();
         } else {
-          renderDefaultJobs();
+          renderDefaultJobs(false);
         }
       } catch (err) {
         console.warn("Lỗi tải danh sách job:", err);
-        renderDefaultJobs();
+        renderDefaultJobs(false);
       }
+
+      // Đẩy cập nhật trạng thái từ HR (localStorage)
+      if (customJobs && customJobs.length > 0) {
+        customJobs.forEach(cj => {
+          let target = availableJobs.find(j => String(j.id) === String(cj.id));
+          if (target && cj.status) {
+            target.status = cj.status;
+          }
+        });
+      }
+
+      updateCounts(availableJobs);
+      renderJobsFiltered();
     }
 
     function renderDefaultJobs() {
