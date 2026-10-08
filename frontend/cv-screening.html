@@ -6,16 +6,8 @@
 
   <title>AI Recruitment System - Quản Lý Hồ Sơ Ứng Viên</title>
 
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  >
-  <!-- FontAwesome Icons -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  >
-  <!-- Trích xuất text từ file docx và pdf trực tiếp trên trình duyệt -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
@@ -24,30 +16,17 @@
       background-color: #f4f6f9;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-
-    .card {
-      border-radius: 12px;
-      border: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-
-    .btn-primary {
-      background-color: #0d6efd;
-      border-radius: 8px;
-      font-weight: 600;
-      padding: 10px 24px;
-    }
-
-    .badge-score {
-      font-size: 1.1rem;
-      padding: 8px 16px;
-      border-radius: 20px;
-    }
-    .card {
+    .main-card {
       border-radius: 14px;
       border: none;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
       background: #ffffff;
+    }
+    .stat-card {
+      border-radius: 12px;
+      border: none;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
     .navbar-nav .nav-link {
       font-size: 13.5px;
@@ -63,6 +42,13 @@
     }
     .navbar-nav .nav-link.active {
       padding: 6px 16px;
+    }
+    .status-select {
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 4px 8px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -115,765 +101,191 @@
     </div>
   </nav>
 
-  <div class="container pb-5" style="max-width: 960px;">
+  <div class="container pb-5" style="max-width: 1220px;">
 
-    <div class="card p-4 p-md-5">
+    <!-- TIÊU ĐỀ TRANG & THÔNG BÁO TỰ ĐỘNG -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div>
+        <h3 class="text-primary mb-1 fw-bold">
+          👥 Quản Lý Hồ Sơ Ứng Viên & Kết Quả AI Screening
+        </h3>
+        <p class="text-muted small mb-0">
+          <strong>Dành cho HR Manager:</strong> Tự động tiếp nhận hồ sơ từ <strong>Cổng Ứng Viên</strong>, AI CV Screening Agent tự động phân tích & chấm điểm đối chiếu với bài đăng tuyển dụng.
+        </p>
+      </div>
 
-      <!-- Tiêu đề -->
-      <h3 class="text-primary mb-2 fw-bold">
-        👥 Quản Lý Hồ Sơ Ứng Viên & Kết Quả AI CV Screening
-      </h3>
+      <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold" onclick="loadIncomingCandidates(true)">
+        <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
+      </button>
+    </div>
 
-      <p class="text-muted small">
-        <strong>Dành cho HR Manager:</strong> Xem kết quả AI tự động sàng lọc & chấm điểm hồ sơ từ <strong>Cổng Ứng Viên</strong>. HR cũng có thể nạp thử nghiệm hồ sơ trực tiếp bên dưới.
-      </p>
+    <!-- BANNER THÔNG BÁO TỰ ĐỘNG -->
+    <div id="liveIncomingAlert" class="alert alert-info border-0 shadow-sm d-flex justify-content-between align-items-center py-2 px-3 mb-4 rounded-3">
+      <div class="small">
+        <i class="fa-solid fa-bell text-primary me-2 fs-6"></i>
+        <strong>Hệ thống kết nối trực tiếp Cổng Ứng Viên:</strong> Ứng viên gửi CV từ Cổng Ứng Viên sẽ tự động kích hoạt AI chấm điểm & lưu kết quả vào danh sách bên dưới.
+      </div>
+      <span class="badge bg-primary px-3 py-2 rounded-pill small" id="lastUpdatedBadge">
+        <i class="fa-solid fa-clock me-1"></i> Vừa cập nhật
+      </span>
+    </div>
 
-      <hr>
-
-      <!-- FORM -->
-      <form id="cvForm">
-
-        <!-- JOB -->
-        <div class="mb-3">
-
-          <label class="form-label fw-semibold">
-            Chọn vị trí tuyển dụng (Job ID)
-          </label>
-
-          <select
-            class="form-select"
-            id="jobId"
-            required
-            onchange="updateJobRequirementsInfo()"
-          >
-            <option value="">-- Đang tải danh sách vị trí... --</option>
-          </select>
-
-          <!-- KHUNG HIỂN THỊ YÊU CẦU CỦA VỊ TRÍ ĐƯỢC CHỌN -->
-          <div id="selectedJobReqInfo" class="mt-2 small text-primary p-2 bg-primary-subtle rounded-3 border border-primary-subtle d-none">
-            <i class="fa-solid fa-circle-info me-1"></i> <strong>Tiêu chuẩn & Yêu cầu của vị trí này:</strong> <span id="selectedJobReqText">-</span>
-          </div>
-
+    <!-- KPI THỐNG KÊ NHANH -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="stat-card p-3 border-start border-primary border-4">
+          <div class="small text-muted fw-semibold">TỔNG HỒ SƠ</div>
+          <div class="fs-3 fw-bold text-primary" id="kpiTotal">0</div>
         </div>
-
-
-        <!-- THÔNG TIN ỨNG VIÊN -->
-        <div class="row">
-
-          <!-- HỌ TÊN -->
-          <div class="col-md-6 mb-3">
-
-            <label class="form-label fw-semibold">
-              Họ và tên ứng viên
-            </label>
-
-            <input
-              type="text"
-              class="form-control"
-              id="candidateName"
-              placeholder="Ví dụ: Trần Thị Lan"
-              required
-            >
-
-          </div>
-
-
-          <!-- EMAIL -->
-          <div class="col-md-6 mb-3">
-
-            <label class="form-label fw-semibold">
-              Email ứng viên
-            </label>
-
-            <input
-              type="email"
-              class="form-control"
-              id="candidateEmail"
-              placeholder="lan.tran@example.com"
-              required
-            >
-
-          </div>
-
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card p-3 border-start border-success border-4">
+          <div class="small text-muted fw-semibold">🟢 ĐẠT CHUẨN</div>
+          <div class="fs-3 fw-bold text-success" id="kpiApproved">0</div>
         </div>
-
-
-        <!-- FILE CV -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">
-            <i class="fa-solid fa-file-arrow-up me-1 text-primary"></i> Tải hồ sơ ứng viên (File CV: .pdf, .docx, .txt)
-          </label>
-          <input
-            type="file"
-            class="form-control form-control-lg"
-            id="cvFile"
-            accept=".txt,.docx,.pdf"
-            required
-          >
-          <div class="form-text">
-            Hỗ trợ tự động trích xuất nội dung từ tệp hồ sơ <code>.pdf</code>, <code>.docx</code>, <code>.txt</code>.
-          </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card p-3 border-start border-danger border-4">
+          <div class="small text-muted fw-semibold">🔴 CHƯA ĐẠT</div>
+          <div class="fs-3 fw-bold text-danger" id="kpiRejected">0</div>
         </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card p-3 border-start border-info border-4">
+          <div class="small text-muted fw-semibold">📅 ĐÃ XẾP LỊCH PV</div>
+          <div class="fs-3 fw-bold text-info" id="kpiInterview">0</div>
+        </div>
+      </div>
+    </div>
 
-
-        <!-- BUTTON -->
-        <button
-          type="submit"
-          class="btn btn-primary w-100"
-          id="btnSubmit"
-        >
-          🚀 BẮT ĐẦU SÀNG LỌC CV
-        </button>
-
-      </form>
-
-
-      <!-- STATUS DƯỚI DROPDOWN -->
-      <div id="jobLoadStatus" class="mb-3"></div>
-
-      <!-- KẾT QUẢ SÀNG LỌC HIỆN ĐẠI -->
-      <div id="resultBox" class="mt-4" style="display: none;">
-        <div class="card border-0 shadow-sm p-4" style="border-radius: 12px; background: #ffffff; border-left: 5px solid #0d6efd !important;">
-          
-          <!-- HEADER KẾT QUẢ -->
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            <div>
-              <h5 class="fw-bold mb-1 text-primary" id="resCandidateTitle">
-                <i class="fa-solid fa-award me-2"></i> Kết Quả Phân Tích Hồ Sơ
-              </h5>
-              <p class="text-muted small mb-0" id="resPositionText">
-                Ứng viên: <strong id="resCandidate"></strong> | Vị trí: <strong id="resPosition"></strong>
-              </p>
-            </div>
-            <div class="text-end">
-              <span id="resScoreBadge" class="fs-4 fw-bold px-3 py-1 rounded-pill shadow-sm text-white bg-success">
-                85 / 100
-              </span>
-              <div class="mt-1" id="resStatusContainer">
-                <span class="badge bg-primary px-3 py-1 rounded-pill" id="resStatus">APPROVED</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- PROGRESS BAR TIẾN ĐỘ -->
-          <div class="progress mb-3" style="height: 10px; border-radius: 6px;">
-            <div
-              id="resProgressBar"
-              class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-              role="progressbar"
-              style="width: 85%"
-            ></div>
-          </div>
-
-          <!-- TỪ KHÓA ĐÁP ỨNG -->
-          <div class="mb-3">
-            <div class="fw-semibold text-success mb-1 small">
-              <i class="fa-solid fa-circle-check me-1"></i> Kỹ năng & Từ khóa đáp ứng (Matched Skills):
-            </div>
-            <div id="resMatchedSkills" class="d-flex flex-wrap gap-1">
-              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Đang cập nhật...</span>
-            </div>
-          </div>
-
-          <!-- TỪ KHÓA CÒN THIẾU -->
-          <div class="mb-3">
-            <div class="fw-semibold text-danger mb-1 small">
-              <i class="fa-solid fa-circle-xmark me-1"></i> Kỹ năng còn thiếu / Cần cải thiện (Missing Skills):
-            </div>
-            <div id="resMissingSkills" class="d-flex flex-wrap gap-1">
-              <span class="badge bg-secondary-subtle text-secondary px-2 py-1">Không có</span>
-            </div>
-          </div>
-
-          <!-- ĐÁNH GIÁ TỪ AI -->
-          <div class="p-3 rounded-3 mb-3 border bg-light">
-            <div class="fw-semibold text-primary mb-1 small">
-              <i class="fa-solid fa-brain me-1"></i> Nhận định chuyên môn từ AI Agent:
-            </div>
-            <div id="resEvaluation" class="small text-secondary fst-italic">
-              Đang phân tích...
-            </div>
-          </div>
-
-          <!-- KHUNG TỰ ĐỘNG XẾP LỊCH & GỬI THƯ MỜI (LUỒNG 4 & 5 LIÊN HOÀN) -->
-          <div id="resAutoScheduleBox" class="p-3 rounded-3 mb-3 border d-none">
-          </div>
-
-          <!-- NÚT ĐIỀU HƯỚNG LIÊN HOÀN -->
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 border-top">
-            <a
-              href="interview-management.html"
-              class="btn btn-success btn-sm fw-semibold shadow-sm px-3 py-2"
-              id="btnInterviewNext"
-            >
-              <i class="fa-solid fa-calendar-check me-1"></i> Xem Bảng Lịch Phỏng Vấn
-            </a>
-            <a href="recruitment-report.html" class="btn btn-outline-primary btn-sm fw-semibold px-3 py-2">
-              <i class="fa-solid fa-chart-pie me-1"></i> Sang Báo Cáo Tuyển Dụng
-            </a>
-          </div>
-
+    <!-- BẢNG DANH SÁCH HỒ SƠ ỨNG VIÊN -->
+    <div class="card main-card p-4 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="fw-bold text-dark mb-0">
+          <i class="fa-solid fa-users-viewfinder text-primary me-2"></i> Danh Sách Hồ Sơ Tiếp Nhận Từ Cổng Ứng Viên (<span id="candCount">0</span>)
+        </h5>
+        <div style="max-width: 280px;">
+          <input type="text" id="candSearchInput" class="form-control form-control-sm rounded-pill px-3" placeholder="🔍 Tìm kiếm ứng viên, vị trí..." onkeyup="filterCandidatesTable()">
         </div>
       </div>
 
-      <!-- LỖI -->
-      <div
-        id="errorBox"
-        class="alert alert-danger mt-4"
-        style="display: none;"
-      ></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light small">
+            <tr>
+              <th scope="col" style="width: 50px;">ID</th>
+              <th scope="col">Ứng viên & Email</th>
+              <th scope="col">Vị trí ứng tuyển</th>
+              <th scope="col">Điểm AI Match</th>
+              <th scope="col" style="max-width: 320px;">Đánh giá AI Gemini</th>
+              <th scope="col">Trạng thái</th>
+              <th scope="col" class="text-end">Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="candidatesTableBody" class="small">
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div> Đang tải danh sách ứng viên từ hệ thống...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
+    <!-- ACCORDION FORM DEMO / NẠP HỒ SƠ THỬ NGHIỆM THỦ CÔNG -->
+    <div class="accordion mb-4" id="demoAccordion">
+      <div class="accordion-item border-0 shadow-sm rounded-4 overflow-hidden">
+        <h2 class="accordion-header" id="headingDemo">
+          <button class="accordion-button collapsed bg-light fw-bold text-primary py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDemo" aria-expanded="false" aria-label="Nạp hồ sơ thử nghiệm">
+            <i class="fa-solid fa-vial me-2 text-warning fs-5"></i> 🧪 Nạp Hồ Sơ Thử Nghiệm / Sàng Lọc CV Thủ Công (Dành cho Demo)
+          </button>
+        </h2>
+        <div id="collapseDemo" class="accordion-collapse collapse" aria-labelledby="headingDemo" data-bs-parent="#demoAccordion">
+          <div class="accordion-body p-4 bg-white">
+            <form id="cvForm">
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">Chọn vị trí tuyển dụng</label>
+                  <select class="form-select form-select-sm" id="jobId" required onchange="updateJobRequirementsInfo()">
+                    <option value="">-- Đang tải vị trí... --</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">Họ và tên ứng viên</label>
+                  <input type="text" class="form-control form-control-sm" id="candidateName" placeholder="Trần Thị Lan" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">Email ứng viên</label>
+                  <input type="email" class="form-control form-control-sm" id="candidateEmail" placeholder="lan.tran@example.com" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold small"><i class="fa-solid fa-file-arrow-up me-1 text-primary"></i> Tải file CV (.pdf, .docx, .txt)</label>
+                <input type="file" class="form-control form-control-sm" id="cvFile" accept=".txt,.docx,.pdf">
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" id="btnSubmit">
+                🚀 BẮT ĐẦU SÀNG LỌC CV THỬ NGHIỆM
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
 
-
-  <!-- JAVASCRIPT -->
-  <script>
-
-    // =========================================================
-    // 1. TỰ ĐỘNG LẤY DANH SÁCH JOB TỪ BACKEND (CÓ FALLBACK THÔNG MINH)
-    // =========================================================
-
-    const fallbackJobs = [
-      { id: 18, position: "Chuyên viên Digital Marketing", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI" },
-      { id: 17, position: "Product Manager", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis" },
-      { id: 16, position: "Chuyên viên Marketing", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO" },
-      { id: 15, position: "Chuyên viên Marketing", requirements: "Content, Facebook Ads, SEO" },
-      { id: 14, position: "Senior Backend Engineer Test 2", requirements: "Node.js, Golang, Docker, Microservices" },
-      { id: 13, position: "Nhân viên chăm sóc khách hàng", requirements: "Kỹ năng giao tiếp, chăm sóc khách hàng, nhiệt tình" },
-      { id: 12, position: "Kỹ sư Công nghệ thông tin", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật" },
-      { id: 11, position: "Nhân viên kinh doanh", requirements: "Kỹ năng bán hàng, giao tiếp, tìm kiếm khách hàng" },
-      { id: 8,  position: "Frontend Developer", requirements: "Thạo ReactJS, HTML, CSS" },
-      { id: 1,  position: "Lập trình viên Phần mềm", requirements: "Java, MySQL, Git, OOP" }
-    ];
-
-    window.availableJobsCache = [];
-
-    function renderJobOptions(jobs) {
-      const jobSelect = document.getElementById("jobId");
-      const urlParams = new URLSearchParams(window.location.search);
-      const targetJobId = urlParams.get('job_id');
-
-      let combinedJobs = [...jobs];
-
-      // Đọc các job mới tạo lưu trong localStorage nếu có
-      try {
-        const customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
-        customJobs.forEach(function(cj) {
-          if (!combinedJobs.some(j => String(j.id) === String(cj.id))) {
-            combinedJobs.unshift(cj);
-          }
-        });
-      } catch(e) {}
-
-      // Nếu có job_id từ URL nhưng chưa có trong danh sách, tự động bổ sung ngay
-      if (targetJobId && !combinedJobs.some(j => String(j.id) === String(targetJobId))) {
-        combinedJobs.unshift({
-          id: targetJobId,
-          position: "Vị trí tuyển dụng #" + targetJobId + " (Vừa chọn từ Trang chủ)",
-          requirements: "Kỹ năng chuyên môn, tinh thần trách nhiệm, làm việc nhóm"
-        });
-      }
-
-      window.availableJobsCache = combinedJobs;
-
-      jobSelect.innerHTML = '<option value="">-- Chọn vị trí tuyển dụng --</option>';
-      combinedJobs.forEach(function(job) {
-        const option = document.createElement("option");
-        option.value = job.id;
-        option.textContent = `ID ${job.id}: ${job.position}`;
-        if (targetJobId && String(job.id) === String(targetJobId)) {
-          option.selected = true;
-        }
-        jobSelect.appendChild(option);
-      });
-
-      if (targetJobId) {
-        jobSelect.value = targetJobId;
-      }
-
-      updateJobRequirementsInfo();
-    }
-
-    // Hiển thị tiêu chuẩn yêu cầu ngay dưới ô chọn Job
-    function updateJobRequirementsInfo() {
-      const jobSelect = document.getElementById("jobId");
-      const infoBox = document.getElementById("selectedJobReqInfo");
-      const textSpan = document.getElementById("selectedJobReqText");
-      if (!jobSelect || !infoBox || !textSpan) return;
-
-      const selectedId = jobSelect.value;
-      if (!selectedId) {
-        infoBox.classList.add("d-none");
-        return;
-      }
-
-      const job = (window.availableJobsCache || fallbackJobs).find(j => String(j.id) === String(selectedId));
-      if (job && job.requirements) {
-        textSpan.innerText = job.requirements;
-        infoBox.classList.remove("d-none");
-      } else {
-        textSpan.innerText = "Yêu cầu kỹ năng chuyên môn phù hợp với vị trí.";
-        infoBox.classList.remove("d-none");
-      }
-    }
-
-
-
-    async function loadJobs() {
-      const statusEl = document.getElementById("jobLoadStatus");
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const response = await fetch("http://localhost:3000/api/jobs", { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        const data = await response.json();
-        if (response.ok && data.success && data.jobs && data.jobs.length > 0) {
-          renderJobOptions(data.jobs);
-          if (statusEl) {
-            statusEl.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>Đã tải realtime ${data.jobs.length} vị trí từ MySQL</span>`;
-          }
-          return;
-        }
-        throw new Error("Không có danh sách job");
-      } catch (error) {
-        console.warn("Dùng danh sách vị trí có sẵn (Fallback):", error.message);
-        renderJobOptions(fallbackJobs);
-        if (statusEl) {
-          statusEl.innerHTML = `<span class="badge bg-info-subtle text-primary border border-info-subtle px-2 py-1"><i class="fa-solid fa-circle-info me-1"></i>Đang hiển thị ${fallbackJobs.length} vị trí sẵn có trong hệ thống</span>`;
-        }
-      }
-    }
-
-    // Nạp ngay danh sách việc làm để không bao giờ bị kẹt
-    renderJobOptions(fallbackJobs);
-    loadJobs();
-
-
-
-    // =========================================================
-    // 2. ĐỌC FILE CV .TXT
-    // =========================================================
-
-    // =========================================================
-    // 2. HÀM TRÍCH XUẤT VĂN BẢN TỪ FILE (.txt, .docx, .pdf)
-    // =========================================================
-
-    async function extractTextFromFile(file) {
-      if (!file) return "";
-      const fileName = file.name.toLowerCase();
-
-      // 1. File .txt
-      if (fileName.endsWith('.txt')) {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = e => resolve(e.target.result.trim());
-          reader.onerror = () => resolve("");
-          reader.readAsText(file);
-        });
-      }
-
-      // 2. File .docx qua Mammoth.js
-      if (fileName.endsWith('.docx')) {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            if (window.mammoth) {
-              mammoth.extractRawText({ arrayBuffer: e.target.result })
-                .then(res => resolve(res.value.trim()))
-                .catch(() => resolve(""));
-            } else {
-              resolve("");
-            }
-          };
-          reader.onerror = () => resolve("");
-          reader.readAsArrayBuffer(file);
-        });
-      }
-
-      // 3. File .pdf qua PDF.js
-      if (fileName.endsWith('.pdf')) {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = async function(e) {
-            try {
-              if (window.pdfjsLib) {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-                const typedarray = new Uint8Array(e.target.result);
-                const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                let fullText = "";
-                for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
-                  const page = await pdf.getPage(i);
-                  const textContent = await page.getTextContent();
-                  fullText += textContent.items.map(item => item.str).join(" ") + "\n";
-                }
-                resolve(fullText.trim());
-              } else {
-                resolve("");
-              }
-            } catch(err) {
-              console.warn("Lỗi đọc PDF:", err);
-              resolve("");
-            }
-          };
-          reader.onerror = () => resolve("");
-          reader.readAsArrayBuffer(file);
-        });
-      }
-
-      return "";
-    }
-
-    // Tự động trích xuất nội dung khi chọn file (người dùng có thể xem trước hoặc sửa)
-    document.getElementById("cvFile").addEventListener("change", async function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const cvTextEl = document.getElementById("cvText");
-      cvTextEl.placeholder = "⏳ Đang trích xuất văn bản từ tệp " + file.name + "...";
-
-      const extracted = await extractTextFromFile(file);
-      if (extracted) {
-        cvTextEl.value = extracted;
-      }
-      cvTextEl.placeholder = "Dán nội dung kỹ năng, kinh nghiệm của ứng viên vào đây nếu không tải tệp lên...";
-    });
-
-
-
-    // =========================================================
-    // 3. GỬI CV SANG N8N (Chấp nhận File CV HOẶC Nội dung CV)
-    // =========================================================
-
-    document
-      .getElementById("cvForm")
-      .addEventListener(
-        "submit",
-        async function(event) {
-
-          event.preventDefault();
-
-          const btn = document.getElementById("btnSubmit");
-          const resultBox = document.getElementById("resultBox");
-          const errorBox = document.getElementById("errorBox");
-
-          btn.disabled = true;
-          btn.innerText = "⏳ Đang xử lý hồ sơ...";
-
-          resultBox.style.display = "none";
-          errorBox.style.display = "none";
-
-          const fileInput = document.getElementById("cvFile");
-          const file = fileInput.files[0];
-
-          if (!file) {
-            alert("⚠️ Vui lòng chọn tệp hồ sơ ứng viên (.pdf, .docx, .txt)!");
-            btn.disabled = false;
-            btn.innerText = "🚀 BẮT ĐẦU SÀNG LỌC CV";
-            return;
-          }
-
-          btn.innerText = "⏳ Đang đọc nội dung từ file " + file.name + "...";
-          let cvText = await extractTextFromFile(file);
-          if (!cvText) {
-            cvText = `Hồ sơ ứng viên đính kèm file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-          }
-
-          btn.innerText = "⏳ Đang trích xuất & chấm điểm qua AI...";
-
-          // =================================================
-          // TẠO PAYLOAD
-          // =================================================
-
-          const payload = {
-            job_id: parseInt(document.getElementById("jobId").value),
-            candidate_name: document.getElementById("candidateName").value.trim(),
-            candidate_email: document.getElementById("candidateEmail").value.trim(),
-            cv_text: cvText
-          };
-
-          // Chặn chuỗi nhị phân rác (nếu đọc lỗi)
-          if (payload.cv_text.startsWith('PK') || payload.cv_text.startsWith('%PDF') || payload.cv_text.includes('\uFFFD') || payload.cv_text.includes('\u001e')) {
-            alert('⚠️ Nội dung CV chứa mã nhị phân không hợp lệ. Vui lòng kiểm tra lại file hoặc dán trực tiếp văn bản CV!');
-            btn.disabled = false;
-            btn.innerText = "🚀 BẮT ĐẦU SÀNG LỌC CV";
-            return;
-          }
-
-          // =================================================
-          // GỬI SANG N8N (Tự động thử cả Production và Test URL)
-          // =================================================
-
-          try {
-
-            let response;
-            try {
-              // 1. Thử Production URL trước (khi Workflow đã bật Active: ON)
-              response = await fetch(
-                "http://localhost:5678/webhook/cv-screening-clean",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload)
-                }
-              );
-              if (!response.ok && response.status === 404) {
-                throw new Error("Production webhook 404");
-              }
-            } catch (errProd) {
-              // 2. Nếu Production chưa bật, thử Test URL (khi đang bấm Test step trong n8n)
-              response = await fetch(
-                "http://localhost:5678/webhook-test/cv-screening-clean",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload)
-                }
-              );
-            }
-
-            const data =
-              await response.json();
-
-
-            // =================================================
-            // XỬ LÝ KẾT QUẢ
-            // =================================================
-
-            if (
-              response.ok &&
-              data.success
-            ) {
-              const score = Number(data.match_score) || 0;
-              const status = data.status || (score >= 70 ? 'APPROVED' : 'REJECTED');
-              const isApproved = status === 'APPROVED';
-
-              document.getElementById("resCandidate").innerText = data.candidate || payload.candidate_name;
-              document.getElementById("resPosition").innerText = data.position || ('Vị trí #' + payload.job_id);
-
-              const scoreBadge = document.getElementById("resScoreBadge");
-              scoreBadge.innerText = score + " / 100";
-              scoreBadge.className = "fs-4 fw-bold px-3 py-1 rounded-pill shadow-sm text-white " + (isApproved ? "bg-success" : (score >= 40 ? "bg-warning text-dark" : "bg-danger"));
-
-              const statusBadge = document.getElementById("resStatus");
-              statusBadge.innerText = status;
-              statusBadge.className = "badge px-3 py-1 rounded-pill " + (isApproved ? "bg-success" : "bg-danger");
-
-              const pBar = document.getElementById("resProgressBar");
-              pBar.style.width = Math.max(5, score) + "%";
-              pBar.className = "progress-bar progress-bar-striped progress-bar-animated " + (isApproved ? "bg-success" : (score >= 40 ? "bg-warning" : "bg-danger"));
-
-              // Render Matched Skills
-              const matchedEl = document.getElementById("resMatchedSkills");
-              const matchedList = data.matched_keywords || [];
-              if (matchedList.length > 0) {
-                matchedEl.innerHTML = matchedList.map(kw => `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="fa-solid fa-check me-1"></i>${kw}</span>`).join(" ");
-              } else {
-                matchedEl.innerHTML = `<span class="text-muted small fst-italic">Chưa phát hiện từ khóa kỹ thuật khớp</span>`;
-              }
-
-              // Render Missing Skills
-              const missingEl = document.getElementById("resMissingSkills");
-              const missingList = data.missing_keywords || [];
-              if (missingList.length > 0) {
-                missingEl.innerHTML = missingList.map(kw => `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>${kw}</span>`).join(" ");
-              } else {
-                missingEl.innerHTML = `<span class="badge bg-success-subtle text-success px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i>Đáp ứng đầy đủ yêu cầu!</span>`;
-              }
-
-              // AI Evaluation
-              document.getElementById("resEvaluation").innerText = data.evaluation || "Hồ sơ đã được hệ thống phân tích và xếp loại tự động.";
-
-              // TỰ ĐỘNG XẾP LỊCH & GỬI THƯ MỜI PHỎNG VẤN (LUỒNG 4 & 5 LIÊN HOÀN)
-              const autoBox = document.getElementById("resAutoScheduleBox");
-              if (isApproved) {
-                if (autoBox) {
-                  autoBox.classList.remove("d-none");
-                  autoBox.className = "p-3 rounded-3 mb-3 border bg-info-subtle border-info";
-                  autoBox.innerHTML = `
-                    <div class="d-flex align-items-center">
-                      <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                      <span class="fw-semibold text-primary">⚡ Hồ sơ ĐẠT chuẩn! Hệ thống đang tự động xếp lịch phỏng vấn & gửi thư mời qua Gmail...</span>
-                    </div>
-                  `;
-
-                  fetch("http://localhost:3000/api/auto-schedule-pass", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      candidate_name: data.candidate || payload.candidate_name,
-                      candidate_email: payload.candidate_email,
-                      job_id: payload.job_id
-                    })
-                  })
-                  .then(res => res.json())
-                  .then(sched => {
-                    if (sched.success) {
-                      autoBox.className = "p-3 rounded-3 mb-3 border bg-success-subtle border-success shadow-sm";
-                      autoBox.innerHTML = `
-                        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                          <div class="d-flex align-items-center">
-                            <span class="badge bg-success me-2 px-2 py-1"><i class="fa-solid fa-bolt me-1"></i> TỰ ĐỘNG KÍCH HOẠT</span>
-                            <strong class="text-success"><i class="fa-solid fa-circle-check me-1"></i> ĐÃ TỰ ĐỘNG XẾP LỊCH & GỬI THƯ MỜI PHỎNG VẤN</strong>
-                          </div>
-                          <span class="badge bg-white text-success border border-success-subtle px-2 py-1 small">
-                            <i class="fa-solid fa-envelope-circle-check me-1"></i> Gmail Sent
-                          </span>
-                        </div>
-                        <div class="row g-2 small text-dark mt-1">
-                          <div class="col-md-6">
-                            <i class="fa-regular fa-calendar-check text-primary me-1"></i> <strong>Thời gian phỏng vấn:</strong> <span class="fw-bold">${sched.interview_time || '2026-10-04 09:30:00'}</span>
-                          </div>
-                          <div class="col-md-6">
-                            <i class="fa-solid fa-user-tie text-primary me-1"></i> <strong>Người phỏng vấn:</strong> <span class="fw-bold">${sched.interviewer || 'Nguyễn HR'}</span>
-                          </div>
-                          <div class="col-md-12 mt-2 d-flex align-items-center flex-wrap gap-2">
-                            <div>
-                              <i class="fa-solid fa-video text-success me-1"></i> <strong>Link Google Meet:</strong>
-                              <a href="${sched.meeting_link || 'https://meet.google.com/dfj-amei-jzt'}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold ms-1">
-                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Vào phòng họp Google Meet
-                              </a>
-                            </div>
-                          </div>
-                          <div class="col-12 mt-2 pt-2 border-top border-success-subtle text-muted">
-                            <i class="fa-solid fa-envelope text-primary me-1"></i> Thư mời phỏng vấn và nhắc lịch kèm link họp đã được <strong>hệ thống tự động gửi qua Gmail</strong> tới ứng viên: <code>${payload.candidate_email}</code>.
-                          </div>
-                        </div>
-                      `;
-                    } else {
-                      autoBox.className = "p-3 rounded-3 mb-3 border bg-warning-subtle border-warning";
-                      autoBox.innerHTML = `<i class="fa-solid fa-circle-info me-1 text-warning"></i> ${sched.message || 'Chưa thể tự động xếp lịch'}`;
-                    }
-                  })
-                  .catch(err => {
-                    autoBox.className = "p-3 rounded-3 mb-3 border bg-warning-subtle border-warning";
-                    autoBox.innerHTML = `<i class="fa-solid fa-circle-info me-1 text-warning"></i> Lỗi tự động xếp lịch: ${err.message}`;
-                  });
-                }
-              } else {
-                // TỰ ĐỘNG GỬI EMAIL THÔNG BÁO TỪ CHỐI / THƯ CẢM ƠN
-                if (autoBox) {
-                  autoBox.classList.remove("d-none");
-                  autoBox.className = "p-3 rounded-3 mb-3 border bg-warning-subtle border-warning";
-                  autoBox.innerHTML = `
-                    <div class="d-flex align-items-center">
-                      <div class="spinner-border spinner-border-sm text-danger me-2"></div>
-                      <span class="fw-semibold text-danger">⏳ Hồ sơ chưa đạt tiêu chuẩn! Hệ thống đang tự động gửi thư cảm ơn & thông báo kết quả...</span>
-                    </div>
-                  `;
-
-                  fetch("http://localhost:3000/api/auto-notify-reject", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      candidate_name: data.candidate || payload.candidate_name,
-                      candidate_email: payload.candidate_email,
-                      position: data.position || ('Vị trí #' + payload.job_id),
-                      evaluation: data.evaluation,
-                      job_id: payload.job_id
-                    })
-                  })
-                  .then(res => res.json())
-                  .then(rej => {
-                    autoBox.className = "p-3 rounded-3 mb-3 border bg-danger-subtle border-danger shadow-sm";
-                    autoBox.innerHTML = `
-                      <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                        <div class="d-flex align-items-center">
-                          <span class="badge bg-danger me-2 px-2 py-1"><i class="fa-solid fa-envelope me-1"></i> TỰ ĐỘNG GỬI MAIL</span>
-                          <strong class="text-danger"><i class="fa-solid fa-circle-xmark me-1"></i> ĐÃ TỰ ĐỘNG GỬI THƯ CẢM ƠN & THÔNG BÁO KẾT QUẢ</strong>
-                        </div>
-                        <span class="badge bg-white text-danger border border-danger-subtle px-2 py-1 small">
-                          <i class="fa-solid fa-envelope-circle-check me-1"></i> Gmail Sent
-                        </span>
-                      </div>
-                      <div class="small text-dark mt-1">
-                        <div class="text-secondary mb-1">
-                          <i class="fa-solid fa-circle-info text-danger me-1"></i> <strong>Lý do sơ loại:</strong> Hồ sơ đạt <b>${score}/100</b> điểm (dưới ngưỡng 70 điểm để vào phỏng vấn).
-                        </div>
-                        <div class="text-muted border-top border-danger-subtle pt-2 mt-2">
-                          <i class="fa-solid fa-paper-plane text-danger me-1"></i> Hệ thống đã <strong>tự động gửi thư cảm ơn & thông báo kết quả chưa phù hợp</strong> (kèm lý do nhận xét chi tiết) qua Gmail đến: <code>${payload.candidate_email}</code>.
-                        </div>
-                      </div>
-                    `;
-                  })
-                  .catch(err => {
-                    autoBox.className = "p-3 rounded-3 mb-3 border bg-danger-subtle border-danger";
-                    autoBox.innerHTML = `
-                      <div class="text-danger small">
-                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Hồ sơ không đạt yêu cầu (${score}/100). Đã ghi nhận kết quả Loại vào cơ sở dữ liệu.
-                      </div>
-                    `;
-                  });
-                }
-              }
-
-              // Next step button
-              const btnNext = document.getElementById("btnInterviewNext");
-              if (btnNext) {
-                btnNext.style.display = isApproved ? "inline-block" : "none";
-              }
-
-              resultBox.style.display = "block";
-              resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-            } else {
-
-              throw new Error(
-                data.message ||
-                "Không thể xử lý CV"
-              );
-
-            }
-
-
-          } catch (error) {
-
-            console.error(
-              "Lỗi:",
-              error
-            );
-
-
-            if (error.message && error.message.includes("Failed to fetch")) {
-              errorBox.innerHTML = `
-                <strong>❌ Không thể kết nối Webhook n8n:</strong><br>
-                • Bạn hãy kiểm tra xem Workflow trong n8n đã <strong>bật công tắc Active (ON)</strong> và <strong>Save</strong> chưa?<br>
-                • Hoặc nếu bạn đang ở màn hình chỉnh sửa n8n, hãy bấm nút <strong>Test step / Listen for test event</strong> ở node Webhook trước khi gửi từ web.
-              `;
-            } else {
-              errorBox.innerText =
-                "Lỗi kết nối Webhook n8n: " +
-                error.message;
-            }
-
-
-            errorBox.style.display =
-              "block";
-
-
-          } finally {
-
-            // Mở lại nút
-            btn.disabled = false;
-
-            btn.innerText =
-              "🚀 BẮT ĐẦU SÀNG LỌC CV";
-
-          }
-
-        }
-      );
-
-    function proceedToInterview() {
-      const candidate = document.getElementById("resCandidate").innerText;
-      const position = document.getElementById("resPosition").innerText;
-      const score = document.getElementById("resScoreBadge").innerText;
-      alert(`🎉 Ứng viên ${candidate} (${position} - Điểm: ${score}) đã ĐẠT chuẩn yêu cầu!\n\nThông tin ứng viên đã sẵn sàng được chuyển tiếp sang trang Lịch phỏng vấn để xếp lịch & tự động gửi thư mời phỏng vấn.`);
-    }
-
-  </script>
+  <!-- MODAL XEM CHI TIẾT HỒ SƠ ỨNG VIÊN & ĐÁNH GIÁ AI -->
+  <div class="modal fade" id="candDetailModal" tabindex="-1" aria-labelledby="candDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow-lg border-0 rounded-4">
+        <div class="modal-header bg-primary text-white py-3">
+          <h5 class="modal-title fw-bold" id="candDetailModalLabel">
+            <i class="fa-solid fa-id-card me-2"></i> Chi Tiết Hồ Sơ: <span id="modalCandName" class="text-warning">...</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <small class="text-muted d-block">Vị Trí Ứng Tuyển:</small>
+              <strong class="fs-6 text-primary" id="modalCandPos">-</strong>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <small class="text-muted d-block">Điểm Match Score:</small>
+              <span class="badge bg-success fs-6" id="modalCandScoreBadge">-</span>
+            </div>
+            <div class="col-md-6">
+              <small class="text-muted d-block">Email Phản Hồi:</small>
+              <code id="modalCandEmail" class="fs-6">-</code>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <small class="text-muted d-block">Trạng Thái Xét Duyệt:</small>
+              <span id="modalCandStatusBadge" class="badge bg-secondary">-</span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-light rounded-3 border mb-3">
+            <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-brain me-1"></i> Nhận Định & Đánh Giá Tự Động Từ AI Gemini:</h6>
+            <div id="modalCandEvalText" class="small text-dark" style="white-space: pre-wrap; line-height: 1.6;">-</div>
+          </div>
+
+          <div>
+            <h6 class="fw-bold text-secondary mb-2"><i class="fa-solid fa-file-lines me-1"></i> Nội Dung CV Văn Bản:</h6>
+            <div id="modalCandCvText" class="p-3 bg-white border rounded-3 small text-secondary" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap;">-</div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light py-2 justify-content-between">
+          <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
+          <a href="interview-management.html" class="btn btn-success btn-sm px-3 fw-bold shadow-sm" id="modalBtnSchedule">
+            <i class="fa-solid fa-calendar-check me-1"></i> Chuyển Sang Lịch Phỏng Vấn
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- CHÂN TRANG (FOOTER) -->
   <footer class="text-center py-4 text-muted small border-top mt-5 bg-white">
@@ -883,7 +295,182 @@
     </div>
   </footer>
 
-  <!-- Bootstrap 5 Bundle JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const API_BASE = "http://localhost:3000";
+    let allCandidatesCache = [];
+
+    async function loadIncomingCandidates(isManualRefresh = false) {
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now());
+        const data = await res.json();
+
+        if (res.ok && data.success && data.candidates) {
+          allCandidatesCache = data.candidates;
+          renderCandidatesTable(allCandidatesCache);
+          updateKPIs(allCandidatesCache);
+          
+          const now = new Date();
+          document.getElementById("lastUpdatedBadge").innerHTML = `<i class="fa-solid fa-clock me-1"></i> Vừa cập nhật ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+          if (isManualRefresh) {
+            alert(`✅ Đã làm mới danh sách! Tìm thấy ${data.candidates.length} hồ sơ ứng viên trong hệ thống.`);
+          }
+        }
+      } catch (err) {
+        console.warn("Lỗi tải danh sách ứng viên:", err);
+      }
+    }
+
+    function updateKPIs(candidates) {
+      const total = candidates.length;
+      const approved = candidates.filter(c => c.approval_status === 'APPROVED' || c.status === 'Đạt').length;
+      const rejected = candidates.filter(c => c.approval_status === 'REJECTED' || c.status === 'Loại').length;
+      const interview = candidates.filter(c => c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Phỏng vấn' || c.interview_time).length;
+
+      document.getElementById('kpiTotal').innerText = total;
+      document.getElementById('kpiApproved').innerText = approved;
+      document.getElementById('kpiRejected').innerText = rejected;
+      document.getElementById('kpiInterview').innerText = interview;
+      document.getElementById('candCount').innerText = total;
+    }
+
+    function renderCandidatesTable(candidates) {
+      const tbody = document.getElementById("candidatesTableBody");
+      if (!tbody) return;
+
+      if (!candidates || candidates.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+              <i class="fa-solid fa-inbox display-6 d-block mb-2 text-secondary"></i>
+              Chưa có hồ sơ ứng viên nào. Hãy thử ứng tuyển từ <strong>Cổng Ứng Viên (Candidate Portal)</strong>!
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = candidates.map(c => {
+        const score = c.match_score || 0;
+        const isApproved = (c.approval_status === 'APPROVED' || c.status === 'Đạt');
+        const isRejected = (c.approval_status === 'REJECTED' || c.status === 'Loại');
+        const isInterview = (c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Phỏng vấn');
+
+        let scoreBadgeClass = 'bg-secondary';
+        let statusBadgeText = 'Chưa duyệt';
+
+        if (isApproved) {
+          scoreBadgeClass = 'bg-success';
+          statusBadgeText = '🟢 APPROVED';
+        } else if (isRejected) {
+          scoreBadgeClass = 'bg-danger';
+          statusBadgeText = '🔴 REJECTED';
+        } else if (isInterview) {
+          scoreBadgeClass = 'bg-info text-dark';
+          statusBadgeText = '📅 Phỏng vấn';
+        }
+
+        const evalShort = (c.ai_evaluation || 'Hồ sơ đã được AI phân tích').substring(0, 90) + '...';
+
+        return `
+          <tr>
+            <td><span class="badge bg-light text-dark border">#${c.id}</span></td>
+            <td>
+              <strong class="text-dark d-block">${c.full_name || c.name || 'Ứng viên'}</strong>
+              <small class="text-muted"><code>${c.email || 'N/A'}</code></small>
+            </td>
+            <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-semibold">${c.position || c.applied_position || 'Vị trí #' + c.job_id}</span></td>
+            <td>
+              <span class="badge ${scoreBadgeClass} shadow-sm px-2 py-1 fs-6">${score} / 100</span>
+            </td>
+            <td style="max-width: 300px;">
+              <span class="small text-secondary italic d-block text-truncate" title="${(c.ai_evaluation || '').replace(/"/g, '&quot;')}">${evalShort}</span>
+              <button class="btn btn-link btn-sm p-0 text-primary fw-semibold small" onclick="openCandDetailModal(${c.id})"><i class="fa-solid fa-eye me-1"></i>Xem chi tiết</button>
+            </td>
+            <td>
+              <select class="form-select form-select-sm status-select fw-semibold ${isApproved ? 'border-success text-success' : isRejected ? 'border-danger text-danger' : 'border-info text-info'}" onchange="changeCandidateStatus(${c.id}, this.value)">
+                <option value="APPROVED" ${isApproved ? 'selected' : ''}>🟢 APPROVED</option>
+                <option value="REJECTED" ${isRejected ? 'selected' : ''}>🔴 REJECTED</option>
+                <option value="INTERVIEW_SCHEDULED" ${isInterview ? 'selected' : ''}>📅 PHỎNG VẤN</option>
+              </select>
+            </td>
+            <td class="text-end text-nowrap">
+              <button class="btn btn-outline-primary btn-sm py-1 px-2 fw-semibold me-1" onclick="openCandDetailModal(${c.id})" title="Xem hồ sơ & kết quả AI">
+                <i class="fa-solid fa-file-lines me-1"></i> Hồ sơ
+              </button>
+              <button class="btn btn-outline-danger btn-sm py-1 px-2" onclick="deleteCandidate(${c.id}, '${(c.full_name || 'Ứng viên').replace(/'/g, "\\'")}')" title="Xóa hồ sơ">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterCandidatesTable() {
+      const query = (document.getElementById('candSearchInput').value || '').toLowerCase();
+      const filtered = allCandidatesCache.filter(c => {
+        const name = (c.full_name || c.name || '').toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        const pos = (c.position || c.applied_position || '').toLowerCase();
+        return name.includes(query) || email.includes(query) || pos.includes(query);
+      });
+      renderCandidatesTable(filtered);
+    }
+
+    function openCandDetailModal(candId) {
+      const c = allCandidatesCache.find(x => Number(x.id) === Number(candId));
+      if (!c) return;
+
+      document.getElementById('modalCandName').innerText = c.full_name || c.name || 'Ứng viên';
+      document.getElementById('modalCandPos').innerText = c.position || c.applied_position || ('Vị trí #' + c.job_id);
+      document.getElementById('modalCandEmail').innerText = c.email || 'N/A';
+      document.getElementById('modalCandScoreBadge').innerText = (c.match_score || 0) + ' / 100';
+      document.getElementById('modalCandStatusBadge').innerText = c.approval_status || c.status || 'N/A';
+      document.getElementById('modalCandEvalText').innerText = c.ai_evaluation || 'Chưa có nhận định chi tiết từ AI Gemini.';
+      document.getElementById('modalCandCvText').innerText = c.cv_content || c.cv_text || 'Không có văn bản CV đính kèm.';
+
+      const modal = new bootstrap.Modal(document.getElementById('candDetailModal'));
+      modal.show();
+    }
+
+    async function changeCandidateStatus(candId, newStatus) {
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates/update-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidate_id: Number(candId), new_status: newStatus })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`✅ Đã cập nhật trạng thái ứng viên #${candId} sang ${newStatus}!`);
+          loadIncomingCandidates();
+        } else {
+          alert('Lỗi cập nhật trạng thái: ' + (data.message || 'Chưa đổi được trạng thái'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối máy chủ: ' + err.message);
+      }
+    }
+
+    async function deleteCandidate(candId, candName) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ ứng viên "${candName}" (ID #${candId}) không?`)) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates/${candId}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert(`Đã xóa thành công hồ sơ #${candId}`);
+          loadIncomingCandidates();
+        }
+      } catch (err) {
+        alert('Lỗi xóa hồ sơ: ' + err.message);
+      }
+    }
+
+    // Tự động tải & cập nhật danh sách ứng viên liên tục
+    loadIncomingCandidates();
+    setInterval(loadIncomingCandidates, 8000);
+  </script>
 </body>
 </html>
