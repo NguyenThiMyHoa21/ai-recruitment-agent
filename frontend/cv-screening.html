@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>AI Recruitment - CV Screening</title>
+  <title>AI Recruitment System - Quản Lý Hồ Sơ Ứng Viên</title>
 
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -79,22 +79,38 @@
         <span>AI Recruitment – <strong class="text-white">HR Dashboard</strong></span>
       </a>
 
-      <div class="navbar-nav d-flex flex-row flex-nowrap align-items-center gap-1 gap-md-2 ms-auto overflow-auto">
-        <a class="nav-link text-white" href="index.html">
-          <i class="fa-solid fa-file-circle-plus me-1"></i> 📝 1. Đăng tin tuyển dụng
-        </a>
-        <a class="nav-link active bg-white text-primary rounded-pill fw-bold shadow-sm" href="cv-screening.html">
-          <i class="fa-solid fa-users me-1"></i> 👥 2. Quản lý ứng viên
-        </a>
-        <a class="nav-link text-white" href="recruitment-report.html">
-          <i class="fa-solid fa-chart-pie me-1"></i> 📊 3. Báo cáo tuyển dụng
-        </a>
-        <a class="nav-link text-white" href="interview-management.html">
-          <i class="fa-solid fa-calendar-check me-1"></i> 📅 4. Lịch phỏng vấn
-        </a>
-        <a href="candidate-portal.html" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark px-3 ms-2 shadow-sm text-nowrap">
-          <i class="fa-solid fa-user-astronaut me-1"></i> 👤 Cổng Ứng Viên
-        </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#hrNavbar" aria-controls="hrNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="hrNavbar">
+        <ul class="navbar-nav ms-auto align-items-center gap-1 gap-md-2 mt-2 mt-lg-0">
+          <li class="nav-item">
+            <a class="nav-link text-white" href="index.html">
+              <i class="fa-solid fa-file-circle-plus me-1"></i> Đăng tin
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active bg-white text-primary rounded-pill fw-bold shadow-sm" href="cv-screening.html">
+              <i class="fa-solid fa-users me-1"></i> Quản lý ứng viên
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="recruitment-report.html">
+              <i class="fa-solid fa-chart-pie me-1"></i> Báo cáo
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="interview-management.html">
+              <i class="fa-solid fa-calendar-check me-1"></i> Lịch phỏng vấn
+            </a>
+          </li>
+          <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+            <a href="candidate-portal.html" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark px-3 shadow-sm text-nowrap">
+              <i class="fa-solid fa-user-astronaut me-1"></i> 👤 Cổng Ứng Viên
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
   </nav>
@@ -109,7 +125,7 @@
       </h3>
 
       <p class="text-muted small">
-        <strong>Dành cho HR Manager:</strong> Xem kết quả AI tự động sàng lọc & chấm điểm hồ sơ ứng tuyển từ <strong>Candidate Portal (Workflow 2)</strong>. HR cũng có thể nạp thử nghiệm hồ sơ trực tiếp bên dưới.
+        <strong>Dành cho HR Manager:</strong> Xem kết quả AI tự động sàng lọc & chấm điểm hồ sơ từ <strong>Cổng Ứng Viên</strong>. HR cũng có thể nạp thử nghiệm hồ sơ trực tiếp bên dưới.
       </p>
 
       <hr>
@@ -290,10 +306,10 @@
               class="btn btn-success btn-sm fw-semibold shadow-sm px-3 py-2"
               id="btnInterviewNext"
             >
-              <i class="fa-solid fa-calendar-check me-1"></i> Xem Bảng Lịch Phỏng Vấn (Luồng 4 & 5)
+              <i class="fa-solid fa-calendar-check me-1"></i> Xem Bảng Lịch Phỏng Vấn
             </a>
             <a href="recruitment-report.html" class="btn btn-outline-primary btn-sm fw-semibold px-3 py-2">
-              <i class="fa-solid fa-chart-pie me-1"></i> Sang Luồng 3: Xem Báo Cáo
+              <i class="fa-solid fa-chart-pie me-1"></i> Sang Báo Cáo Tuyển Dụng
             </a>
           </div>
 
@@ -679,7 +695,7 @@
                   autoBox.innerHTML = `
                     <div class="d-flex align-items-center">
                       <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                      <span class="fw-semibold text-primary">⚡ Hồ sơ ĐẠT chuẩn! Hệ thống đang tự động điều phối Luồng 4 (Xếp lịch AI) & Luồng 5 (Gửi thư mời qua Gmail)...</span>
+                      <span class="fw-semibold text-primary">⚡ Hồ sơ ĐẠT chuẩn! Hệ thống đang tự động xếp lịch phỏng vấn & gửi thư mời qua Gmail...</span>
                     </div>
                   `;
 
@@ -699,7 +715,7 @@
                       autoBox.innerHTML = `
                         <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                           <div class="d-flex align-items-center">
-                            <span class="badge bg-success me-2 px-2 py-1"><i class="fa-solid fa-bolt me-1"></i> TỰ ĐỘNG LIÊN HOÀN</span>
+                            <span class="badge bg-success me-2 px-2 py-1"><i class="fa-solid fa-bolt me-1"></i> TỰ ĐỘNG KÍCH HOẠT</span>
                             <strong class="text-success"><i class="fa-solid fa-circle-check me-1"></i> ĐÃ TỰ ĐỘNG XẾP LỊCH & GỬI THƯ MỜI PHỎNG VẤN</strong>
                           </div>
                           <span class="badge bg-white text-success border border-success-subtle px-2 py-1 small">
@@ -722,7 +738,7 @@
                             </div>
                           </div>
                           <div class="col-12 mt-2 pt-2 border-top border-success-subtle text-muted">
-                            <i class="fa-solid fa-envelope text-primary me-1"></i> Thư mời phỏng vấn và nhắc lịch kèm link họp đã được <strong>Luồng 5 tự động gửi qua Gmail</strong> tới ứng viên: <code>${payload.candidate_email}</code>.
+                            <i class="fa-solid fa-envelope text-primary me-1"></i> Thư mời phỏng vấn và nhắc lịch kèm link họp đã được <strong>hệ thống tự động gửi qua Gmail</strong> tới ứng viên: <code>${payload.candidate_email}</code>.
                           </div>
                         </div>
                       `;
@@ -737,14 +753,14 @@
                   });
                 }
               } else {
-                // TỰ ĐỘNG GỬI EMAIL THÔNG BÁO TỪ CHỐI / THƯ CẢM ƠN (LUỒNG 5)
+                // TỰ ĐỘNG GỬI EMAIL THÔNG BÁO TỪ CHỐI / THƯ CẢM ƠN
                 if (autoBox) {
                   autoBox.classList.remove("d-none");
                   autoBox.className = "p-3 rounded-3 mb-3 border bg-warning-subtle border-warning";
                   autoBox.innerHTML = `
                     <div class="d-flex align-items-center">
                       <div class="spinner-border spinner-border-sm text-danger me-2"></div>
-                      <span class="fw-semibold text-danger">⏳ Hồ sơ chưa đạt tiêu chuẩn! Hệ thống đang tự động gửi thư cảm ơn & thông báo kết quả (Luồng 5)...</span>
+                      <span class="fw-semibold text-danger">⏳ Hồ sơ chưa đạt tiêu chuẩn! Hệ thống đang tự động gửi thư cảm ơn & thông báo kết quả...</span>
                     </div>
                   `;
 
@@ -777,7 +793,7 @@
                           <i class="fa-solid fa-circle-info text-danger me-1"></i> <strong>Lý do sơ loại:</strong> Hồ sơ đạt <b>${score}/100</b> điểm (dưới ngưỡng 70 điểm để vào phỏng vấn).
                         </div>
                         <div class="text-muted border-top border-danger-subtle pt-2 mt-2">
-                          <i class="fa-solid fa-paper-plane text-danger me-1"></i> Hệ thống đã <strong>Luồng 5 tự động gửi thư cảm ơn & thông báo kết quả chưa phù hợp</strong> (kèm lý do nhận xét chi tiết) qua Gmail đến: <code>${payload.candidate_email}</code>.
+                          <i class="fa-solid fa-paper-plane text-danger me-1"></i> Hệ thống đã <strong>tự động gửi thư cảm ơn & thông báo kết quả chưa phù hợp</strong> (kèm lý do nhận xét chi tiết) qua Gmail đến: <code>${payload.candidate_email}</code>.
                         </div>
                       </div>
                     `;
@@ -854,7 +870,7 @@
       const candidate = document.getElementById("resCandidate").innerText;
       const position = document.getElementById("resPosition").innerText;
       const score = document.getElementById("resScoreBadge").innerText;
-      alert(`🎉 Ứng viên ${candidate} (${position} - Điểm: ${score}) đã ĐẠT chuẩn yêu cầu!\n\nThông tin ứng viên đã sẵn sàng được chuyển tiếp sang Luồng 4 (AI Interview Scheduling Agent) để tự động gửi thư mời phỏng vấn & tạo link Google Meet.`);
+      alert(`🎉 Ứng viên ${candidate} (${position} - Điểm: ${score}) đã ĐẠT chuẩn yêu cầu!\n\nThông tin ứng viên đã sẵn sàng được chuyển tiếp sang trang Lịch phỏng vấn để xếp lịch & tự động gửi thư mời phỏng vấn.`);
     }
 
   </script>

@@ -49,13 +49,19 @@
         <span>AI Recruitment – <strong class="text-warning">Candidate Portal</strong></span>
       </a>
 
-      <div class="ms-auto d-flex align-items-center gap-2">
-        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill small d-none d-md-inline-block">
-          <i class="fa-solid fa-eye me-1"></i> Giao diện dành cho Ứng viên
-        </span>
-        <a href="index.html" class="btn btn-primary btn-sm rounded-pill fw-bold px-3 shadow-sm">
-          <i class="fa-solid fa-user-tie me-1"></i> 👔 Chuyển sang HR Dashboard
-        </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#candidateNavbar" aria-controls="candidateNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="candidateNavbar">
+        <div class="ms-auto d-flex flex-column flex-lg-row align-items-lg-center gap-2 mt-2 mt-lg-0">
+          <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill small">
+            <i class="fa-solid fa-eye me-1"></i> Giao diện dành cho Ứng viên
+          </span>
+          <a href="index.html" class="btn btn-primary btn-sm rounded-pill fw-bold px-3 shadow-sm text-nowrap">
+            <i class="fa-solid fa-user-tie me-1"></i> HR Dashboard
+          </a>
+        </div>
       </div>
     </div>
   </nav>
@@ -115,7 +121,7 @@
           <div class="modal-body p-4">
             
             <div class="alert alert-info border-0 shadow-sm py-2 px-3 small mb-4">
-              <i class="fa-solid fa-circle-info me-1"></i> Hồ sơ của bạn sẽ được gửi thẳng vào <strong>Workflow 2 (AI CV Screening Agent)</strong> để tự động chấm điểm đối chiếu với JD công việc.
+              <i class="fa-solid fa-circle-info me-1"></i> Hồ sơ của bạn sẽ được hệ thống AI CV Screening tiếp nhận và tự động chấm điểm đối chiếu với yêu cầu công việc.
             </div>
 
             <input type="hidden" id="applyJobId">

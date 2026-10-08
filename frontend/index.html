@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Recruitment - Đăng Tin Tuyển Dụng (Workflow 1)</title>
+  <title>AI Recruitment System - HR Dashboard</title>
 
   <!-- Bootstrap 5 -->
   <link
@@ -69,28 +69,44 @@
         <span>AI Recruitment – <strong class="text-white">HR Dashboard</strong></span>
       </a>
 
-      <div class="navbar-nav d-flex flex-row flex-nowrap align-items-center gap-1 gap-md-2 ms-auto overflow-auto">
-        <a class="nav-link active bg-white text-primary rounded-pill fw-bold shadow-sm" href="index.html">
-          <i class="fa-solid fa-file-circle-plus me-1"></i> 📝 1. Đăng tin tuyển dụng
-        </a>
-        <a class="nav-link text-white" href="cv-screening.html">
-          <i class="fa-solid fa-users me-1"></i> 👥 2. Quản lý ứng viên
-        </a>
-        <a class="nav-link text-white" href="recruitment-report.html">
-          <i class="fa-solid fa-chart-pie me-1"></i> 📊 3. Báo cáo tuyển dụng
-        </a>
-        <a class="nav-link text-white" href="interview-management.html">
-          <i class="fa-solid fa-calendar-check me-1"></i> 📅 4. Lịch phỏng vấn
-        </a>
-        <a href="candidate-portal.html" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark px-3 ms-2 shadow-sm text-nowrap">
-          <i class="fa-solid fa-user-astronaut me-1"></i> 👤 Cổng Ứng Viên
-        </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#hrNavbar" aria-controls="hrNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="hrNavbar">
+        <ul class="navbar-nav ms-auto align-items-center gap-1 gap-md-2 mt-2 mt-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active bg-white text-primary rounded-pill fw-bold shadow-sm" href="index.html">
+              <i class="fa-solid fa-file-circle-plus me-1"></i> Đăng tin
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="cv-screening.html">
+              <i class="fa-solid fa-users me-1"></i> Quản lý ứng viên
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="recruitment-report.html">
+              <i class="fa-solid fa-chart-pie me-1"></i> Báo cáo
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="interview-management.html">
+              <i class="fa-solid fa-calendar-check me-1"></i> Lịch phỏng vấn
+            </a>
+          </li>
+          <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+            <a href="candidate-portal.html" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark px-3 shadow-sm text-nowrap">
+              <i class="fa-solid fa-user-astronaut me-1"></i> 👤 Cổng Ứng Viên
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
   </nav>
 
   <!-- ========================================================= -->
-  <!-- NỘI DUNG CHÍNH (WORKFLOW 1: JOB POSTING) -->
+  <!-- NỘI DUNG CHÍNH (JOB POSTING) -->
   <!-- ========================================================= -->
   <div class="container pb-5" style="max-width: 960px;">
 
@@ -103,10 +119,10 @@
         </div>
         <div>
           <h3 class="text-primary mb-1 fw-bold">
-            📝 Tạo & Đăng Tin Tuyển Dụng (AI Job Posting)
+            📝 Tạo & Đăng Tin Tuyển Dụng
           </h3>
           <p class="text-muted mb-0 small">
-            <strong>Dành cho HR / Nhà tuyển dụng:</strong> HR nhập yêu cầu công việc cơ bản, AI Gemini hỗ trợ viết bài JD chuyên nghiệp và lưu vào MySQL (Trạng thái: <span class="badge bg-success-subtle text-success border border-success-subtle px-2">🟢 Published</span>).
+            <strong>Dành cho HR / Nhà tuyển dụng:</strong> Nhập yêu cầu công việc cơ bản, AI Gemini hỗ trợ viết bài đăng tuyển dụng (JD) chuyên nghiệp và tự động lưu hệ thống (Trạng thái: <span class="badge bg-success-subtle text-success border border-success-subtle px-2">🟢 Published</span>).
           </p>
         </div>
       </div>
@@ -209,7 +225,7 @@
             required
           ></textarea>
           <div class="form-text">
-            Các yêu cầu này sẽ được Luồng 2 (AI CV Screening) sử dụng làm tiêu chí để chấm điểm hồ sơ ứng viên.
+            Các yêu cầu này sẽ được hệ thống AI CV Screening sử dụng làm tiêu chí để chấm điểm hồ sơ ứng viên.
           </div>
         </div>
 
@@ -232,7 +248,7 @@
               <i class="fa-solid fa-circle-check fs-3 text-success me-2"></i>
               <div>
                 <h5 class="fw-bold mb-0 text-success">Đã Đăng Tin Tuyển Dụng Thành Công!</h5>
-                <span class="text-muted small">Đã lưu vào MySQL & hoàn tất quy trình 12 bước</span>
+                <span class="text-muted small">Đã lưu vào hệ thống & tạo bản JD tự động</span>
               </div>
             </div>
             <div>
@@ -264,7 +280,7 @@
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top">
             <span class="text-muted small">Vị trí này đã sẵn sàng tiếp nhận hồ sơ.</span>
             <a href="cv-screening.html" class="btn btn-success btn-sm fw-semibold px-3 py-2">
-              <i class="fa-solid fa-arrow-right me-1"></i> Sang Luồng 2: Sàng Lọc CV Ngay
+              <i class="fa-solid fa-arrow-right me-1"></i> Sang Quản Lý Ứng Viên
             </a>
           </div>
         </div>
