@@ -8,6 +8,10 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+  <!-- Thư viện giải mã tệp PDF & Word (.docx) trực tiếp trên Client -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  
   <style>
     body {
       background-color: #f8fafc;
@@ -36,6 +40,16 @@
       padding: 5px 12px;
       border-radius: 20px;
       border: 1px solid #cbd5e1;
+    }
+    .file-upload-box {
+      border: 2px dashed #93c5fd !important;
+      background-color: #f8fafc;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .file-upload-box:hover, .file-upload-box.dragover {
+      background-color: #eff6ff;
+      border-color: #2563eb !important;
     }
   </style>
 </head>
@@ -164,10 +178,51 @@
               </div>
             </div>
 
+            <!-- TÙY CHỌN 1: TẢI TỆP CV -->
             <div class="mb-3">
-              <label class="form-label fw-bold small text-secondary">Nội Dung Văn Bản CV / Kỹ Năng & Kinh Nghiệm <span class="text-danger">*</span></label>
-              <textarea class="form-control" id="applyCvText" rows="6" placeholder="Nhập hoặc dán toàn bộ nội dung CV của bạn (Kỹ năng chuyên môn, dự án đã thực hiện, kinh nghiệm làm việc)..." required></textarea>
-              <small class="text-muted italic">Mẹo: Ghi rõ các kỹ năng chuyên môn cốt lõi để AI chấm điểm Match Score cao hơn!</small>
+              <label class="form-label fw-bold small text-secondary d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-file-arrow-up text-primary me-1"></i> Tải Lên Tệp CV (PDF / DOCX / TXT)</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">Tùy chọn tải file hoặc nhập chữ</span>
+              </label>
+
+              <div class="file-upload-box p-3 rounded-3 text-center position-relative" id="dropZone">
+                <input type="file" id="applyCvFile" class="position-absolute top-0 start-0 w-100 h-100 opacity-0" accept=".pdf,.docx,.doc,.txt" onchange="onCvFileSelected(this.files[0])">
+                
+                <div id="uploadPrompt">
+                  <i class="fa-solid fa-cloud-arrow-up fs-2 text-primary mb-1 d-block"></i>
+                  <div class="fw-semibold text-dark small">Kéo thả tệp CV vào đây hoặc <span class="text-primary text-decoration-underline">chọn từ thiết bị</span></div>
+                  <div class="text-muted" style="font-size: 11px;">Hỗ trợ: <strong>.PDF, .DOCX, .TXT</strong> (Hệ thống AI sẽ tự động đọc nội dung)</div>
+                </div>
+
+                <div id="uploadFileInfo" class="d-none align-items-center justify-content-between bg-white p-2 rounded-2 border shadow-sm">
+                  <div class="d-flex align-items-center gap-2 overflow-hidden text-start">
+                    <i class="fa-solid fa-file-circle-check text-success fs-3"></i>
+                    <div class="overflow-hidden">
+                      <div class="fw-bold text-dark small text-truncate" id="fileNameDisplay">CV_UngVien.pdf</div>
+                      <div class="text-muted" style="font-size: 11px;" id="fileSizeDisplay">0 KB</div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 rounded-pill" title="Xóa tệp" onclick="removeUploadedCvFile(event)">
+                    <i class="fa-solid fa-trash-can me-1"></i> Xóa tệp
+                  </button>
+                </div>
+              </div>
+
+              <div id="fileParseStatus" class="small mt-2 d-none">
+                <span id="fileParseMsg"></span>
+              </div>
+            </div>
+
+            <!-- TÙY CHỌN 2: NỘI DUNG VĂN BẢN CV -->
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-secondary d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-file-lines text-primary me-1"></i> Nội Dung Văn Bản CV / Kỹ Năng & Kinh Nghiệm</span>
+                <span class="text-muted" style="font-size: 11px;">(Tự động điền khi tải tệp hoặc nhập thủ công)</span>
+              </label>
+              <textarea class="form-control" id="applyCvText" rows="5" placeholder="Nhập hoặc dán nội dung CV, tóm tắt kỹ năng chuyên môn cốt lõi, dự án đã làm để AI chấm điểm..."></textarea>
+              <div class="d-flex justify-content-between align-items-center mt-1">
+                <small class="text-muted italic" style="font-size: 11px;">💡 Bạn có thể tải file CV, gõ văn bản trực tiếp hoặc kết hợp cả hai.</small>
+              </div>
             </div>
 
           </div>
@@ -433,11 +488,115 @@
       }).join('');
     }
 
+    // Trích xuất văn bản từ tệp PDF
+    async function extractTextFromPdf(arrayBuffer) {
+      if (typeof pdfjsLib === 'undefined') {
+        throw new Error('Thư viện PDF.js chưa sẵn sàng');
+      }
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      } catch(e) {}
+
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n\n';
+      }
+      return fullText.trim();
+    }
+
+    // Trích xuất văn bản từ tệp Word (.docx)
+    async function extractTextFromDocx(arrayBuffer) {
+      if (typeof mammoth === 'undefined') {
+        throw new Error('Thư viện Mammoth chưa sẵn sàng');
+      }
+      const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+      return (result.value || '').trim();
+    }
+
+    // Đọc văn bản từ tệp văn bản thông thường (.txt)
+    function readTextFromFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = err => reject(err);
+        reader.readAsText(file);
+      });
+    }
+
+    // Xử lý khi người dùng chọn hoặc kéo thả tệp CV
+    async function onCvFileSelected(file) {
+      if (!file) return;
+
+      document.getElementById('fileNameDisplay').innerText = file.name;
+      document.getElementById('fileSizeDisplay').innerText = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('uploadPrompt').classList.add('d-none');
+      document.getElementById('uploadFileInfo').classList.remove('d-none');
+      document.getElementById('uploadFileInfo').classList.add('d-flex');
+
+      const statusEl = document.getElementById('fileParseStatus');
+      const statusMsg = document.getElementById('fileParseMsg');
+      statusEl.classList.remove('d-none');
+      statusEl.className = 'small mt-2 text-primary';
+      statusMsg.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang giải mã nội dung từ tệp <strong>${file.name}</strong>...`;
+
+      try {
+        let extractedText = '';
+        const ext = file.name.split('.').pop().toLowerCase();
+        const arrayBuffer = await file.arrayBuffer();
+
+        if (ext === 'pdf') {
+          extractedText = await extractTextFromPdf(arrayBuffer);
+        } else if (ext === 'docx') {
+          extractedText = await extractTextFromDocx(arrayBuffer);
+        } else {
+          extractedText = await readTextFromFile(file);
+        }
+
+        const cvTextarea = document.getElementById('applyCvText');
+        if (extractedText && extractedText.trim().length > 15) {
+          if (!cvTextarea.value.trim()) {
+            cvTextarea.value = extractedText;
+          } else {
+            cvTextarea.value = cvTextarea.value.trim() + '\n\n' + extractedText;
+          }
+          statusEl.className = 'small mt-2 text-success fw-semibold';
+          statusMsg.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> Đã trích xuất nội dung từ tệp <strong>${file.name}</strong> vào khung bên dưới thành công!`;
+        } else {
+          statusEl.className = 'small mt-2 text-info';
+          statusMsg.innerHTML = `<i class="fa-solid fa-file-circle-check me-1"></i> Đã đính kèm tệp <strong>${file.name}</strong>. Bạn có thể bổ sung thêm mô tả kỹ năng vào khung bên dưới.`;
+        }
+      } catch (err) {
+        console.warn('Lỗi phân tích nội dung tệp:', err);
+        statusEl.className = 'small mt-2 text-warning';
+        statusMsg.innerHTML = `<i class="fa-solid fa-paperclip me-1"></i> Đã ghi nhận tệp <strong>${file.name}</strong>. Hãy tóm tắt kỹ năng chuyên môn vào khung bên dưới để AI chấm điểm chuẩn xác nhất nhé!`;
+      }
+    }
+
+    // Xóa tệp CV đã tải lên
+    function removeUploadedCvFile(event) {
+      if (event) event.stopPropagation();
+      const fileInput = document.getElementById('applyCvFile');
+      fileInput.value = '';
+      document.getElementById('uploadPrompt').classList.remove('d-none');
+      document.getElementById('uploadFileInfo').classList.add('d-none');
+      document.getElementById('uploadFileInfo').classList.remove('d-flex');
+      document.getElementById('fileParseStatus').classList.add('d-none');
+    }
+
     // Mở Modal Form Ứng Tuyển
     function openApplyModal(jobId, jobPosition) {
       document.getElementById('applyJobId').value = jobId;
       document.getElementById('applyJobTitle').value = jobPosition;
       document.getElementById('applyJobTitleHeader').innerText = jobPosition;
+
+      // Reset ô upload và textarea
+      removeUploadedCvFile();
+      document.getElementById('applyCvText').value = '';
 
       const modalEl = document.getElementById('applyModal');
       const modal = new bootstrap.Modal(modalEl);
@@ -449,15 +608,31 @@
       event.preventDefault();
       
       const btn = document.getElementById('btnSubmitApply');
+      const fileInput = document.getElementById('applyCvFile');
+      const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+      let cvText = (document.getElementById('applyCvText').value || '').trim();
+
+      // Kiểm tra người dùng phải cung cấp ít nhất 1 trong 2: file CV hoặc văn bản CV
+      if (!hasFile && !cvText) {
+        alert("⚠️ Vui lòng tải lên tệp CV hoặc nhập nội dung văn bản CV trước khi gửi hồ sơ!");
+        return;
+      }
+
+      // Nếu có tệp nhưng khung văn bản trống, tạo nội dung mô tả kèm tên file
+      if (!cvText && hasFile) {
+        const file = fileInput.files[0];
+        cvText = `[Hồ sơ ứng viên đính kèm tệp: ${file.name}] - Ứng tuyển vị trí ${document.getElementById('applyJobTitle').value}. Ứng viên sẵn sàng cung cấp thêm chi tiết khi phỏng vấn.`;
+      }
+
       btn.disabled = true;
-      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Đang gửi hồ sơ...`;
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Đang gửi hồ sơ & AI chấm điểm...`;
 
       const payload = {
         job_id: Number(document.getElementById('applyJobId').value) || 1,
         position: document.getElementById('applyJobTitle').value,
         candidate_name: document.getElementById('applyName').value,
         candidate_email: document.getElementById('applyEmail').value,
-        cv_text: document.getElementById('applyCvText').value
+        cv_text: cvText
       };
 
       try {
@@ -474,10 +649,11 @@
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
 
-        alert(`🎉 NỘP HỒ SƠ THÀNH CÔNG!\n\nCảm ơn ${payload.candidate_name} đã ứng tuyển vị trí "${payload.position}".\n\nHồ sơ của bạn đã được chuyển đến AI CV Screening Agent để tự động phân tích & chấm điểm. Kết quả sẽ được gửi về Email: ${payload.candidate_email}!`);
+        alert(`🎉 NỘP HỒ SƠ THÀNH CÔNG!\n\nCảm ơn ${payload.candidate_name} đã ứng tuyển vị trí "${payload.position}".\n\nHồ sơ CV của bạn đã được chuyển đến AI CV Screening Agent để tự động phân tích & chấm điểm. Kết quả sẽ được gửi về Email: ${payload.candidate_email}!`);
 
         // Reset form
         document.getElementById('candidateApplyForm').reset();
+        removeUploadedCvFile();
       } catch (err) {
         alert("Lỗi kết nối khi nộp hồ sơ: " + err.message);
       } finally {
@@ -486,7 +662,42 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', loadJobs);
+    // Thiết lập Drag & Drop cho vùng upload
+    function setupDragAndDrop() {
+      const dropZone = document.getElementById('dropZone');
+      if (!dropZone) return;
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('dragover');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('dragover');
+        }, false);
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          const fileInput = document.getElementById('applyCvFile');
+          fileInput.files = files;
+          onCvFileSelected(files[0]);
+        }
+      }, false);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadJobs();
+      setupDragAndDrop();
+    });
   </script>
 </body>
 </html>

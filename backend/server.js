@@ -91,7 +91,181 @@ app.post("/api/jobs", async (req, res) => {
     }
 });
 
-// API nhận hồ sơ ứng tuyển từ Candidate Portal -> Gửi sang Webhook Luồng 2 n8n (cv-screening-clean)
+// ========================================================
+// HÀM HELPER TỰ ĐỘNG XẾP LỊCH & GỬI EMAIL LIÊN HOÀN (LUỒNG 4 & 5)
+// ========================================================
+
+// 1. Tự động xếp lịch phỏng vấn thông minh & gửi thư mời Gmail khi ĐẬU (match_score >= 70)
+async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate_email, job_id, position }) {
+    console.log(`[Auto-Pass] Bắt đầu tự động xếp lịch & gửi thư mời Gmail cho: ${candidate_name || candidate_email}...`);
+    let targetId = candidate_id;
+    if (!targetId) {
+        let query = "SELECT id, full_name, email, applied_position, interview_time, interviewer_name, meeting_link FROM candidates WHERE 1=1";
+        let params = [];
+        if (candidate_email) {
+            query += " AND email = ?";
+            params.push(candidate_email);
+        } else if (candidate_name) {
+            query += " AND (full_name = ? OR name = ?)";
+            params.push(candidate_name, candidate_name);
+        }
+        query += " ORDER BY id DESC LIMIT 1";
+        const [rows] = await db.query(query, params);
+        if (rows && rows.length > 0) targetId = rows[0].id;
+    }
+
+    if (!targetId) {
+        console.warn("[Auto-Pass] Không tìm thấy candidate ID để xếp lịch");
+        return { success: false, message: "Không tìm thấy hồ sơ" };
+    }
+
+    // Gọi Luồng 4 n8n để xếp lịch phỏng vấn và tạo Google Meet
+    let l4Result = {};
+    try {
+        const responseL4 = await fetch("http://localhost:5678/webhook/interview-schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                candidate_id: Number(targetId),
+                requested_by: "Auto_CV_Screening_Pass"
+            })
+        });
+        l4Result = await responseL4.json();
+    } catch (e) {
+        console.warn("[Auto-Pass] Lỗi gọi webhook Luồng 4:", e.message);
+    }
+
+    // Cập nhật trạng thái 'Phỏng vấn' và 'INTERVIEW_SCHEDULED' trong MySQL
+    try {
+        await db.query(
+            "UPDATE candidates SET approval_status = 'INTERVIEW_SCHEDULED', status = 'Phỏng vấn' WHERE id = ?",
+            [Number(targetId)]
+        );
+    } catch (dbErr) {
+        console.warn("[Auto-Pass] Lỗi sync DB status:", dbErr.message);
+    }
+
+    // Lấy thông tin ứng viên đã cập nhật
+    const [candRows] = await db.query(
+        "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+        [Number(targetId)]
+    );
+    const cand = (candRows && candRows.length > 0) ? candRows[0] : {};
+
+    const interviewTime = cand.interview_time || (l4Result.data && l4Result.data.interview_time) || "09:30 12/10/2026";
+    const interviewer = cand.interviewer_name || (l4Result.data && l4Result.data.interviewer) || "Trần Văn Tech";
+    const meetLink = cand.meeting_link || (l4Result.data && l4Result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt";
+
+    // Kích hoạt Luồng 5 (gửi thư mời Gmail kèm giờ PV và link Meet)
+    console.log(`[Auto-Pass] Kích hoạt Luồng 5 gửi email thư mời tới ${cand.email || candidate_email} lúc ${interviewTime}...`);
+    try {
+        await fetch("http://localhost:5678/webhook/send-interview-invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                candidate_id: Number(targetId),
+                candidate_name: cand.full_name || cand.name || candidate_name,
+                candidate_email: cand.email || candidate_email,
+                position: cand.job_title || cand.position || position,
+                interview_time: interviewTime,
+                interviewer: interviewer,
+                meet_link: meetLink,
+                notification_type: "invite",
+                type: "invite"
+            })
+        });
+        console.log(`[Auto-Pass] Đã gửi thư mời phỏng vấn thành công qua Gmail cho ${cand.email || candidate_email}!`);
+    } catch (autoInviteErr) {
+        console.warn("[Auto-Pass] Lỗi gửi email Luồng 5:", autoInviteErr.message);
+    }
+
+    return {
+        success: true,
+        candidate_id: Number(targetId),
+        candidate_name: cand.full_name || cand.name || candidate_name,
+        candidate_email: cand.email || candidate_email,
+        interview_time: interviewTime,
+        interviewer: interviewer,
+        meeting_link: meetLink
+    };
+}
+
+// 2. Tự động gửi thư từ chối lịch sự & nhận định chuyên môn AI khi LOẠI (match_score < 70)
+async function executeAutoNotifyReject({ candidate_id, candidate_name, candidate_email, position, evaluation, job_id }) {
+    console.log(`[Auto-Reject] Tự động gửi thư từ chối tới: ${candidate_name || candidate_email}...`);
+    let candName = candidate_name;
+    let candEmail = candidate_email;
+    let candPos = position;
+    let candEval = evaluation;
+    let targetId = candidate_id;
+
+    if (!candEmail || !candName || !targetId) {
+        let query = "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE 1=1";
+        let params = [];
+        if (candEmail) {
+            query += " AND c.email = ?";
+            params.push(candEmail);
+        } else if (candName) {
+            query += " AND (c.full_name = ? OR c.name = ?)";
+            params.push(candName, candName);
+        } else if (targetId) {
+            query += " AND c.id = ?";
+            params.push(targetId);
+        }
+        query += " ORDER BY c.id DESC LIMIT 1";
+
+        const [rows] = await db.query(query, params);
+        if (rows && rows.length > 0) {
+            const c = rows[0];
+            targetId = c.id;
+            candName = candName || c.full_name || c.name;
+            candEmail = candEmail || c.email;
+            candPos = candPos || c.job_title;
+            candEval = candEval || c.ai_evaluation;
+        }
+    }
+
+    // Cập nhật trạng thái thông báo trong MySQL
+    try {
+        if (targetId) {
+            await db.query("UPDATE candidates SET notification_status = 'Sent_Rejection' WHERE id = ?", [Number(targetId)]);
+        } else if (candEmail) {
+            await db.query("UPDATE candidates SET notification_status = 'Sent_Rejection' WHERE email = ?", [candEmail]);
+        }
+    } catch (dbErr) {
+        console.warn("[Auto-Reject] Lỗi sync DB reject status:", dbErr.message);
+    }
+
+    // Gọi Luồng 5 n8n để gửi email thông báo từ chối qua Gmail
+    try {
+        await fetch("http://localhost:5678/webhook/send-interview-invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                candidate_id: Number(targetId) || 0,
+                candidate_name: candName || "Ứng viên",
+                candidate_email: candEmail,
+                position: candPos || "Vị trí tuyển dụng",
+                notification_type: "rejection",
+                type: "rejection",
+                status: "REJECTED",
+                evaluation: candEval || "Hồ sơ chưa phù hợp với tiêu chí chuyên môn của vị trí."
+            })
+        });
+        console.log(`[Auto-Reject] Đã gửi thư từ chối thành công qua Gmail cho ${candEmail}!`);
+    } catch (n8nErr) {
+        console.warn("[Auto-Reject] Lỗi gọi n8n Luồng 5 rejection:", n8nErr.message);
+    }
+
+    return {
+        success: true,
+        candidate_name: candName,
+        candidate_email: candEmail,
+        notification_type: "rejection"
+    };
+}
+
+// API nhận hồ sơ ứng tuyển từ Candidate Portal -> Gửi sang Webhook Luồng 2 n8n -> Tự động kích hoạt Luồng 4 & 5
 app.post("/api/screen-cv", async (req, res) => {
     try {
         const payload = req.body;
@@ -111,9 +285,31 @@ app.post("/api/screen-cv", async (req, res) => {
             resultJson = { raw: resultText };
         }
 
+        const candStatus = resultJson.status || (resultJson[0] && resultJson[0].status);
+        const matchScore = Number(resultJson.match_score || (resultJson[0] && resultJson[0].match_score) || 0);
+
+        // TỰ ĐỘNG LIÊN HOÀN DỰA TRÊN KẾT QUẢ AI CHẤM ĐIỂM:
+        if (candStatus === 'APPROVED' || candStatus === 'Đạt' || matchScore >= 70) {
+            console.log(`[Auto-Screening] Ứng viên ${payload.candidate_name} ĐẬU (${matchScore}đ) ➜ Tự động xếp lịch AI (Luồng 4) & gửi thư mời Gmail (Luồng 5)...`);
+            executeAutoSchedulePass({
+                candidate_name: payload.candidate_name,
+                candidate_email: payload.candidate_email,
+                position: payload.position,
+                job_id: payload.job_id
+            }).catch(e => console.warn("Lỗi auto schedule pass:", e.message));
+        } else {
+            console.log(`[Auto-Screening] Ứng viên ${payload.candidate_name} BỊ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
+            executeAutoNotifyReject({
+                candidate_name: payload.candidate_name,
+                candidate_email: payload.candidate_email,
+                position: payload.position,
+                evaluation: resultJson.evaluation || resultJson.ai_evaluation || (resultJson[0] && resultJson[0].ai_evaluation)
+            }).catch(e => console.warn("Lỗi auto notify reject:", e.message));
+        }
+
         res.json({
             success: true,
-            message: "Hồ sơ ứng tuyển đã được nhận và chuyển sang AI Screening!",
+            message: "Hồ sơ ứng tuyển đã được tiếp nhận và xử lý tự động liên hoàn!",
             data: resultJson
         });
     } catch (error) {

@@ -357,6 +357,11 @@
               </select>
             </td>
             <td class="text-end text-nowrap">
+              ${isRejected ? `
+                <button class="btn btn-outline-danger btn-sm py-1 px-2 fw-semibold me-1 shadow-sm" onclick="sendRejectEmail(${c.id}, '${(c.full_name || 'Ứng viên').replace(/'/g, "\\'")}')" title="Kích hoạt Luồng 5 gửi email từ chối">
+                  <i class="fa-solid fa-paper-plane me-1"></i> Gửi mail từ chối
+                </button>
+              ` : ''}
               <button class="btn btn-outline-primary btn-sm py-1 px-2 fw-semibold me-1" onclick="openCandDetailModal(${c.id})" title="Xem hồ sơ & kết quả AI">
                 <i class="fa-solid fa-file-lines me-1"></i> Hồ sơ
               </button>
@@ -367,6 +372,29 @@
           </tr>
         `;
       }).join('');
+    }
+
+    // Kích hoạt Luồng 5 gửi thư từ chối cho ứng viên bị Loại
+    async function sendRejectEmail(candId, candName) {
+      if (!confirm(`Bạn có chắc chắn muốn kích hoạt Luồng 5 gửi email thông báo kết quả sơ tuyển tới ứng viên "${candName}"?`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/auto-notify-reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidate_id: candId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ Đã kích hoạt Luồng 5 n8n gửi email từ chối tới ứng viên "${candName}" thành công!`);
+          loadIncomingCandidates();
+        } else {
+          alert("Lỗi khi gửi email: " + (data.message || "Không xác định"));
+        }
+      } catch (err) {
+        alert("Lỗi kết nối máy chủ: " + err.message);
+      }
     }
 
     function filterCandidatesTable() {
