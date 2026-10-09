@@ -189,8 +189,8 @@
               Danh sách ứng viên trong phễu tuyển dụng
             </h5>
             <div class="d-flex flex-wrap gap-1 mt-2" id="filterGroup">
-              <button class="btn btn-sm btn-dark rounded-pill px-3 py-1 filter-btn active" data-filter="ALL" onclick="filterStatus('ALL')">
-                Tất cả (<span id="count-all">0</span>)
+              <button class="btn btn-sm btn-dark rounded-pill px-3 py-1 filter-btn active" data-filter="ALL" onclick="filterStatus('ALL')" title="Danh sách ứng viên vào vòng phỏng vấn (Đạt & Phỏng vấn)">
+                Tất cả phỏng vấn (<span id="count-all">0</span>)
               </button>
               <button class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 filter-btn" data-filter="Phỏng vấn" onclick="filterStatus('Phỏng vấn')">
                 🔵 Phỏng vấn (<span id="count-pv">0</span>)
@@ -198,8 +198,8 @@
               <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 filter-btn" data-filter="Đạt" onclick="filterStatus('Đạt')">
                 🟢 Đạt (<span id="count-dat">0</span>)
               </button>
-              <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 filter-btn" data-filter="Loại" onclick="filterStatus('Loại')">
-                🔴 Loại (<span id="count-loai">0</span>)
+              <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 filter-btn" data-filter="Loại" onclick="filterStatus('Loại')" title="Xem ứng viên bị loại và trạng thái thư từ chối">
+                🔴 Đã loại (<span id="count-loai">0</span>)
               </button>
             </div>
           </div>
@@ -377,7 +377,6 @@
     }
 
     function updateCounts() {
-      const countAll = allCandidates.length;
       let countPv = 0;
       let countDat = 0;
       let countLoai = 0;
@@ -392,6 +391,7 @@
           countDat++;
         }
       });
+      const countAll = countPv + countDat; // Đếm số ứng viên trong vòng phỏng vấn (Đạt & Phỏng vấn)
       const elAll = document.getElementById('count-all');
       const elPv = document.getElementById('count-pv');
       const elDat = document.getElementById('count-dat');
@@ -419,21 +419,37 @@
     }
 
     function applyFilter() {
-      let filtered = allCandidates;
+      let filtered = [];
       const searchVal = (document.getElementById('interviewSearchInput')?.value || '').toLowerCase().trim();
 
-      if (currentFilter !== 'ALL') {
-        filtered = filtered.filter(c => {
+      if (currentFilter === 'ALL') {
+        // Mặc định Phương án 2: Ẩn người bị loại, chỉ hiển thị ứng viên Đạt & Phỏng vấn
+        filtered = allCandidates.filter(c => {
+          const s = (c.status || '').trim();
+          const app = (c.approval_status || '').trim();
+          const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
+          return !isRejected;
+        });
+      } else if (currentFilter === 'Đạt') {
+        filtered = allCandidates.filter(c => {
           const s = (c.status || '').trim();
           const app = (c.approval_status || '').trim();
           const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
           const isInterview = (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED');
-          const isApproved = (s === 'Đạt' || app === 'APPROVED') && !isRejected && !isInterview;
-
-          if (currentFilter === 'Đạt') return isApproved;
-          if (currentFilter === 'Loại') return isRejected;
-          if (currentFilter === 'Phỏng vấn') return isInterview;
-          return true;
+          return (s === 'Đạt' || app === 'APPROVED') && !isRejected && !isInterview;
+        });
+      } else if (currentFilter === 'Phỏng vấn') {
+        filtered = allCandidates.filter(c => {
+          const s = (c.status || '').trim();
+          const app = (c.approval_status || '').trim();
+          return (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED');
+        });
+      } else if (currentFilter === 'Loại') {
+        // Chỉ hiển thị ứng viên bị loại khi HR bấm vào tab 'Đã loại'
+        filtered = allCandidates.filter(c => {
+          const s = (c.status || '').trim();
+          const app = (c.approval_status || '').trim();
+          return (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
         });
       }
 
