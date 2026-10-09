@@ -69,6 +69,9 @@
 
       <div class="collapse navbar-collapse" id="candidateNavbar">
         <div class="ms-auto d-flex flex-column flex-lg-row align-items-lg-center gap-2 mt-2 mt-lg-0">
+          <button type="button" class="btn btn-outline-light btn-sm rounded-pill fw-semibold px-3 text-nowrap" onclick="openTrackStatusModal()">
+            <i class="fa-solid fa-magnifying-glass me-1 text-warning"></i> Tra cứu hồ sơ
+          </button>
           <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill small">
             <i class="fa-solid fa-eye me-1"></i> Giao diện dành cho Ứng viên
           </span>
@@ -93,6 +96,11 @@
           <p class="mb-0 text-white-50 lead fs-6">
             Tra cứu các cơ hội nghề nghiệp hấp dẫn và nộp CV trực tiếp. AI Recruitment Agent sẽ tự động tiếp nhận, phân tích độ phù hợp và phản hồi kết quả minh bạch qua Email.
           </p>
+          <div class="mt-3">
+            <button type="button" class="btn btn-warning fw-bold px-4 py-2 rounded-pill shadow-sm" onclick="openTrackStatusModal()">
+              <i class="fa-solid fa-magnifying-glass me-1"></i> 🔍 Tra Cứu Trạng Thái Hồ Sơ Đã Nộp
+            </button>
+          </div>
         </div>
         <div class="col-md-4 text-center d-none d-md-block">
           <i class="fa-solid fa-file-circle-check display-1 text-white-50"></i>
@@ -235,6 +243,36 @@
           </div>
         </form>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TRA CỨU TIẾN TRÌNH HỒ SƠ ỨNG VIÊN -->
+  <div class="modal fade" id="trackModal" tabindex="-1" aria-labelledby="trackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow-lg border-0 rounded-4">
+        <div class="modal-header bg-dark text-white py-3">
+          <h5 class="modal-title fw-bold" id="trackModalLabel">
+            <i class="fa-solid fa-magnifying-glass me-2 text-warning"></i> Tra Cứu Tiến Trình Hồ Sơ Ứng Tuyển
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-muted mb-3">
+            Nhập địa chỉ <strong>Email</strong> bạn đã dùng khi nộp CV để hệ thống AI kiểm tra trạng thái sơ loại, kết quả đánh giá và thông tin lịch hẹn phỏng vấn theo thời gian thực.
+          </p>
+          <div class="input-group mb-4 shadow-sm">
+            <span class="input-group-text bg-light"><i class="fa-solid fa-envelope text-muted"></i></span>
+            <input type="email" class="form-control" id="trackEmailInput" placeholder="Ví dụ: nguyenvana@gmail.com..." onkeydown="if(event.key==='Enter') executeTrackStatus()">
+            <button class="btn btn-primary fw-bold px-4" type="button" id="btnTrackSubmit" onclick="executeTrackStatus()">
+              <i class="fa-solid fa-search me-1"></i> Tra Cứu
+            </button>
+          </div>
+
+          <div id="trackResultContainer" class="d-none">
+            <!-- Kết quả động hiển thị ở đây -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -692,6 +730,130 @@
           onCvFileSelected(files[0]);
         }
       }, false);
+    }
+
+    // Mở Modal Tra Cứu Tiến Trình Hồ Sơ
+    function openTrackStatusModal() {
+      const modalEl = document.getElementById('trackModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+      setTimeout(() => {
+        const inp = document.getElementById('trackEmailInput');
+        if (inp) inp.focus();
+      }, 400);
+    }
+
+    // Thực thi tra cứu qua API backend
+    async function executeTrackStatus() {
+      const emailInput = document.getElementById('trackEmailInput');
+      const email = (emailInput.value || '').trim();
+      const container = document.getElementById('trackResultContainer');
+      const btn = document.getElementById('btnTrackSubmit');
+
+      if (!email || !email.includes('@')) {
+        alert("⚠️ Vui lòng nhập đúng địa chỉ email hợp lệ để tra cứu!");
+        emailInput.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang tra cứu...`;
+      container.classList.remove('d-none');
+      container.innerHTML = `
+        <div class="text-center py-4 text-muted">
+          <div class="spinner-border text-primary spinner-border-sm me-2"></div> Đang kiểm tra hồ sơ từ cơ sở dữ liệu tuyển dụng...
+        </div>
+      `;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/candidate-status?email=` + encodeURIComponent(email));
+        const data = await res.json();
+
+        if (!res.ok || !data.success || !data.applications || data.applications.length === 0) {
+          container.innerHTML = `
+            <div class="alert alert-warning border-0 shadow-sm text-center py-4">
+              <i class="fa-solid fa-circle-exclamation text-warning fs-1 mb-2 d-block"></i>
+              <h6 class="fw-bold mb-1">Không tìm thấy hồ sơ ứng tuyển nào!</h6>
+              <p class="small text-muted mb-0">Không có dữ liệu ứng tuyển nào liên kết với email <strong>${email}</strong>. Vui lòng kiểm tra lại email hoặc chọn vị trí bên dưới để nộp hồ sơ mới nhé!</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = data.applications.map((app) => {
+          const score = Number(app.match_score) || 0;
+          const isPassed = (app.approval_status === 'APPROVED' || app.approval_status === 'INTERVIEW_SCHEDULED' || app.status === 'Đạt' || app.status === 'Phỏng vấn' || score >= 70);
+          const isInterviewScheduled = Boolean(app.interview_time || app.status === 'Phỏng vấn' || app.approval_status === 'INTERVIEW_SCHEDULED');
+          const isRejected = (app.approval_status === 'REJECTED' || app.status === 'Loại' || app.status === 'Chưa đạt' || app.notification_status === 'Sent_Rejection');
+
+          let statusBadge = '';
+          let step1Class = 'text-success fw-bold';
+          let step2Class = 'text-success fw-bold';
+          let step3Class = 'text-muted';
+
+          if (isInterviewScheduled) {
+            statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2"><i class="fa-solid fa-calendar-check me-1"></i> ĐÃ XẾP LỊCH PHỎNG VẤN</span>`;
+            step3Class = 'text-primary fw-bold';
+          } else if (isPassed) {
+            statusBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2"><i class="fa-solid fa-circle-check me-1"></i> ĐẠT VÒNG SƠ LOẠI CV</span>`;
+            step3Class = 'text-info fw-bold';
+          } else if (isRejected) {
+            statusBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2"><i class="fa-solid fa-circle-xmark me-1"></i> CHƯA PHÙ HỢP ĐỢT NÀY</span>`;
+            step3Class = 'text-danger fw-bold';
+          } else {
+            statusBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2"><i class="fa-solid fa-hourglass-half me-1"></i> ĐANG CHỜ AI SÀNG LỌC</span>`;
+          }
+
+          return `
+            <div class="card border rounded-3 p-3 mb-3 shadow-sm bg-light text-start">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <div>
+                  <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-briefcase text-primary me-1"></i> ${app.applied_position}</h6>
+                  <small class="text-muted">Ứng viên: <strong>${app.full_name || app.name || 'Bạn'}</strong> • Nộp lúc: ${app.created_at ? new Date(app.created_at).toLocaleString('vi-VN') : 'Gần đây'}</small>
+                </div>
+                <div>${statusBadge}</div>
+              </div>
+
+              <!-- TIMELINE TIẾN TRÌNH -->
+              <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded-2 border my-2 small text-center">
+                <div class="${step1Class}"><i class="fa-solid fa-file-arrow-up me-1"></i> 1. Đã nộp CV</div>
+                <div class="text-muted">➔</div>
+                <div class="${step2Class}"><i class="fa-solid fa-brain me-1"></i> 2. AI Chấm điểm (${score}đ)</div>
+                <div class="text-muted">➔</div>
+                <div class="${step3Class}"><i class="fa-solid fa-flag-checkered me-1"></i> 3. ${isInterviewScheduled ? 'Đã có lịch PV' : isRejected ? 'Đã gửi thư phản hồi' : 'Đang xử lý'}</div>
+              </div>
+
+              <!-- THÔNG TIN PHỎNG VẤN (NẾU CÓ) -->
+              ${app.interview_time ? `
+                <div class="alert alert-success border-0 py-2 px-3 small mt-2 mb-2">
+                  <div class="fw-bold mb-1"><i class="fa-solid fa-calendar-day me-1"></i> Lịch Hẹn Phỏng Vấn Chính Thức:</div>
+                  <div>📅 Thời gian: <strong>${app.interview_time}</strong></div>
+                  <div>👤 Người phỏng vấn: <strong>${app.interviewer_name || 'Hội đồng tuyển dụng'}</strong></div>
+                  ${app.meeting_link ? `<div class="mt-1">🔗 Phòng họp trực tuyến: <a href="${app.meeting_link}" target="_blank" class="fw-bold text-decoration-underline">${app.meeting_link}</a></div>` : ''}
+                </div>
+              ` : ''}
+
+              <!-- NHẬN XÉT CỦA AI -->
+              ${app.ai_evaluation ? `
+                <div class="bg-white p-2 rounded-2 border small mt-1">
+                  <span class="text-secondary fw-semibold"><i class="fa-solid fa-comment-dots text-primary me-1"></i> Đánh giá chuyên môn từ AI Gemini:</span>
+                  <div class="text-muted mt-1 fst-italic">${app.ai_evaluation}</div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        container.innerHTML = `
+          <div class="alert alert-danger border-0 small text-center py-3">
+            <i class="fa-solid fa-circle-exclamation me-1"></i> Lỗi kết nối khi tra cứu hồ sơ: ${err.message}
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-search me-1"></i> Tra Cứu`;
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {

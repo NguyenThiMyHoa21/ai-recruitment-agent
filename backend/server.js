@@ -894,6 +894,60 @@ app.delete("/api/jobs/:id", async (req, res) => {
     }
 });
 
+// API cho ứng viên tra cứu tiến trình hồ sơ từ Cổng Ứng Viên (Candidate Portal)
+app.get("/api/candidate-status", async (req, res) => {
+    const email = (req.query.email || "").trim();
+    if (!email) {
+        return res.status(400).json({ success: false, message: "Vui lòng cung cấp email tra cứu" });
+    }
+
+    try {
+        const [rows] = await db.query(`
+            SELECT c.id, c.name, c.full_name, c.email, 
+                   COALESCE(c.applied_position, j.position, 'Vị trí tuyển dụng') as applied_position,
+                   c.match_score, c.approval_status, c.status, c.ai_evaluation,
+                   c.interview_time, c.interviewer_name, c.meeting_link, c.notification_status,
+                   c.created_at
+            FROM candidates c
+            LEFT JOIN jobs j ON c.job_id = j.id
+            WHERE c.email = ?
+            ORDER BY c.id DESC
+        `, [email]);
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `Không tìm thấy hồ sơ ứng tuyển nào với email: ${email}`
+            });
+        }
+
+        res.json({
+            success: true,
+            email: email,
+            applications: rows
+        });
+    } catch (error) {
+        console.error("Lỗi tra cứu hồ sơ:", error.message);
+        res.status(500).json({ success: false, message: "Lỗi máy chủ khi tra cứu: " + error.message });
+    }
+});
+
+// API nhận và lưu Audit Log của các tác tử tự động hóa n8n (Luồng 6, Luồng 2, ...)
+app.post("/api/workflow-logs", async (req, res) => {
+    try {
+        const { workflow_name, execution_status, payload } = req.body;
+        const logPayload = typeof payload === 'object' ? JSON.stringify(payload) : (payload || '{}');
+        await db.query(
+            "INSERT INTO workflow_logs (workflow_name, execution_status, payload) VALUES (?, ?, ?)",
+            [workflow_name || "Agent Workflow", execution_status || "SUCCESS", logPayload]
+        );
+        res.json({ success: true, message: "Đã ghi nhận audit log thành công" });
+    } catch (err) {
+        console.warn("Lỗi ghi log workflow:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Backend running at http://localhost:${PORT}`);
 });

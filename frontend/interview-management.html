@@ -182,24 +182,29 @@
     <!-- CARD BẢNG DANH SÁCH -->
     <div class="card main-card">
       <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div>
-          <h5 class="fw-bold text-dark mb-1">
-            <i class="fa-solid fa-list-check text-primary me-2"></i>
-            Danh sách ứng viên trong phễu tuyển dụng
-          </h5>
-          <div class="d-flex flex-wrap gap-1 mt-2" id="filterGroup">
-            <button class="btn btn-sm btn-dark rounded-pill px-3 py-1 filter-btn active" data-filter="ALL" onclick="filterStatus('ALL')">
-              Tất cả (<span id="count-all">0</span>)
-            </button>
-            <button class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 filter-btn" data-filter="Phỏng vấn" onclick="filterStatus('Phỏng vấn')">
-              🔵 Phỏng vấn (<span id="count-pv">0</span>)
-            </button>
-            <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 filter-btn" data-filter="Đạt" onclick="filterStatus('Đạt')">
-              🟢 Đạt (<span id="count-dat">0</span>)
-            </button>
-            <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 filter-btn" data-filter="Loại" onclick="filterStatus('Loại')">
-              🔴 Loại (<span id="count-loai">0</span>)
-            </button>
+        <div class="w-100 d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div>
+            <h5 class="fw-bold text-dark mb-1">
+              <i class="fa-solid fa-list-check text-primary me-2"></i>
+              Danh sách ứng viên trong phễu tuyển dụng
+            </h5>
+            <div class="d-flex flex-wrap gap-1 mt-2" id="filterGroup">
+              <button class="btn btn-sm btn-dark rounded-pill px-3 py-1 filter-btn active" data-filter="ALL" onclick="filterStatus('ALL')">
+                Tất cả (<span id="count-all">0</span>)
+              </button>
+              <button class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 filter-btn" data-filter="Phỏng vấn" onclick="filterStatus('Phỏng vấn')">
+                🔵 Phỏng vấn (<span id="count-pv">0</span>)
+              </button>
+              <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 filter-btn" data-filter="Đạt" onclick="filterStatus('Đạt')">
+                🟢 Đạt (<span id="count-dat">0</span>)
+              </button>
+              <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 filter-btn" data-filter="Loại" onclick="filterStatus('Loại')">
+                🔴 Loại (<span id="count-loai">0</span>)
+              </button>
+            </div>
+          </div>
+          <div style="min-width: 260px;">
+            <input type="text" id="interviewSearchInput" class="form-control form-control-sm rounded-pill px-3 shadow-sm border" placeholder="🔍 Tìm kiếm ứng viên, email..." onkeyup="applyFilter()">
           </div>
         </div>
       </div>
@@ -415,8 +420,10 @@
 
     function applyFilter() {
       let filtered = allCandidates;
+      const searchVal = (document.getElementById('interviewSearchInput')?.value || '').toLowerCase().trim();
+
       if (currentFilter !== 'ALL') {
-        filtered = allCandidates.filter(c => {
+        filtered = filtered.filter(c => {
           const s = (c.status || '').trim();
           const app = (c.approval_status || '').trim();
           const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
@@ -429,6 +436,17 @@
           return true;
         });
       }
+
+      if (searchVal) {
+        filtered = filtered.filter(c => {
+          const name = (c.full_name || c.name || '').toLowerCase();
+          const email = (c.email || '').toLowerCase();
+          const pos = (c.applied_position || c.position || '').toLowerCase();
+          const id = String(c.id);
+          return name.includes(searchVal) || email.includes(searchVal) || pos.includes(searchVal) || id === searchVal;
+        });
+      }
+
       renderRows(filtered);
     }
 
@@ -511,9 +529,13 @@
         }
 
         const reviewText = c.ai_evaluation || c.ai_review || '';
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('candidate_id');
+        const isTarget = targetId && String(c.id) === String(targetId);
+        const rowClass = isTarget ? 'table-warning border-start border-warning border-4' : '';
 
         return `
-          <tr data-id="${c.id}">
+          <tr data-id="${c.id}" class="${rowClass}">
             <td class="ps-3 fw-bold text-secondary">#${c.id}</td>
             <td>
               <div class="fw-bold text-dark">${c.full_name || c.name || 'N/A'}</div>
@@ -855,7 +877,15 @@
       alert(`📊 ĐÃ TẢI FILE EXCEL LỊCH PHỎNG VẤN THÀNH CÔNG!\n\n📁 Tên file: ${fileName}\n\nFile đã được tải về máy tính. Bạn có thể mở bằng Excel hoặc tải lên Google Drive / Sheets!`);
     };
 
-    document.addEventListener('DOMContentLoaded', fetchCandidates);
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const searchParam = params.get('search');
+      if (searchParam) {
+        const inp = document.getElementById('interviewSearchInput');
+        if (inp) inp.value = searchParam;
+      }
+      fetchCandidates();
+    });
   </script>
 
   <!-- Bootstrap 5 Bundle JS -->

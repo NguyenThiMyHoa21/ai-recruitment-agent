@@ -278,10 +278,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://httpbin.org/post",
+        "url": "http://localhost:3000/api/workflow-logs",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"candidate_id\": {{ $json.candidate_id }},\n  \"status\": \"{{ $json.new_status }}\",\n  \"evaluation\": \"{{ $json.ai_note }}\"\n}",
+        "jsonBody": "={\n  \"workflow_name\": \"Workflow 6 - Candidate Management Agent\",\n  \"execution_status\": \"SUCCESS\",\n  \"payload\": {\n    \"candidate_id\": {{ $json.candidate_id }},\n    \"status\": \"{{ $json.new_status }}\",\n    \"ai_evaluation\": \"{{ $json.ai_note }}\",\n    \"timestamp\": new Date().toISOString()\n  }\n}",
         "options": {}
       },
       "id": "e845405e-2154-49e6-9b48-8ed894029dd4",

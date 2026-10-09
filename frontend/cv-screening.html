@@ -420,6 +420,11 @@
       document.getElementById('modalCandEvalText').innerText = c.ai_evaluation || 'Chưa có nhận định chi tiết từ AI Gemini.';
       document.getElementById('modalCandCvText').innerText = c.cv_content || c.cv_text || 'Không có văn bản CV đính kèm.';
 
+      const scheduleBtn = document.getElementById('modalBtnSchedule');
+      if (scheduleBtn) {
+        scheduleBtn.href = `interview-management.html?candidate_id=${c.id}&search=${encodeURIComponent(c.full_name || c.name || c.email || '')}`;
+      }
+
       const modal = new bootstrap.Modal(document.getElementById('candDetailModal'));
       modal.show();
     }

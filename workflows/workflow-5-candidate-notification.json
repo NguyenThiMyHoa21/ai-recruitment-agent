@@ -158,6 +158,26 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ Boolean($('6. Parse Invite Content').first().json.is_rejection) }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "step-7-1-check-rejection",
+      "name": "7.1. Check Rejection Branch",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        200
+      ]
+    },
+    {
+      "parameters": {
         "calendar": {
           "__rl": true,
           "value": "primary",
@@ -372,6 +392,24 @@
     },
     "7. Send Official Invite Email": {
       "main": [
+        [
+          {
+            "node": "7.1. Check Rejection Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7.1. Check Rejection Branch": {
+      "main": [
+        [
+          {
+            "node": "13. Update Notification Status DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "8. Sync Google Calendar",
