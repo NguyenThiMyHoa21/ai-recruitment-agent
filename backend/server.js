@@ -27,13 +27,13 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-// API lấy danh sách Job đã published
+// API lấy danh sách Job (bao gồm cả published và closed) để HR quản lý và Cổng ứng viên hiển thị đúng trạng thái
 app.get("/api/jobs", async (req, res) => {
     try {
         const [jobs] = await db.query(`
-            SELECT id, position, department, location, salary, requirements
+            SELECT id, position, department, location, salary, requirements, COALESCE(status, 'published') AS status
             FROM jobs
-            WHERE status = 'published'
+            WHERE position IS NOT NULL AND position != '' AND position != 'undefined' AND (status != 'pending' OR status IS NULL)
             ORDER BY id DESC
         `);
 

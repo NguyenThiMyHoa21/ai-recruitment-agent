@@ -132,20 +132,23 @@ function copyJdContent() {
 // 3. TẢI DANH SÁCH VỊ TRÍ ĐANG TUYỂN DỤNG
 // =========================================================
 const defaultJobsFallback = [
-    { id: 18, position: "Chuyên viên Digital Marketing", department: "Truyền thông", salary: "18 - 25 Triệu VND", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI" },
-    { id: 17, position: "Product Manager", department: "Product", salary: "30 - 45 Triệu VND", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis" },
-    { id: 16, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO" },
-    { id: 15, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Content, Facebook Ads, SEO" },
-    { id: 14, position: "Senior Backend Engineer Test 2", department: "Engineering", salary: "35 - 50 Triệu VND", requirements: "Node.js, Golang, Docker, Microservices" },
-    { id: 13, position: "Nhân viên chăm sóc khách hàng", department: "CSKH", salary: "8 - 12 Triệu VND", requirements: "Kỹ năng giao tiếp, chăm sóc khách hàng, nhiệt tình" },
-    { id: 12, position: "Kỹ sư Công nghệ thông tin", department: "IT Software", salary: "15 - 25 Triệu VND", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật" },
-    { id: 11, position: "Nhân viên kinh doanh", department: "Kinh doanh", salary: "10 - 20 Triệu VND", requirements: "Kỹ năng bán hàng, giao tiếp, tìm kiếm khách hàng" },
-    { id: 8,  position: "Frontend Developer", department: "Engineering", salary: "18 - 28 Triệu VND", requirements: "Thạo ReactJS, HTML, CSS" }
+    { id: 18, position: "Chuyên viên Digital Marketing", department: "Truyền thông", salary: "18 - 25 Triệu VND", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI", status: "published" },
+    { id: 17, position: "Product Manager", department: "Product", salary: "30 - 45 Triệu VND", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis", status: "published" },
+    { id: 16, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO", status: "published" },
+    { id: 15, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Content, Facebook Ads, SEO", status: "published" },
+    { id: 14, position: "Senior Backend Engineer Test 2", department: "Engineering", salary: "35 - 50 Triệu VND", requirements: "Node.js, Golang, Docker, Microservices", status: "published" },
+    { id: 13, position: "Nhân viên chăm sóc khách hàng", department: "CSKH", salary: "8 - 12 Triệu VND", requirements: "Kỹ năng giao tiếp, chăm sóc khách hàng, nhiệt tình", status: "published" },
+    { id: 12, position: "Kỹ sư Công nghệ thông tin", department: "IT Software", salary: "15 - 25 Triệu VND", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật", status: "published" },
+    { id: 11, position: "Nhân viên kinh doanh", department: "Kinh doanh", salary: "10 - 20 Triệu VND", requirements: "Kỹ năng bán hàng, giao tiếp, tìm kiếm khách hàng", status: "published" },
+    { id: 8,  position: "Frontend Developer", department: "Engineering", salary: "18 - 28 Triệu VND", requirements: "Thạo ReactJS, HTML, CSS", status: "published" }
 ];
 
 async function loadActiveJobs() {
     const tbody = document.getElementById("jobsTableBody");
     if (!tbody) return;
+
+    let customJobs = [];
+    try { customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(e) {}
 
     try {
         const controller = new AbortController();
@@ -154,17 +157,26 @@ async function loadActiveJobs() {
         clearTimeout(timeoutId);
 
         const data = await res.json();
-        if (res.ok && data.success && data.jobs && data.jobs.length > 0) {
+        if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
+            // Đồng bộ trạng thái: nếu localStorage có trạng thái mới nhất do vừa click toggle
+            data.jobs.forEach(j => {
+                const saved = customJobs.find(cj => String(cj.id) === String(j.id));
+                if (saved && saved.status) {
+                    j.status = saved.status;
+                }
+            });
             renderJobsTable(data.jobs);
             return;
         }
-        throw new Error("Không có dữ liệu");
+        throw new Error("Không có dữ liệu từ backend");
     } catch (e) {
         let combined = [...defaultJobsFallback];
         try {
-            const customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
             customJobs.forEach(cj => {
-                if (!combined.some(j => String(j.id) === String(cj.id))) {
+                const existing = combined.find(j => String(j.id) === String(cj.id));
+                if (existing) {
+                    if (cj.status) existing.status = cj.status;
+                } else if (cj.position) {
                     combined.unshift(cj);
                 }
             });
@@ -222,8 +234,9 @@ async function toggleJobStatus(jobId, newStatus, selectEl) {
     }
 
     // 2. Cập nhật cache bộ nhớ & localStorage để Cổng Ứng Viên đồng bộ lập tức
+    let target = null;
     if (window.jobsCache) {
-        const target = window.jobsCache.find(j => String(j.id) === String(jobId));
+        target = window.jobsCache.find(j => String(j.id) === String(jobId));
         if (target) target.status = newStatus;
     }
     try {
@@ -232,12 +245,18 @@ async function toggleJobStatus(jobId, newStatus, selectEl) {
         if (item) {
             item.status = newStatus;
         } else {
-            customJobs.push({ id: Number(jobId), status: newStatus });
+            customJobs.push({
+                id: Number(jobId),
+                status: newStatus,
+                position: target?.position || '',
+                department: target?.department || '',
+                salary: target?.salary || ''
+            });
         }
         localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
     } catch(e) {}
 
-    // 3. Gửi API lên Backend Node.js
+    // 3. Gửi API lên Backend Node.js để cập nhật vào MySQL
     try {
         const res = await fetch("http://localhost:3000/api/jobs/update-status", {
             method: "POST",
