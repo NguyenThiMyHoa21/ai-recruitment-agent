@@ -366,6 +366,20 @@
               -
             </div>
           </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label fw-bold text-success small mb-0">
+                <i class="fa-solid fa-brain me-1"></i> Bản mô tả công việc chi tiết (JD) do AI Gemini sinh ra:
+              </label>
+              <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 small" onclick="navigator.clipboard.writeText(document.getElementById('modalJobDesc').innerText); alert('Đã sao chép JD!');">
+                <i class="fa-solid fa-copy me-1"></i> Sao chép JD
+              </button>
+            </div>
+            <div class="p-3 bg-light rounded-3 border small text-dark" style="white-space: pre-wrap; line-height: 1.6; max-height: 280px; overflow-y: auto;" id="modalJobDesc">
+              Đang tải nội dung JD...
+            </div>
+          </div>
         </div>
         <div class="modal-footer bg-light py-2 d-flex justify-content-between">
           <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>

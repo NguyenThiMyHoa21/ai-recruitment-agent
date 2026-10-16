@@ -326,6 +326,11 @@ window.viewJobDetail = function(jobId) {
     const reqEl = document.getElementById("modalJobReq");
     if (reqEl) reqEl.innerText = job.requirements || 'Kỹ năng làm việc chuyên nghiệp, đáp ứng văn hóa công ty.';
 
+    const descEl = document.getElementById("modalJobDesc");
+    if (descEl) {
+        descEl.innerText = job.job_description || `BẢN MÔ TẢ CÔNG VIỆC CHUYÊN NGHIỆP\n\n1. VỊ TRÍ TUYỂN DỤNG: ${job.position}\n2. PHÒNG BAN: ${job.department || 'Nhân sự'} | ĐỊA ĐIỂM: ${job.location || 'Đà Nẵng'}\n3. MỨC LƯƠNG: ${job.salary || 'Thỏa thuận'}\n4. TIÊU CHUẨN: ${job.requirements || 'Theo tiêu chuẩn chuyên môn'}\n5. QUYỀN LỢI: Môi trường làm việc năng động, lộ trình thăng tiến rõ ràng, chế độ đãi ngộ hấp dẫn.`;
+    }
+
     const linkEl = document.getElementById("modalJobLinkScreen");
     if (linkEl) linkEl.href = `cv-screening.html?job_id=${job.id}`;
 
