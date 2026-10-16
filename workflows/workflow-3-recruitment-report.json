@@ -41,13 +41,24 @@
     {
       "parameters": {
         "conditions": {
-          "number": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.total_candidates }}",
-              "operation": "largerEqual",
-              "value2": 0
+              "id": "step3-filter-candidates",
+              "leftValue": "={{ $json.total_candidates }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "node-3-filter",
@@ -176,12 +187,25 @@
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.report_title }}",
-              "operation": "isNotEmpty"
+              "id": "step8-check-report",
+              "leftValue": "={{ $json.report_title }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "node-8-if",
@@ -222,7 +246,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO recruitment_reports (report_title, total_jobs, total_candidates, approved_candidates, rejected_candidates, avg_score, ai_insights, approval_status)\nVALUES (\n  '{{ $('Step 7: Generate Report').item.json.report_title }}',\n  {{ $('Step 4: Aggregate Statistics').item.json.total_jobs }},\n  {{ $('Step 4: Aggregate Statistics').item.json.total_candidates }},\n  {{ $('Step 4: Aggregate Statistics').item.json.approved_candidates }},\n  {{ $('Step 4: Aggregate Statistics').item.json.rejected_candidates }},\n  {{ $('Step 4: Aggregate Statistics').item.json.avg_score }},\n  '{{ $('Step 6: AI Agent - Analyze Recruitment').item.json.ai_insights }}',\n  '{{ $json.approval_status }}'\n);"
+        "query": "INSERT INTO recruitment_reports (report_title, total_jobs, total_candidates, approved_candidates, rejected_candidates, avg_score, ai_insights, approval_status)\nVALUES (\n  {{ JSON.stringify($('Step 7: Generate Report').item.json.report_title) }},\n  {{ Number($('Step 4: Aggregate Statistics').item.json.total_jobs) || 0 }},\n  {{ Number($('Step 4: Aggregate Statistics').item.json.total_candidates) || 0 }},\n  {{ Number($('Step 4: Aggregate Statistics').item.json.approved_candidates) || 0 }},\n  {{ Number($('Step 4: Aggregate Statistics').item.json.rejected_candidates) || 0 }},\n  {{ Number($('Step 4: Aggregate Statistics').item.json.avg_score) || 0 }},\n  {{ JSON.stringify($('Step 6: AI Agent - Analyze Recruitment').item.json.ai_insights) }},\n  {{ JSON.stringify($json.approval_status) }}\n);"
       },
       "id": "node-10-save",
       "name": "Step 10: Save Report to MySQL",
@@ -273,7 +297,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'AI Recruitment Report Agent',\n  'SUCCESS',\n  '{\"report_title\": \"{{ $('Step 7: Generate Report').item.json.report_title }}\", \"status\": \"DELIVERED\"}'\n);"
+        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'AI Recruitment Report Agent',\n  'SUCCESS',\n  {{ JSON.stringify(JSON.stringify({ report_title: $('Step 7: Generate Report').item.json.report_title, status: 'DELIVERED' })) }}\n);"
       },
       "id": "node-12-log",
       "name": "Step 12: Insert Audit Log",
