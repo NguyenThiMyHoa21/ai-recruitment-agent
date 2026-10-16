@@ -294,17 +294,28 @@
 
     // Tải danh sách công việc đang đăng tuyển từ Backend MySQL
     async function loadJobs() {
+      // 1. Dọn dẹp localStorage nếu có bản ghi rác
       let customJobs = [];
-      try { customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(e) {}
+      try {
+        const raw = localStorage.getItem('custom_jobs');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            customJobs = list.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
+            localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
+          }
+        }
+      } catch(e) {}
 
+      // 2. Lấy dữ liệu từ Backend MySQL
       try {
         const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now());
         const rawText = await res.text();
         let data = {};
         try { data = JSON.parse(rawText); } catch(e) {}
 
-        if (res.ok && data.success && data.jobs && data.jobs.length > 0) {
-          availableJobs = data.jobs;
+        if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
+          availableJobs = data.jobs.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
         } else {
           renderDefaultJobs(false);
         }
@@ -313,7 +324,7 @@
         renderDefaultJobs(false);
       }
 
-      // Đẩy cập nhật trạng thái từ HR (localStorage)
+      // 3. Đồng bộ trạng thái mới nhất từ HR
       if (customJobs && customJobs.length > 0) {
         customJobs.forEach(cj => {
           let target = availableJobs.find(j => String(j.id) === String(cj.id));
@@ -408,7 +419,7 @@
           location: "Đà Nẵng",
           salary: "10 - 20 triệu",
           requirements: "Tìm kiếm mở rộng tệp khách hàng B2B, đàm phán hợp đồng, giao tiếp tự tin.",
-          status: "closed"
+          status: "published"
         },
         {
           id: 10,
@@ -417,7 +428,7 @@
           location: "Đà Nẵng",
           salary: "8 - 12 triệu",
           requirements: "Tiếp nhận phản hồi khách hàng qua tổng đài, giọng nói truyền cảm, giải quyết khiếu nại.",
-          status: "closed"
+          status: "published"
         },
         {
           id: 11,
@@ -426,7 +437,7 @@
           location: "Đà Nẵng / Remote",
           salary: "25 - 35 triệu",
           requirements: "Quản trị AWS, Kubernetes, CI/CD Pipeline, Ansible, Monitoring (Prometheus/Grafana).",
-          status: "closed"
+          status: "published"
         }
       ];
       updateCounts(availableJobs);

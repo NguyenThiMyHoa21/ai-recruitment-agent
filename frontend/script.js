@@ -143,6 +143,20 @@ const defaultJobsFallback = [
     { id: 8,  position: "Frontend Developer", department: "Engineering", salary: "18 - 28 Triệu VND", requirements: "Thạo ReactJS, HTML, CSS", status: "published" }
 ];
 
+// Tự động dọn sạch các bản ghi lỗi trong localStorage ngay khi tải trang
+(function cleanCorruptedLocalStorage() {
+    try {
+        const raw = localStorage.getItem('custom_jobs');
+        if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+                const cleaned = list.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
+                localStorage.setItem('custom_jobs', JSON.stringify(cleaned));
+            }
+        }
+    } catch(e) {}
+})();
+
 async function loadActiveJobs() {
     const tbody = document.getElementById("jobsTableBody");
     if (!tbody) return;
@@ -155,21 +169,27 @@ async function loadActiveJobs() {
 
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
+            // Lọc bỏ triệt để các bản ghi không hợp lệ hoặc undefined
+            const validJobs = data.jobs.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
+            
             // Chuẩn hóa trạng thái từ MySQL
-            data.jobs.forEach(j => {
+            validJobs.forEach(j => {
                 if (!j.status || j.status === 'undefined') {
                     j.status = 'published';
                 }
             });
             // Đồng bộ sang localStorage để Cổng ứng viên đọc đồng nhất
-            localStorage.setItem('custom_jobs', JSON.stringify(data.jobs));
-            renderJobsTable(data.jobs);
+            localStorage.setItem('custom_jobs', JSON.stringify(validJobs));
+            renderJobsTable(validJobs);
             return;
         }
         throw new Error("Không có dữ liệu từ backend");
     } catch (e) {
         let customJobs = [];
-        try { customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(err) {}
+        try { 
+            customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
+            customJobs = customJobs.filter(j => j && j.position && j.position !== 'undefined');
+        } catch(err) {}
 
         let combined = [...defaultJobsFallback];
         try {
@@ -177,12 +197,12 @@ async function loadActiveJobs() {
                 const existing = combined.find(j => String(j.id) === String(cj.id));
                 if (existing) {
                     if (cj.status) existing.status = cj.status;
-                } else if (cj.position) {
+                } else if (cj.position && cj.position !== 'undefined') {
                     combined.unshift(cj);
                 }
             });
         } catch(err) {}
-        renderJobsTable(combined);
+        renderJobsTable(combined.filter(j => j && j.position && j.position !== 'undefined'));
     }
 }
 
@@ -240,10 +260,13 @@ async function toggleJobStatus(jobId, newStatus, selectEl) {
         if (item) {
             item.status = newStatus;
         } else {
-            customJobs.push({
-                id: Number(jobId),
-                status: newStatus
-            });
+            const currentJob = (window.jobsCache || []).find(j => String(j.id) === String(jobId)) || defaultJobsFallback.find(j => String(j.id) === String(jobId));
+            if (currentJob) {
+                customJobs.push({
+                    ...currentJob,
+                    status: newStatus
+                });
+            }
         }
         localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
     } catch(e) {}
