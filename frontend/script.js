@@ -132,10 +132,10 @@ function copyJdContent() {
 // 3. TẢI DANH SÁCH VỊ TRÍ ĐANG TUYỂN DỤNG
 // =========================================================
 const defaultJobsFallback = [
+    { id: 20, position: "Chuyên viên Digital Marketing", department: "Truyền thông", salary: "18 - 25 Triệu VND", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI", status: "published" },
     { id: 18, position: "Chuyên viên Digital Marketing", department: "Truyền thông", salary: "18 - 25 Triệu VND", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI", status: "published" },
     { id: 17, position: "Product Manager", department: "Product", salary: "30 - 45 Triệu VND", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis", status: "published" },
-    { id: 16, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO", status: "published" },
-    { id: 15, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Content, Facebook Ads, SEO", status: "published" },
+    { id: 15, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO", status: "published" },
     { id: 14, position: "Senior Backend Engineer Test 2", department: "Engineering", salary: "35 - 50 Triệu VND", requirements: "Node.js, Golang, Docker, Microservices", status: "published" },
     { id: 13, position: "Nhân viên chăm sóc khách hàng", department: "CSKH", salary: "8 - 12 Triệu VND", requirements: "Kỹ năng giao tiếp, chăm sóc khách hàng, nhiệt tình", status: "published" },
     { id: 12, position: "Kỹ sư Công nghệ thông tin", department: "IT Software", salary: "15 - 25 Triệu VND", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật", status: "published" },
@@ -147,9 +147,6 @@ async function loadActiveJobs() {
     const tbody = document.getElementById("jobsTableBody");
     if (!tbody) return;
 
-    let customJobs = [];
-    try { customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(e) {}
-
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -158,18 +155,22 @@ async function loadActiveJobs() {
 
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
-            // Đồng bộ trạng thái: nếu localStorage có trạng thái mới nhất do vừa click toggle
+            // Chuẩn hóa trạng thái từ MySQL
             data.jobs.forEach(j => {
-                const saved = customJobs.find(cj => String(cj.id) === String(j.id));
-                if (saved && saved.status) {
-                    j.status = saved.status;
+                if (!j.status || j.status === 'undefined') {
+                    j.status = 'published';
                 }
             });
+            // Đồng bộ sang localStorage để Cổng ứng viên đọc đồng nhất
+            localStorage.setItem('custom_jobs', JSON.stringify(data.jobs));
             renderJobsTable(data.jobs);
             return;
         }
         throw new Error("Không có dữ liệu từ backend");
     } catch (e) {
+        let customJobs = [];
+        try { customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(err) {}
+
         let combined = [...defaultJobsFallback];
         try {
             customJobs.forEach(cj => {
@@ -224,21 +225,15 @@ function renderJobsTable(jobs) {
 
 // Hàm đổi trạng thái tuyển dụng (HR chọn Đang tuyển / Tạm ngưng)
 async function toggleJobStatus(jobId, newStatus, selectEl) {
-    // 1. Cập nhật giao diện select
-    if (selectEl) {
-        if (newStatus === 'published') {
-            selectEl.className = 'form-select form-select-sm fw-semibold shadow-sm border-success text-success';
-        } else {
-            selectEl.className = 'form-select form-select-sm fw-semibold shadow-sm border-danger text-danger';
+    // 1. Cập nhật cache bộ nhớ ngay lập tức
+    if (window.jobsCache) {
+        const target = window.jobsCache.find(j => String(j.id) === String(jobId));
+        if (target) {
+            target.status = newStatus;
         }
     }
 
-    // 2. Cập nhật cache bộ nhớ & localStorage để Cổng Ứng Viên đồng bộ lập tức
-    let target = null;
-    if (window.jobsCache) {
-        target = window.jobsCache.find(j => String(j.id) === String(jobId));
-        if (target) target.status = newStatus;
-    }
+    // 2. Cập nhật localStorage để Cổng Ứng Viên đồng bộ lập tức
     try {
         let customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
         let item = customJobs.find(j => String(j.id) === String(jobId));
@@ -247,16 +242,22 @@ async function toggleJobStatus(jobId, newStatus, selectEl) {
         } else {
             customJobs.push({
                 id: Number(jobId),
-                status: newStatus,
-                position: target?.position || '',
-                department: target?.department || '',
-                salary: target?.salary || ''
+                status: newStatus
             });
         }
         localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
     } catch(e) {}
 
-    // 3. Gửi API lên Backend Node.js để cập nhật vào MySQL
+    // 3. Cập nhật màu sắc select ngay lập tức trên UI
+    if (selectEl) {
+        if (newStatus === 'published') {
+            selectEl.className = 'form-select form-select-sm fw-semibold shadow-sm border-success text-success';
+        } else {
+            selectEl.className = 'form-select form-select-sm fw-semibold shadow-sm border-danger text-danger';
+        }
+    }
+
+    // 4. Gửi API lên Backend Node.js để lưu vào MySQL
     try {
         const res = await fetch("http://localhost:3000/api/jobs/update-status", {
             method: "POST",
@@ -269,12 +270,12 @@ async function toggleJobStatus(jobId, newStatus, selectEl) {
         try { data = JSON.parse(rawText); } catch(e) {}
 
         if (res.ok && data.success) {
-            alert(`✅ Đã đổi trạng thái vị trí #${jobId} sang: ${newStatus === 'published' ? '🟢 ĐANG TUYỂN DỤNG' : '🔴 TẠM NGƯNG TIẾP NHẬN'}.\n\nCổng Ứng Viên đã được đồng bộ tự động!`);
+            alert(`✅ Đã đổi trạng thái vị trí #${jobId} sang: ${newStatus === 'published' ? '🟢 ĐANG TUYỂN DỤNG' : '🔴 TẠM NGƯNG TIẾP NHẬN'}.\n\nCổng Ứng Viên và Cơ sở dữ liệu đã được đồng bộ tự động!`);
         } else {
             alert(`✅ Đã cập nhật vị trí #${jobId} sang: ${newStatus === 'published' ? '🟢 ĐANG TUYỂN DỤNG' : '🔴 TẠM NGƯNG TIẾP NHẬN'}.`);
         }
     } catch (err) {
-        alert(`✅ Đã cập nhật vị trí #${jobId} sang: ${newStatus === 'published' ? '🟢 ĐANG TUYỂN DỤNG' : '🔴 TẠM NGƯNG TIẾP NHẬN'} (Đã lưu trạng thái).`);
+        alert(`✅ Đã cập nhật vị trí #${jobId} sang: ${newStatus === 'published' ? '🟢 ĐANG TUYỂN DỤNG' : '🔴 TẠM NGƯNG TIẾP NHẬN'} (Đã lưu vào bộ nhớ).`);
     }
 }
 
