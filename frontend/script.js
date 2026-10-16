@@ -132,15 +132,14 @@ function copyJdContent() {
 // 3. TẢI DANH SÁCH VỊ TRÍ ĐANG TUYỂN DỤNG
 // =========================================================
 const defaultJobsFallback = [
-    { id: 20, position: "Chuyên viên Digital Marketing", department: "Truyền thông", salary: "18 - 25 Triệu VND", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI", status: "published" },
-    { id: 18, position: "Chuyên viên Digital Marketing", department: "Truyền thông", salary: "18 - 25 Triệu VND", requirements: "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích chỉ số ROI", status: "published" },
-    { id: 17, position: "Product Manager", department: "Product", salary: "30 - 45 Triệu VND", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis", status: "published" },
-    { id: 15, position: "Chuyên viên Marketing", department: "Truyền thông", salary: "15 - 20 Triệu VND", requirements: "Marketing, Digital Marketing, Facebook Ads, Google Ads, SEO", status: "published" },
-    { id: 14, position: "Senior Backend Engineer Test 2", department: "Engineering", salary: "35 - 50 Triệu VND", requirements: "Node.js, Golang, Docker, Microservices", status: "published" },
-    { id: 13, position: "Nhân viên chăm sóc khách hàng", department: "CSKH", salary: "8 - 12 Triệu VND", requirements: "Kỹ năng giao tiếp, chăm sóc khách hàng, nhiệt tình", status: "published" },
-    { id: 12, position: "Kỹ sư Công nghệ thông tin", department: "IT Software", salary: "15 - 25 Triệu VND", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật", status: "published" },
-    { id: 11, position: "Nhân viên kinh doanh", department: "Kinh doanh", salary: "10 - 20 Triệu VND", requirements: "Kỹ năng bán hàng, giao tiếp, tìm kiếm khách hàng", status: "published" },
-    { id: 8,  position: "Frontend Developer", department: "Engineering", salary: "18 - 28 Triệu VND", requirements: "Thạo ReactJS, HTML, CSS", status: "published" }
+    { id: 17, position: "Product Manager", department: "Product", salary: "25 - 35 Triệu", requirements: "Agile, Scrum, Product Roadmapping, Data Analysis", status: "published" },
+    { id: 14, position: "Senior Backend Engineer", department: "Engineering", salary: "35 - 50 Triệu VND", requirements: "3+ năm kinh nghiệm Node.js, Golang, Docker, Microservices", status: "published" },
+    { id: 13, position: "Nhân viên chăm sóc khách hàng", department: "CSKH", salary: "15 - 25 Triệu", requirements: "Năng nổ, hoạt bát, có kinh nghiệm giao tiếp", status: "published" },
+    { id: 12, position: "Kỹ sư Công nghệ thông tin", department: "IT", salary: "10 - 20 Triệu", requirements: "Phần mềm, lập trình, giải quyết vấn đề kỹ thuật", status: "published" },
+    { id: 11, position: "Nhân viên kinh doanh", department: "Kinh doanh", salary: "8 - 12 Triệu", requirements: "Kỹ năng bán hàng, giao tiếp, tìm kiếm khách hàng", status: "published" },
+    { id: 8,  position: "Frontend Developer", department: "Engineering", salary: "15 - 20 Triệu", requirements: "Thạo ReactJS, HTML, CSS", status: "published" },
+    { id: 7,  position: "DevOps Engineer", department: "Infrastructure", salary: "20 - 25 Triệu", requirements: "Thành thạo Docker, CI/CD, Linux", status: "published" },
+    { id: 6,  position: "Backend Developer", department: "Engineering", salary: "15 - 20 Triệu", requirements: "Thành thạo PHP, MySQL, RESTful API", status: "published" }
 ];
 
 // Tự động dọn sạch các bản ghi lỗi trong localStorage ngay khi tải trang
