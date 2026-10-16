@@ -42,3 +42,4 @@ volumes:
 networks:
   recruitment-network:
     driver: bridge
+
