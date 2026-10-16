@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mysql-recruitment:
+    image: mysql:8.0
+    container_name: mysql-recruitment
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: recruitment_db
+      MYSQL_USER: recruitment
+      MYSQL_PASSWORD: recruitment123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - recruitment-network
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - recruitment-network
+    depends_on:
+      - mysql-recruitment
+
+volumes:
+  mysql_data:
+  n8n_data:
+
+networks:
+  recruitment-network:
+    driver: bridge
