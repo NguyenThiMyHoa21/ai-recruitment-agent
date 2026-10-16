@@ -112,7 +112,7 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
       <div>
         <h4 class="fw-bold text-dark mb-1">
-          <i class="fa-solid fa-briefcase text-primary me-2"></i> Danh Sách Vị Trí Tuyển Dụng (<span id="jobCount">11</span>)
+          <i class="fa-solid fa-briefcase text-primary me-2"></i> Danh Sách Vị Trí Tuyển Dụng (<span id="jobCount">0</span>)
         </h4>
         <small class="text-muted">Hiển thị danh sách vị trí đang mở tuyển và vị trí đã tạm ngưng tiếp nhận hồ sơ.</small>
       </div>
@@ -121,13 +121,13 @@
       <div class="d-flex align-items-center flex-wrap gap-2">
         <div class="btn-group btn-group-sm shadow-sm" role="group" id="statusFilterGroup">
           <button type="button" class="btn btn-primary fw-semibold px-3 active" onclick="filterJobs('all', this)">
-            Tất cả (<span id="countAll">11</span>)
+            Tất cả (<span id="countAll">0</span>)
           </button>
           <button type="button" class="btn btn-outline-primary fw-semibold px-3" onclick="filterJobs('published', this)">
-            🟢 Đang tuyển (<span id="countPublished">8</span>)
+            🟢 Đang tuyển (<span id="countPublished">0</span>)
           </button>
           <button type="button" class="btn btn-outline-primary fw-semibold px-3" onclick="filterJobs('closed', this)">
-            🔴 Tạm ngưng (<span id="countClosed">3</span>)
+            🔴 Tạm ngưng (<span id="countClosed">0</span>)
           </button>
         </div>
 
@@ -292,22 +292,8 @@
     let availableJobs = [];
     let currentFilter = 'all';
 
-    // Tải danh sách công việc đang đăng tuyển từ Backend MySQL
+    // Tải danh sách công việc đang đăng tuyển từ Backend MySQL (Single Source of Truth)
     async function loadJobs() {
-      // 1. Dọn dẹp localStorage nếu có bản ghi rác
-      let customJobs = [];
-      try {
-        const raw = localStorage.getItem('custom_jobs');
-        if (raw) {
-          const list = JSON.parse(raw);
-          if (Array.isArray(list)) {
-            customJobs = list.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
-            localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
-          }
-        }
-      } catch(e) {}
-
-      // 2. Lấy dữ liệu từ Backend MySQL
       try {
         const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now());
         const rawText = await res.text();
@@ -315,28 +301,46 @@
         try { data = JSON.parse(rawText); } catch(e) {}
 
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
+          // Lấy trực tiếp trạng thái thật từ MySQL (không bị localStorage rác đè lên)
           availableJobs = data.jobs.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
+          
+          // Ghi đè lại localStorage để dọn sạch hoàn toàn các trạng thái rác cũ
+          try {
+            localStorage.setItem('custom_jobs', JSON.stringify(availableJobs));
+          } catch(e) {}
         } else {
-          renderDefaultJobs(false);
+          loadFallbackJobs();
         }
       } catch (err) {
-        console.warn("Lỗi tải danh sách job:", err);
-        renderDefaultJobs(false);
-      }
-
-      // 3. Đồng bộ trạng thái mới nhất từ HR
-      if (customJobs && customJobs.length > 0) {
-        customJobs.forEach(cj => {
-          let target = availableJobs.find(j => String(j.id) === String(cj.id));
-          if (target && cj.status) {
-            target.status = cj.status;
-          }
-        });
+        console.warn("Lỗi tải danh sách job từ Backend, chuyển sang dự phòng:", err);
+        loadFallbackJobs();
       }
 
       updateCounts(availableJobs);
       renderJobsFiltered();
     }
+
+    // Cơ chế dự phòng chỉ dùng khi Backend mất kết nối hoàn toàn
+    function loadFallbackJobs() {
+      try {
+        const raw = localStorage.getItem('custom_jobs');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list) && list.length > 0) {
+            availableJobs = list.filter(j => j && j.position && j.position !== 'undefined');
+            if (availableJobs.length > 0) return;
+          }
+        }
+      } catch(e) {}
+      renderDefaultJobs();
+    }
+
+    // Tự động cập nhật tức thì khi HR ở tab khác đổi trạng thái
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'custom_jobs' || e.key === 'job_status_updated') {
+        loadJobs();
+      }
+    });
 
     function renderDefaultJobs() {
       availableJobs = [

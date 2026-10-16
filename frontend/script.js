@@ -269,6 +269,7 @@ async function toggleJobStatus(jobId, newStatus, selectEl) {
             }
         }
         localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
+        localStorage.setItem('job_status_updated', Date.now());
     } catch(e) {}
 
     // 3. Cập nhật màu sắc select ngay lập tức trên UI
