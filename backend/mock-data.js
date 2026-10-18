@@ -263,3 +263,4 @@ module.exports = {
     MOCK_HISTORY,
     MOCK_REPORT
 };
+
