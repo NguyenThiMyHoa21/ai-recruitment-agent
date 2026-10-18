@@ -3,11 +3,11 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
-    host: "127.0.0.1",
-    port: 3306,
-    user: "recruitment",
-    password: "recruitment123",
-    database: "recruitment_db",
+    host: process.env.DB_HOST || "127.0.0.1",
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER || "recruitment",
+    password: process.env.DB_PASSWORD || "recruitment123",
+    database: process.env.DB_NAME || "recruitment_db",
     waitForConnections: true,
     connectionLimit: 10,
     connectTimeout: 5000,
@@ -15,7 +15,7 @@ const db = mysql.createPool({
 });
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const path = require("path");
 
