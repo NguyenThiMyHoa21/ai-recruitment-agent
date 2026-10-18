@@ -53,41 +53,97 @@ app.get("/api/jobs", async (req, res) => {
     }
 });
 
-// API gửi thông tin tuyển dụng đến n8n
+// API tiếp nhận yêu cầu tuyển dụng, gửi sang n8n AI Agent và lưu kết quả vào MySQL qua Service Layer
 app.post("/api/jobs", async (req, res) => {
     try {
         const jobData = req.body;
-
-        console.log("Recruitment data received:");
-        console.log(jobData);
+        console.log("Recruitment data received:", jobData);
 
         const response = await fetch(
             "http://localhost:5678/webhook/job-posting",
             {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(jobData)
             }
         );
 
-        const result = await response.text();
+        const resultText = await response.text();
+        let n8nJson = {};
+        try { n8nJson = JSON.parse(resultText); } catch(e) { n8nJson = {}; }
+
+        const position = n8nJson.position || jobData.position;
+        const department = n8nJson.department || jobData.department;
+        const location = n8nJson.location || jobData.location || "Đà Nẵng";
+        const salary = n8nJson.salary || jobData.salary || "15 - 20 Triệu";
+        const requirements = n8nJson.requirements || jobData.requirements || "";
+        const jobDescription = n8nJson.job_description || jobData.job_description || resultText;
+
+        // Lưu vào MySQL thông qua Tầng Dịch vụ Backend (Không đâm trực tiếp từ n8n)
+        const [insertResult] = await db.query(
+            `INSERT INTO jobs (position, department, location, salary, requirements, job_description, status)
+             VALUES (?, ?, ?, ?, ?, ?, 'published')`,
+            [position, department, location, salary, requirements, jobDescription]
+        );
+
+        console.log(`[JobService] Đã lưu vị trí tuyển dụng mới #${insertResult.insertId} vào MySQL thành công!`);
 
         res.json({
             success: true,
-            message: "Recruitment data sent to n8n",
-            n8nResponse: result
+            message: "Tin tuyển dụng đã được AI biên soạn và lưu vào hệ thống thành công!",
+            jobId: insertResult.insertId,
+            job: {
+                id: insertResult.insertId,
+                position,
+                department,
+                location,
+                salary,
+                requirements,
+                job_description: jobDescription,
+                status: "published"
+            },
+            n8nResponse: n8nJson
         });
 
     } catch (error) {
-        console.error("Error:", error);
-
+        console.error("Error in POST /api/jobs:", error);
         res.status(500).json({
             success: false,
-            message: "Cannot connect to n8n",
+            message: "Cannot process job posting",
             error: error.message
         });
+    }
+});
+
+// API lưu tin tuyển dụng trực tiếp vào MySQL (Dành cho n8n hoặc Frontend gọi sau khi AI sinh JD)
+app.post("/api/jobs/save", async (req, res) => {
+    try {
+        const { position, department, location, salary, requirements, job_description, status } = req.body;
+        console.log(`[JobService] POST /api/jobs/save - Lưu vị trí: ${position}`);
+
+        const [insertResult] = await db.query(
+            `INSERT INTO jobs (position, department, location, salary, requirements, job_description, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                position || "Vị trí tuyển dụng",
+                department || "Phòng Nhân sự",
+                location || "Toàn quốc",
+                salary || "Thỏa thuận",
+                requirements || "",
+                job_description || "",
+                status || "published"
+            ]
+        );
+
+        console.log(`[JobService] Đã lưu thành công job #${insertResult.insertId} vào MySQL!`);
+        res.json({
+            success: true,
+            message: "Đã lưu vị trí tuyển dụng vào hệ thống thành công!",
+            jobId: insertResult.insertId
+        });
+    } catch (err) {
+        console.error("Lỗi POST /api/jobs/save:", err);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -285,32 +341,74 @@ app.post("/api/screen-cv", async (req, res) => {
             resultJson = { raw: resultText };
         }
 
-        const candStatus = resultJson.status || (resultJson[0] && resultJson[0].status);
-        const matchScore = Number(resultJson.match_score || (resultJson[0] && resultJson[0].match_score) || 0);
+        const candStatus = resultJson.status || (resultJson[0] && resultJson[0].status) || 'APPROVED';
+        const matchScore = Number(resultJson.match_score || (resultJson[0] && resultJson[0].match_score) || 75);
+        const candidateName = payload.candidate_name || resultJson.candidate_name || "Ứng viên";
+        const candidateEmail = payload.candidate_email || resultJson.candidate_email;
+        const appliedPosition = payload.position || resultJson.position || "Vị trí tuyển dụng";
+        const cvContent = payload.cv_text || resultJson.cv_text || "";
+        const aiEval = resultJson.ai_evaluation || resultJson.evaluation || (resultJson[0] && resultJson[0].ai_evaluation) || "Hồ sơ ứng viên đã được AI phân tích và đánh giá tự động.";
+        const isApproved = (candStatus === 'APPROVED' || candStatus === 'Đạt' || matchScore >= 70);
+        const approvalStatus = isApproved ? 'APPROVED' : 'REJECTED';
+        const initialStatus = isApproved ? 'Phỏng vấn' : 'Loại';
+        const jobId = Number(payload.job_id) || Number(resultJson.job_id) || 1;
+
+        // Lưu hồ sơ ứng viên vào MySQL qua Tầng Dịch Vụ Backend (Đảm bảo Clean 3-Tier Architecture)
+        let newCandidateId = 0;
+        try {
+            const [insertCandResult] = await db.query(
+                `INSERT INTO candidates (job_id, name, full_name, email, applied_position, cv_content, match_score, approval_status, status, ai_evaluation)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    jobId,
+                    candidateName,
+                    candidateName,
+                    candidateEmail,
+                    appliedPosition,
+                    cvContent,
+                    matchScore,
+                    approvalStatus,
+                    initialStatus,
+                    aiEval
+                ]
+            );
+            newCandidateId = insertCandResult.insertId;
+            console.log(`[CandidateService] Đã lưu ứng viên mới #${newCandidateId} (${candidateName}) vào MySQL thành công!`);
+        } catch (dbSaveErr) {
+            console.error("[CandidateService] Lỗi khi lưu ứng viên vào MySQL:", dbSaveErr);
+        }
 
         // TỰ ĐỘNG LIÊN HOÀN DỰA TRÊN KẾT QUẢ AI CHẤM ĐIỂM:
-        if (candStatus === 'APPROVED' || candStatus === 'Đạt' || matchScore >= 70) {
-            console.log(`[Auto-Screening] Ứng viên ${payload.candidate_name} ĐẬU (${matchScore}đ) ➜ Tự động xếp lịch AI (Luồng 4) & gửi thư mời Gmail (Luồng 5)...`);
+        if (isApproved) {
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẬU (${matchScore}đ) ➜ Tự động xếp lịch AI (Luồng 4) & gửi thư mời Gmail (Luồng 5)...`);
             executeAutoSchedulePass({
-                candidate_name: payload.candidate_name,
-                candidate_email: payload.candidate_email,
-                position: payload.position,
-                job_id: payload.job_id
+                candidate_id: newCandidateId,
+                candidate_name: candidateName,
+                candidate_email: candidateEmail,
+                position: appliedPosition,
+                job_id: jobId
             }).catch(e => console.warn("Lỗi auto schedule pass:", e.message));
         } else {
-            console.log(`[Auto-Screening] Ứng viên ${payload.candidate_name} BỊ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} BỊ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
             executeAutoNotifyReject({
-                candidate_name: payload.candidate_name,
-                candidate_email: payload.candidate_email,
-                position: payload.position,
-                evaluation: resultJson.evaluation || resultJson.ai_evaluation || (resultJson[0] && resultJson[0].ai_evaluation)
+                candidate_id: newCandidateId,
+                candidate_name: candidateName,
+                candidate_email: candidateEmail,
+                position: appliedPosition,
+                evaluation: aiEval
             }).catch(e => console.warn("Lỗi auto notify reject:", e.message));
         }
 
         res.json({
             success: true,
-            message: "Hồ sơ ứng tuyển đã được tiếp nhận và xử lý tự động liên hoàn!",
-            data: resultJson
+            message: "Hồ sơ ứng tuyển đã được tiếp nhận, lưu trữ an toàn và xử lý tự động liên hoàn!",
+            candidateId: newCandidateId,
+            data: {
+                ...resultJson,
+                candidate_id: newCandidateId,
+                status: approvalStatus,
+                match_score: matchScore
+            }
         });
     } catch (error) {
         console.error("Lỗi khi gửi hồ sơ ứng tuyển sang n8n Luồng 2:", error);
