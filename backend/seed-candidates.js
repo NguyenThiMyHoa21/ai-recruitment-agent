@@ -7,14 +7,12 @@ async function seed() {
     
     let connection;
     try {
-        connection = await mysql.createConnection({
-            host: "localhost",
-            port: 3306,
-            user: "recruitment",
-            password: "recruitment123",
-            database: "recruitment_db",
-            multipleStatements: true
-        });
+        const socketExists = fs.existsSync("/tmp/mysql.sock");
+        connection = await mysql.createConnection(
+            socketExists
+                ? { socketPath: "/tmp/mysql.sock", user: "recruitment", password: "recruitment123", database: "recruitment_db", multipleStatements: true }
+                : { host: "127.0.0.1", port: 3306, user: "recruitment", password: "recruitment123", database: "recruitment_db", multipleStatements: true }
+        );
 
         const sqlPath = path.join(__dirname, "../seed_50_candidates.sql");
         const sqlContent = fs.readFileSync(sqlPath, "utf-8");

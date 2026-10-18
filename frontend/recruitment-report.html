@@ -815,44 +815,55 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+const API_BASE = (window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
 
 async function generateReport() {
-
   const btn = document.getElementById("btnGenerate");
-
   const loader = document.getElementById("loading");
-
   const dashboard = document.getElementById("reportDashboard");
 
-
   btn.disabled = true;
-
   loader.style.display = "block";
-
   dashboard.style.display = "none";
 
-
   try {
+    let response;
+    let data;
 
-    const response = await fetch(
-      "http://localhost:5678/webhook/generate-recruitment-report",
-      {
+    // 1. Gọi qua Backend API Service Layer (kết nối trực tiếp MySQL 50 ứng viên & gọi AI Gemini)
+    try {
+      response = await fetch(`${API_BASE}/api/generate-recruitment-report`, {
         method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
+        headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(6000),
         body: JSON.stringify({})
+      });
+      if (response && response.ok) {
+        data = await response.json();
       }
-    );
+    } catch (apiErr) {
+      console.warn("Backend API gặp sự cố, thử gọi trực tiếp n8n Webhook:", apiErr.message);
+    }
+
+    // 2. Dự phòng gọi trực tiếp n8n Webhook nếu cần
+    if (!data || !data.success) {
+      try {
+        response = await fetch("http://localhost:5678/webhook/generate-recruitment-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(4000),
+          body: JSON.stringify({})
+        });
+        if (response && response.ok) {
+          data = await response.json();
+        }
+      } catch (n8nErr) {
+        console.warn("n8n webhook không phản hồi:", n8nErr.message);
+      }
+    }
 
 
-    const data = await response.json();
-
-
-    if (response.ok && data.success) {
-
+    if (data && data.success) {
       const statistics = data.statistics || {};
 
 
@@ -1090,7 +1101,6 @@ function renderDefaultReport() {
 // =========================================================
 window.candidatesCache = [];
 window.currentFilter = 'ALL';
-const API_BASE = (window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
 
 async function loadRecentCandidates() {
   const countBadge = document.getElementById("candidateCountBadge");
