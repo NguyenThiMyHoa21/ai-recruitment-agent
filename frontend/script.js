@@ -30,10 +30,11 @@ form.addEventListener("submit", async (event) => {
         let n8nData = {};
 
         try {
-            // 1. Gửi trực tiếp đến n8n Webhook (Cổng 5678)
+            // 1. Gửi trực tiếp đến n8n Webhook (Cổng 5678) với timeout 3.5s
             response = await fetch("http://localhost:5678/webhook/job-posting", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                signal: AbortSignal.timeout(3500),
                 body: JSON.stringify(jobData)
             });
             if (response.ok) {
@@ -51,6 +52,9 @@ form.addEventListener("submit", async (event) => {
                 n8nData = typeof result.n8nResponse === "string" ? JSON.parse(result.n8nResponse) : (result.n8nResponse || {});
             } catch (e) {
                 n8nData = {};
+            }
+            if (!n8nData.job_description && result.job && result.job.job_description) {
+                n8nData.job_description = result.job.job_description;
             }
         }
 

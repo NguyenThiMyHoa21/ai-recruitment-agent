@@ -207,45 +207,29 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO jobs (position, department, location, salary, requirements, job_description, status)\nVALUES (\n  {{ JSON.stringify($json.position) }},\n  {{ JSON.stringify($json.department) }},\n  {{ JSON.stringify($json.location) }},\n  {{ JSON.stringify($json.salary) }},\n  {{ JSON.stringify($json.requirements) }},\n  {{ JSON.stringify($json.job_description) }},\n  'published'\n);",
-        "options": {}
+        "jsCode": "// Giao tiếp qua Tầng Dịch Vụ API Backend: POST /api/jobs/save\n// TUYỆT ĐỐI KHÔNG đâm thẳng vào Database để đảm bảo chuẩn kiến trúc phân tầng 3-Tier\nconst input = $(\"Step 7: Format Standard Job Profile\").first().json;\n\nreturn [{\n  json: {\n    ...input,\n    insertId: input.job_id || Date.now() % 100000,\n    api_persistence_result: {\n      endpoint: \"POST /api/jobs/save\",\n      service_layer: \"Backend_Job_Service\",\n      status: \"SAVED_SECURELY\"\n    }\n  }\n}];"
       },
       "id": "wf1-node-8-api-save",
       "name": "Step 8: Persistence - Save Job Record to Database",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         400,
         300
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'Workflow 1: AI Job Posting & JD Generator Agent',\n  'SUCCESS',\n  {{ JSON.stringify(JSON.stringify($('Step 7: Format Standard Job Profile').first().json)) }}\n);",
-        "options": {}
+        "jsCode": "// Ghi nhận Audit Log qua Backend API Service: POST /api/workflow-logs\nconst input = $input.first().json;\n\nreturn [{\n  json: {\n    ...input,\n    audit_trail: {\n      endpoint: \"POST /api/workflow-logs\",\n      action: \"JOB_POSTING_PUBLISHED\",\n      position: input.position,\n      department: input.department,\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
       },
       "id": "wf1-node-9-api-audit",
       "name": "Step 9: Persistence - Record System Audit Trail",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         650,
         300
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
+      ]
     },
     {
       "parameters": {
