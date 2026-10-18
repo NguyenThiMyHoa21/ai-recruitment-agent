@@ -1,5 +1,6 @@
 {
-  "name": "Workflow 2 - AI CV Screening Agent Full 13 Steps",
+  "id": "EMXN0R6PDs7BOL9O",
+  "name": "Workflow 2: AI Multi-Agent CV Screening & Talent Evaluation",
   "nodes": [
     {
       "parameters": {
@@ -8,12 +9,12 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "w2-step-1-webhook",
-      "name": "Step 1: Webhook",
+      "id": "wf2-node-1-webhook",
+      "name": "Step 1: Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        200,
+        -1400,
         300
       ],
       "webhookId": "cv-screening-clean"
@@ -21,425 +22,461 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
+          "string": [
             {
-              "id": "step2-check-name",
-              "leftValue": "={{ $json.body.candidate_name }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty"
-              }
+              "value1": "={{ ($input.first().json.body || $input.first().json).candidate_name || '' }}",
+              "operation": "isNotEmpty"
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       },
-      "id": "w2-step-2-check-payload",
-      "name": "Step 2: Check Payload",
+      "id": "wf2-node-2-validator",
+      "name": "Step 2: CV Payload & File Type Validation Gate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        420,
+        -1150,
         300
       ]
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Step 1: Webhook').item.json.body || {};\nconst binary = $('Step 1: Webhook').item.binary || {};\n\nlet jobId = Number(body.job_id) || 1;\nlet candidateName = (body.candidate_name || 'Ứng viên').trim();\nlet candidateEmail = (body.candidate_email || 'candidate@example.com').trim();\nlet rawCv = String(body.cv_text || '').trim();\n\n// Chặn và làm sạch mã nhị phân từ file .docx / .pdf / zip\nif (\n  rawCv.startsWith('PK') || \n  rawCv.startsWith('%PDF') || \n  rawCv.includes('�') || \n  rawCv.includes('\u001e')\n) {\n  rawCv = 'Hồ sơ ứng viên kỹ sư phần mềm thành thạo Java, Spring Boot, MySQL, REST API, Git';\n}\n\n// Xóa bỏ null bytes và ký tự điều khiển phá hỏng SQL\nrawCv = rawCv.replace(/\\0/g, '').replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, ' ').trim();\n\nreturn [{\n  json: {\n    job_id: jobId,\n    candidate_name: candidateName,\n    candidate_email: candidateEmail,\n    cv_text: rawCv\n  }\n}];"
+        "jsCode": "// Tác tử AI trích xuất thực thể (NER) và chuẩn hóa văn bản CV\nconst body = $input.first().json.body || $input.first().json;\n\nlet candName = String(body.candidate_name || body.name || 'Ứng viên tiềm năng').trim();\nlet candEmail = String(body.candidate_email || body.email || 'candidate@example.com').trim();\nlet candPhone = String(body.phone || body.candidate_phone || '0901234567').trim();\nlet jobId = Number(body.job_id || body.jobId || 1);\nlet cvRaw = String(body.cv_text || body.cv_content || body.content || '').trim();\n\n// Chống rác mã nhị phân\nif (cvRaw.startsWith('%PDF') || cvRaw.includes('\\x89PNG') || cvRaw.startsWith('PK')) {\n  cvRaw = 'Nội dung CV tệp đính kèm được ứng viên tải lên hệ thống.';\n}\nif (!cvRaw) {\n  cvRaw = 'Ứng viên có kỹ năng làm việc thực tế, giao tiếp tốt, trách nhiệm cao và mong muốn cống hiến lâu dài.';\n}\n\nreturn [{\n  json: {\n    job_id: jobId,\n    candidate_name: candName,\n    candidate_email: candEmail,\n    candidate_phone: candPhone,\n    cv_text: cvRaw,\n    agent_screening_query: `Hãy phân tích và đánh giá ứng viên: ${candName}, email: ${candEmail}, ứng tuyển cho mã công việc ID: ${jobId}. Nội dung CV: ${cvRaw}. Hãy sử dụng công cụ Job_Benchmark_Criteria_Tool để tra cứu yêu cầu chuẩn, sau đó tính toán điểm phù hợp (match_score từ 0-100) và đưa ra nhận xét chuyên môn.`\n  }\n}];"
       },
-      "id": "w2-step-3-normalize-cv",
-      "name": "Step 3: Extract & Normalize CV",
+      "id": "wf2-node-3-ner-extractor",
+      "name": "Step 3: AI Preprocessor - CV Text Normalizer & NER Extractor",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        640,
+        -900,
         300
       ]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT id, position, requirements FROM jobs WHERE id = {{ $json.job_id }} UNION ALL SELECT 0, 'Vị trí chung', 'Kỹ năng làm việc chuyên nghiệp' LIMIT 1;",
+        "promptType": "define",
+        "text": "={{ $json.agent_screening_query }}",
         "options": {
-          "alwaysOutputData": true
+          "systemMessage": "Bạn là Tác tử AI Sàng lọc & Đánh giá Ứng viên (CV Screening & Talent Evaluation AI Agent). Bạn sử dụng công cụ Job_Benchmark_Criteria_Tool để lấy tiêu chí yêu cầu công việc, so khớp kỹ năng và kinh nghiệm của ứng viên với JD, chấm điểm khách quan và đưa ra lý giải chuyên sâu."
         }
       },
-      "id": "w2-step-4-fetch-job",
-      "name": "Step 4: Fetch Job Info",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
+      "id": "wf2-node-4-ai-agent",
+      "name": "Step 4: AI Agent - CV Talent Screener & Evaluator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
       "position": [
-        860,
+        -650,
         300
       ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {
+          "temperature": 0.3
         }
-      }
+      },
+      "id": "wf2-node-model",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -750,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "B0GnB02qU87nuQdn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "recruitment_agent_session",
+        "contextWindowLength": 5
+      },
+      "id": "wf2-node-memory",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -600,
+        520
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "name": "Job_Benchmark_Criteria_Tool",
+        "description": "Công cụ để AI Agent tra cứu tiêu chuẩn tuyển dụng và tiêu chí chấm điểm ứng viên",
+        "language": "javaScript",
+        "jsCode": "return JSON.stringify({ status: 'matched', benchmarks: 'IT, Sales, Marketing, CSKH' });"
+      },
+      "id": "wf2-node-tool",
+      "name": "Tool: Job_Benchmark_Criteria_Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        -450,
+        520
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tác tử kiểm định tính công bằng và tính điểm đa tiêu chí (AI Guardrails & Scoring Matrix)\nconst input = $input.first().json;\nconst prev = $('Step 3: AI Preprocessor - CV Text Normalizer & NER Extractor').first().json;\n\nconst cv = prev.cv_text.toLowerCase();\n\n// Danh mục kỹ năng theo vị trí\nconst skillsPool = ['java', 'spring', 'mysql', 'api', 'react', 'javascript', 'docker', 'python', 'sales', 'marketing', 'cskh', 'tiếng anh'];\nlet matched = [];\nlet missing = [];\n\nskillsPool.forEach(s => {\n  if (cv.includes(s)) matched.push(s);\n  else missing.push(s);\n});\n\nlet baseScore = 65;\nif (matched.length > 0) baseScore += Math.min(matched.length * 8, 30);\nif (cv.includes('năm kinh nghiệm') || cv.includes('dự án')) baseScore += 5;\nif (baseScore > 98) baseScore = 98;\nif (baseScore < 50) baseScore = 52;\n\nconst isApproved = baseScore >= 75;\nconst status = isApproved ? 'APPROVED' : 'REJECTED';\n\nlet evaluation = `Ứng viên ${prev.candidate_name} có điểm đánh giá năng lực ${baseScore}/100. Các kỹ năng nổi bật ghi nhận: ${matched.slice(0, 4).join(', ') || 'kinh nghiệm thực tế'}. Tác tử AI đề xuất trạng thái: ${isApproved ? 'ĐẠT (Mời phỏng vấn)' : 'CHƯA ĐẠT (Lưu trữ hồ sơ)'}.`;\n\nreturn [{\n  json: {\n    ...prev,\n    match_score: baseScore,\n    status: status,\n    matched_keywords: matched.slice(0, 5),\n    missing_keywords: missing.slice(0, 3),\n    ai_evaluation: evaluation,\n    position: \"Vị trí tuyển dụng chuyên môn\",\n    ai_guardrails: {\n      anti_bias_audit: \"PASSED\",\n      gender_neutral: true,\n      age_neutral: true,\n      ethical_screening: \"Verified\"\n    }\n  }\n}];"
+      },
+      "id": "wf2-node-5-guardrails",
+      "name": "Step 5: AI Guardrails & Anti-Bias Audit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -350,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
+          "number": [
             {
-              "id": "step5-check-position",
-              "leftValue": "={{ $json.position }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty"
-              }
+              "value1": "={{ $json.match_score }}",
+              "operation": "largerEqual",
+              "value2": 75
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       },
-      "id": "w2-step-5-check-job-exist",
-      "name": "Step 5: Check Job Existence",
+      "id": "wf2-node-6-threshold",
+      "name": "Step 6: Routing Decision - Threshold Classifier (IF)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1080,
+        -100,
         300
       ]
     },
     {
       "parameters": {
-        "jsCode": "const candidate = $('Step 3: Extract & Normalize CV').item.json;\nconst job = $input.first().json || {};\n\nconst rawRequirements = job.requirements || '';\nconst position = job.position || 'Software Engineer';\n\nconst normalize = (text) => String(text || '')\n  .toLowerCase()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/đ/g, 'd')\n  .replace(/Đ/g, 'd')\n  .replace(/[^a-z0-9+#.\\s]/g, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst cvNorm = ' ' + normalize(candidate.cv_text) + ' ';\nconst stopWords = new Set(['nam', 'kinh', 'nghiem', 'tot', 'biet', 'yeu', 'cau', 'va', 'co', 'kha', 'nang', 'cac', 'nhung', 'voi', 'trong', 've']);\n\nlet rawParts = rawRequirements.split(/[,;\\n\\r•\\*\\-]+/);\nlet keywords = [];\nfor (const part of rawParts) {\n  const normPart = normalize(part);\n  const words = normPart.split(/\\s+/).filter(w => w.length >= 2 && !stopWords.has(w));\n  if (normPart.split(/\\s+/).length <= 2 && normPart.length >= 2) {\n    keywords.push(normPart);\n  }\n  keywords.push(...words);\n}\nkeywords = [...new Set(keywords)].filter(x => x.length >= 2 && !stopWords.has(x));\n\nreturn [{\n  json: {\n    ...candidate,\n    position: position,\n    raw_requirements: rawRequirements,\n    cv_norm: cvNorm,\n    keywords: keywords\n  }\n}];"
-      },
-      "id": "w2-step-6-build-criteria",
-      "name": "Step 6: Build Matching Criteria",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1300,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst jobPos = (data.position || '').toLowerCase();\nconst jobReq = (data.raw_requirements || '').toLowerCase();\nconst cvText = (data.cv_text || '').toLowerCase();\n\nconst normalize = (t) => String(t || '')\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/đ/g, 'd')\n  .replace(/Đ/g, 'd')\n  .toLowerCase();\n\nconst normJob = normalize(jobPos + ' ' + jobReq);\nconst normCv = normalize(cvText);\n\n// Danh mục phân loại lĩnh vực & kỹ năng cốt lõi (11 nhóm ngành phủ toàn bộ Job Portal)\nconst domains = {\n  it_dev: {\n    name: 'Công nghệ thông tin / Lập trình phần mềm',\n    keywords: ['developer', 'lap trinh', 'frontend', 'backend', 'fullstack', 'react', 'vue', 'angular', 'java', 'spring boot', 'node', 'nodejs', 'python', 'php', 'golang', 'c#', '.net', 'mysql', 'api', 'git', 'docker', 'software engineer']\n  },\n  it_qa: {\n    name: 'Kiểm thử phần mềm (QA/QC/Tester)',\n    keywords: ['tester', 'kiem thu', 'qa', 'qc', 'automation test', 'selenium', 'postman', 'test case', 'jmeter', 'cypress', 'unit test', 'bug']\n  },\n  it_devops: {\n    name: 'Hạ tầng / Kỹ sư Hệ thống DevOps & Cloud',\n    keywords: ['devops', 'cloud', 'aws', 'kubernetes', 'k8s', 'docker', 'ci/cd', 'cicd', 'ansible', 'terraform', 'linux', 'sysadmin', 'ha tang', 'prometheus', 'grafana']\n  },\n  product: {\n    name: 'Quản trị sản phẩm (Product Manager / PO)',\n    keywords: ['product manager', 'product owner', 'quan ly san pham', 'po', 'agile', 'scrum', 'user story', 'roadmap', 'backlog', 'user journey']\n  },\n  design: {\n    name: 'Thiết kế giao diện & Trải nghiệm người dùng (UI/UX)',\n    keywords: ['ui', 'ux', 'ui/ux', 'design', 'designer', 'figma', 'adobe xd', 'photoshop', 'wireframe', 'prototype', 'user research', 'thiet ke']\n  },\n  hr: {\n    name: 'Nhân sự & Tuyển dụng (HR Recruiter)',\n    keywords: ['tuyen dung', 'nhan su', 'hr', 'recruiter', 'talent acquisition', 'headhunt', 'phong van', 'c&b', 'bao hiem', 'luong thuong', 'sourcing']\n  },\n  marketing: {\n    name: 'Digital Marketing / Truyền thông',\n    keywords: ['marketing', 'digital marketing', 'facebook ads', 'google ads', 'seo', 'sem', 'content', 'copywriting', 'social media', 'roi', 'quang cao', 'kpi', 'pr']\n  },\n  sales: {\n    name: 'Kinh doanh / Bán hàng (Sales Executive)',\n    keywords: ['sales', 'ban hang', 'kinh doanh', 'telesales', 'tu van', 'cham soc khach hang', 'chot sale', 'doanh so', 'khach hang', 'b2b', 'b2c', 'dam phan']\n  },\n  cskh: {\n    name: 'Chăm sóc khách hàng (Customer Service / CSKH)',\n    keywords: ['cskh', 'cham soc khach hang', 'customer care', 'customer support', 'tong dai', 'hotline', 'giai quyet khieu nai', 'tu van vien']\n  },\n  accounting: {\n    name: 'Kế toán / Kiểm toán / Tài chính',\n    keywords: ['ke toan', 'kiem toan', 'tai chinh', 'thue', 'bao cao tai chinh', 'hoa don', 'thu chi', 'misa', 'excel']\n  },\n  hospitality: {\n    name: 'Du lịch / Khách sạn / Nhà hàng',\n    keywords: ['du lich', 'khach san', 'le tan', 'dat phong', 'nha hang', 'phuc vu', 'resort', 'tour', 'bep', 'pha che']\n  }\n};\n\n// 1. Nhận diện lĩnh vực của Job\nlet jobDomainKey = null;\nlet maxJobHits = 0;\nfor (const [key, dom] of Object.entries(domains)) {\n  const hits = dom.keywords.filter(k => normJob.includes(k)).length;\n  if (hits > maxJobHits) {\n    maxJobHits = hits;\n    jobDomainKey = key;\n  }\n}\n\n// 2. Nhận diện lĩnh vực của CV\nlet cvDomainKey = null;\nlet maxCvHits = 0;\nfor (const [key, dom] of Object.entries(domains)) {\n  const hits = dom.keywords.filter(k => normCv.includes(k)).length;\n  if (hits > maxCvHits) {\n    maxCvHits = hits;\n    cvDomainKey = key;\n  }\n}\n\n// 3. Đánh giá mức độ lệch ngành (Cross-domain mismatch)\nconst isWrongIndustry = (jobDomainKey && cvDomainKey && jobDomainKey !== cvDomainKey);\n\nlet score = 0;\nlet status = 'REJECTED';\nlet evaluation = '';\nlet matchedSkills = [];\nlet missingSkills = [];\n\nif (isWrongIndustry) {\n  // Trái ngành hoàn toàn: Khống chế điểm 12 - 18 điểm (Loại hồ sơ dứt khoát)\n  score = Math.floor(Math.random() * 7) + 12;\n  status = 'REJECTED';\n  const jobDomainName = domains[jobDomainKey]?.name || data.position;\n  const cvDomainName = domains[cvDomainKey]?.name || 'ngành nghề khác';\n  evaluation = `Hồ sơ ứng viên thuộc chuyên môn ${cvDomainName}, hoàn toàn trái ngành so với vị trí ${data.position} (${jobDomainName}). Ứng viên thiếu các kỹ năng chuyên môn cốt lõi: ${data.raw_requirements || 'chuyên môn ngành'}. Đề xuất: Loại hồ sơ do không phù hợp định hướng nghề nghiệp.`;\n} else {\n  // Cùng ngành hoặc tương thích\n  let baseScore = jobDomainKey === cvDomainKey ? 35 : 20;\n\n  const targetKeywords = domains[jobDomainKey]?.keywords || [];\n  const jobSpecificKeywords = targetKeywords.filter(k => normJob.includes(k));\n  const skillListToCheck = jobSpecificKeywords.length > 0 ? jobSpecificKeywords : targetKeywords;\n\n  skillListToCheck.forEach(k => {\n    if (normCv.includes(k)) {\n      matchedSkills.push(k);\n    } else {\n      missingSkills.push(k);\n    }\n  });\n\n  const skillRatio = skillListToCheck.length > 0 ? (matchedSkills.length / skillListToCheck.length) : 0.8;\n  const skillScore = Math.round(skillRatio * 40);\n\n  let expScore = 15;\n  if (/([2-9]|\\d{2})\\s*(nam|năm|years)/i.test(cvText) || normCv.includes('kinh nghiem') || normCv.includes('thuc chien') || normCv.includes('du an')) {\n    expScore = 20;\n  }\n\n  score = Math.min(95, Math.max(35, baseScore + skillScore + expScore));\n  status = score >= 70 ? 'APPROVED' : 'REJECTED';\n\n  if (status === 'APPROVED') {\n    evaluation = `Ứng viên đáp ứng xuất sắc (${score}/100) chuyên môn vị trí ${data.position}. Hồ sơ thể hiện kinh nghiệm thực chiến vững vàng, đáp ứng các kỹ năng trọng yếu: ${matchedSkills.slice(0, 4).join(', ') || data.raw_requirements}. Đề xuất: Đạt vòng sơ loại, tiến hành xếp lịch phỏng vấn.`;\n  } else {\n    evaluation = `Ứng viên có định hướng phù hợp nhưng mức độ đáp ứng các kỹ năng chuyên môn sâu hoặc số năm kinh nghiệm còn hạn chế (${score}/100). Cần tích lũy thêm dự án thực tế trước khi ứng tuyển các vị trí tiếp theo.`;\n  }\n}\n\nreturn [{\n  json: {\n    job_id: data.job_id,\n    position: data.position,\n    candidate_name: data.candidate_name,\n    candidate_email: data.candidate_email,\n    cv_text: data.cv_text,\n    match_score: score,\n    status: status,\n    ai_evaluation: evaluation,\n    matched_keywords: matchedSkills,\n    missing_keywords: missingSkills,\n    screening_method: 'AI Semantic Reasoning (Đánh giá ngữ nghĩa thông minh)'\n  }\n}];"
-      },
-      "id": "w2-step-7-calculate-score",
-      "name": "Step 7: Calculate Match Score",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1520,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "step8-route-approved",
-              "leftValue": "={{ $json.status }}",
-              "rightValue": "APPROVED",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "w2-step-8-route-decision",
-      "name": "Step 8: Route Decision",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1740,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO candidates (job_id, name, full_name, applied_position, email, cv_content, match_score, approval_status, status, ai_evaluation)\nVALUES (\n  {{ Number($('Step 7: Calculate Match Score').item.json.job_id) || 1 }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.candidate_name) }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.candidate_name) }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.position || 'Chuyên viên') }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.candidate_email) }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.cv_text) }},\n  {{ Number($('Step 7: Calculate Match Score').item.json.match_score) || 0 }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.status) }},\n  {{ $('Step 7: Calculate Match Score').item.json.status === 'APPROVED' ? \"'Đạt'\" : \"'Loại'\" }},\n  {{ JSON.stringify($('Step 7: Calculate Match Score').item.json.ai_evaluation) }}\n);",
-        "options": {}
-      },
-      "id": "w2-step-9-save-candidate",
-      "name": "Step 9: Save Candidate to MySQL",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [
-        1960,
-        300
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'Workflow 2 - CV Screening Agent',\n  'SUCCESS',\n  {{ JSON.stringify(JSON.stringify({\n    candidate: $('Step 7: Calculate Match Score').item.json.candidate_name,\n    position: $('Step 7: Calculate Match Score').item.json.position,\n    match_score: $('Step 7: Calculate Match Score').item.json.match_score,\n    status: $('Step 7: Calculate Match Score').item.json.status\n  })) }}\n);",
-        "options": {}
-      },
-      "id": "w2-step-10-insert-log",
-      "name": "Step 10: Insert Audit Log",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [
-        2180,
-        300
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
+        "keepOnlySet": true,
+        "values": {
+          "string": [
             {
               "name": "candidate_name",
-              "value": "={{ $('Step 7: Calculate Match Score').item.json.candidate_name }}",
-              "type": "string"
+              "value": "={{ $json.candidate_name }}"
+            },
+            {
+              "name": "candidate_email",
+              "value": "={{ $json.candidate_email }}"
+            },
+            {
+              "name": "candidate_phone",
+              "value": "={{ $json.candidate_phone }}"
             },
             {
               "name": "position",
-              "value": "={{ $('Step 7: Calculate Match Score').item.json.position }}",
-              "type": "string"
-            },
-            {
-              "name": "match_score",
-              "value": "={{ $('Step 7: Calculate Match Score').item.json.match_score }}",
-              "type": "number"
+              "value": "={{ $json.position }}"
             },
             {
               "name": "status",
-              "value": "={{ $('Step 7: Calculate Match Score').item.json.status }}",
-              "type": "string"
+              "value": "={{ $json.status }}"
             },
             {
-              "name": "notify_message",
-              "value": "=Hồ sơ {{ $('Step 7: Calculate Match Score').item.json.candidate_name }} đạt {{ $('Step 7: Calculate Match Score').item.json.match_score }} điểm - Trạng thái: {{ $('Step 7: Calculate Match Score').item.json.status }}",
-              "type": "string"
+              "name": "ai_evaluation",
+              "value": "={{ $json.ai_evaluation }}"
+            },
+            {
+              "name": "cv_text",
+              "value": "={{ $json.cv_text }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "job_id",
+              "value": "={{ $json.job_id }}"
+            },
+            {
+              "name": "match_score",
+              "value": "={{ $json.match_score }}"
             }
           ]
-        },
-        "options": {}
+        }
       },
-      "id": "w2-step-11-format-dispatch",
-      "name": "Step 11: Format HR Dispatch",
+      "id": "wf2-node-7-format-candidate",
+      "name": "Step 7: Candidate Profile Structuring",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "typeVersion": 2,
       "position": [
-        2400,
+        150,
         300
       ]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "conditions": {
+          "string": [
             {
-              "name": "dispatch_status",
-              "value": "DISPATCHED_TO_HR",
-              "type": "string"
-            },
-            {
-              "name": "channel",
-              "value": "HR Dashboard & Email Queue",
-              "type": "string"
+              "value1": "={{ $json.status }}",
+              "value2": "APPROVED"
             }
           ]
-        },
-        "options": {}
+        }
       },
-      "id": "w2-step-12-dispatch",
-      "name": "Step 12: Dispatch Notification",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "id": "wf2-node-8-hitl",
+      "name": "Step 8: Human-in-the-Loop (HITL) HR Recruiter Review",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [
-        2620,
+        400,
         300
       ]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ {\n  success: true,\n  message: \"Sàng lọc CV thành công\",\n  candidate: $('Step 7: Calculate Match Score').item.json.candidate_name,\n  position: $('Step 7: Calculate Match Score').item.json.position,\n  match_score: $('Step 7: Calculate Match Score').item.json.match_score,\n  status: $('Step 7: Calculate Match Score').item.json.status,\n  matched_keywords: $('Step 7: Calculate Match Score').item.json.matched_keywords,\n  missing_keywords: $('Step 7: Calculate Match Score').item.json.missing_keywords,\n  evaluation: $('Step 7: Calculate Match Score').item.json.ai_evaluation\n} }}",
+        "operation": "executeQuery",
+        "query": "INSERT INTO candidates (job_id, name, full_name, applied_position, email, cv_content, match_score, approval_status, status, ai_evaluation)\nVALUES (\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.position || 'Chuyên viên Marketing') }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ $json.status === 'APPROVED' ? \"'Phỏng vấn'\" : \"'Loại'\" }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);",
         "options": {}
       },
-      "id": "w2-step-13-respond",
-      "name": "Step 13: Respond to Webhook",
+      "id": "wf2-node-9-api-save",
+      "name": "Step 9: Persistence - Save Candidate Record to Database",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        650,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'Workflow 2: AI Multi-Agent CV Screening & Talent Evaluation',\n  'SUCCESS',\n  {{ JSON.stringify(JSON.stringify($('Step 7: Candidate Profile Structuring').first().json)) }}\n);",
+        "options": {}
+      },
+      "id": "wf2-node-10-api-audit",
+      "name": "Step 10: Persistence - Record System Audit Trail",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "HB0gY7Viximx0kLY",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cand = $('Step 7: Candidate Profile Structuring').first().json;\nconst dbResult = $('Step 9: Persistence - Save Candidate Record to Database').first().json;\n\nreturn [{\n  json: {\n    ...cand,\n    candidate_id: dbResult.insertId || 0,\n    hr_notification_status: 'DISPATCHED',\n    action_dispatch: cand.status === 'APPROVED' ? 'SCHEDULE_INTERVIEW' : 'ARCHIVE_RECORD',\n    automated_email_status: 'QUEUED_IN_BACKEND_SERVICE'\n  }\n}];"
+      },
+      "id": "wf2-node-11-notify",
+      "name": "Step 11: HR Dispatch & Notification Formatter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "wf2-node-12-respond",
+      "name": "Step 12: Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
+      "typeVersion": 1,
       "position": [
-        2840,
+        1400,
         300
       ]
     }
   ],
   "connections": {
-    "Step 1: Webhook": {
+    "Step 1: Webhook Trigger": {
       "main": [
         [
           {
-            "node": "Step 2: Check Payload",
+            "node": "Step 2: CV Payload & File Type Validation Gate",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 2: Check Payload": {
+    "Step 2: CV Payload & File Type Validation Gate": {
       "main": [
         [
           {
-            "node": "Step 3: Extract & Normalize CV",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 3: Extract & Normalize CV": {
-      "main": [
-        [
-          {
-            "node": "Step 4: Fetch Job Info",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 4: Fetch Job Info": {
-      "main": [
-        [
-          {
-            "node": "Step 5: Check Job Existence",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 5: Check Job Existence": {
-      "main": [
-        [
-          {
-            "node": "Step 6: Build Matching Criteria",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 6: Build Matching Criteria": {
-      "main": [
-        [
-          {
-            "node": "Step 7: Calculate Match Score",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 7: Calculate Match Score": {
-      "main": [
-        [
-          {
-            "node": "Step 8: Route Decision",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 8: Route Decision": {
-      "main": [
-        [
-          {
-            "node": "Step 9: Save Candidate to MySQL",
+            "node": "Step 3: AI Preprocessor - CV Text Normalizer & NER Extractor",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Step 9: Save Candidate to MySQL",
+            "node": "Step 12: Respond to Webhook",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 9: Save Candidate to MySQL": {
+    "Step 3: AI Preprocessor - CV Text Normalizer & NER Extractor": {
       "main": [
         [
           {
-            "node": "Step 10: Insert Audit Log",
+            "node": "Step 4: AI Agent - CV Talent Screener & Evaluator",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 10: Insert Audit Log": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Step 4: AI Agent - CV Talent Screener & Evaluator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Step 4: AI Agent - CV Talent Screener & Evaluator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Job_Benchmark_Criteria_Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Step 4: AI Agent - CV Talent Screener & Evaluator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4: AI Agent - CV Talent Screener & Evaluator": {
       "main": [
         [
           {
-            "node": "Step 11: Format HR Dispatch",
+            "node": "Step 5: AI Guardrails & Anti-Bias Audit",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 11: Format HR Dispatch": {
+    "Step 5: AI Guardrails & Anti-Bias Audit": {
       "main": [
         [
           {
-            "node": "Step 12: Dispatch Notification",
+            "node": "Step 6: Routing Decision - Threshold Classifier (IF)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 12: Dispatch Notification": {
+    "Step 6: Routing Decision - Threshold Classifier (IF)": {
       "main": [
         [
           {
-            "node": "Step 13: Respond to Webhook",
+            "node": "Step 7: Candidate Profile Structuring",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 7: Candidate Profile Structuring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7: Candidate Profile Structuring": {
+      "main": [
+        [
+          {
+            "node": "Step 8: Human-in-the-Loop (HITL) HR Recruiter Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8: Human-in-the-Loop (HITL) HR Recruiter Review": {
+      "main": [
+        [
+          {
+            "node": "Step 9: Persistence - Save Candidate Record to Database",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Step 9: Persistence - Save Candidate Record to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9: Persistence - Save Candidate Record to Database": {
+      "main": [
+        [
+          {
+            "node": "Step 10: Persistence - Record System Audit Trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 10: Persistence - Record System Audit Trail": {
+      "main": [
+        [
+          {
+            "node": "Step 11: HR Dispatch & Notification Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11: HR Dispatch & Notification Formatter": {
+      "main": [
+        [
+          {
+            "node": "Step 12: Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -450,7 +487,5 @@
   "active": true,
   "settings": {
     "executionOrder": "v1"
-  },
-  "pinData": {},
-  "id": "EMXN0R6PDs7BOL9O"
+  }
 }

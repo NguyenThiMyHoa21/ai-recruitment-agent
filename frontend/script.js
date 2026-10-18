@@ -74,6 +74,25 @@ form.addEventListener("submit", async (event) => {
 
             form.reset();
 
+            // Tự động lưu tin tuyển dụng & JD vào MySQL thông qua Tầng Backend Service
+            try {
+                await fetch("http://localhost:3000/api/jobs/save", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        position: n8nData.position || jobData.position,
+                        department: n8nData.department || jobData.department,
+                        location: n8nData.location || jobData.location,
+                        salary: n8nData.salary || jobData.salary,
+                        requirements: n8nData.requirements || jobData.requirements,
+                        job_description: jd,
+                        status: 'published'
+                    })
+                });
+            } catch(saveErr) {
+                console.warn("[BackendService] Lỗi lưu job qua API Backend:", saveErr);
+            }
+
             // Tự động chèn ngay vị trí mới tạo lên đầu bảng danh sách
             const newJobId = (defaultJobsFallback[0]?.id || 16) + 1;
             const newJobItem = {

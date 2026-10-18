@@ -30,6 +30,9 @@ services:
       - WEBHOOK_URL=http://localhost:5678/
     volumes:
       - n8n_data:/home/node/.n8n
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - recruitment-network
     depends_on:
