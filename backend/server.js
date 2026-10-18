@@ -632,7 +632,7 @@ app.post("/api/schedule-interview", async (req, res) => {
             const response = await fetch(`${N8N_URL}/webhook/interview-schedule`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                signal: AbortSignal.timeout(3500),
+                signal: AbortSignal.timeout(15000),
                 body: JSON.stringify({
                     candidate_id: Number(candidate_id),
                     requested_by: requested_by || "HR_Web_Admin",
@@ -644,6 +644,7 @@ app.post("/api/schedule-interview", async (req, res) => {
             console.warn("[FALLBACK] n8n không kết nối được hoặc offline, tự động kích hoạt Tác tử Luồng 4 dự phòng:", n8nErr.message);
             result = {
                 success: true,
+                fallback: true,
                 message: "Tác tử Luồng 4: Đã xếp lịch phỏng vấn thông minh thành công!",
                 data: {
                     candidate_id: Number(candidate_id),
@@ -691,32 +692,34 @@ app.post("/api/schedule-interview", async (req, res) => {
             });
         }
 
-        // TỰ ĐỘNG GỬI THƯ MỜI PHỎNG VẤN QUA LUỒNG 5 (Không cần bấm nút thủ công)
-        try {
-            const [cRows] = await db.query(
-                "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
-                [Number(candidate_id)]
-            ).catch(() => [[]]);
+        // TỰ ĐỘNG GỬI THƯ MỜI PHỎNG VẤN QUA LUỒNG 5 (Nếu Luồng 4 dùng fallback)
+        if (result && result.fallback) {
+            try {
+                const [cRows] = await db.query(
+                    "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+                    [Number(candidate_id)]
+                ).catch(() => [[]]);
 
-            let cand = (cRows && cRows.length > 0) ? cRows[0] : MOCK_CANDIDATES.find(c => c.id === Number(candidate_id));
-            if (cand) {
-                fetch(`${N8N_URL}/webhook/send-interview-invite`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    signal: AbortSignal.timeout(3000),
-                    body: JSON.stringify({
-                        candidate_id: Number(cand.id),
-                        candidate_name: cand.full_name || cand.name,
-                        candidate_email: cand.email,
-                        position: cand.job_title || cand.position || cand.applied_position,
-                        interview_time: cand.interview_time || smartTime,
-                        interviewer: cand.interviewer_name || (result.data && result.data.interviewer) || "Hội Đồng Phỏng Vấn & Ban Tuyển Dụng",
-                        meet_link: cand.meeting_link || (result.data && result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt"
-                    })
-                }).catch(err => console.warn("Lỗi auto-dispatch Luồng 5:", err.message));
+                let cand = (cRows && cRows.length > 0) ? cRows[0] : MOCK_CANDIDATES.find(c => c.id === Number(candidate_id));
+                if (cand) {
+                    fetch(`${N8N_URL}/webhook/send-interview-invite`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        signal: AbortSignal.timeout(10000),
+                        body: JSON.stringify({
+                            candidate_id: Number(cand.id),
+                            candidate_name: cand.full_name || cand.name,
+                            candidate_email: cand.email,
+                            position: cand.job_title || cand.position || cand.applied_position,
+                            interview_time: cand.interview_time || smartTime,
+                            interviewer: cand.interviewer_name || (result.data && result.data.interviewer) || "Hội Đồng Phỏng Vấn & Ban Tuyển Dụng",
+                            meet_link: cand.meeting_link || (result.data && result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt"
+                        })
+                    }).catch(err => console.warn("Lỗi auto-dispatch Luồng 5:", err.message));
+                }
+            } catch (autoInviteErr) {
+                console.warn("Lỗi chuẩn bị dữ liệu gửi thư mời:", autoInviteErr.message);
             }
-        } catch (autoInviteErr) {
-            console.warn("Lỗi chuẩn bị dữ liệu gửi thư mời:", autoInviteErr.message);
         }
 
         res.json(result);
@@ -1889,7 +1892,7 @@ app.get("/api/candidates/:id/timeline", async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`Backend running at http://localhost:${PORT}`);
 });
 
