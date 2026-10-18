@@ -250,7 +250,7 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
     // Gọi Luồng 4 n8n để xếp lịch phỏng vấn và tạo Google Meet
     let l4Result = {};
     try {
-        const responseL4 = await fetch("http://localhost:5678/webhook/interview-schedule", {
+        const responseL4 = await fetch(`${N8N_URL}/webhook/interview-schedule`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -287,7 +287,7 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
     // Kích hoạt Luồng 5 (gửi thư mời Gmail kèm giờ PV và link Meet)
     console.log(`[Auto-Pass] Kích hoạt Luồng 5 gửi email thư mời tới ${cand.email || candidate_email} lúc ${interviewTime}...`);
     try {
-        await fetch("http://localhost:5678/webhook/send-interview-invite", {
+        await fetch(`${N8N_URL}/webhook/send-interview-invite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -366,7 +366,7 @@ async function executeAutoNotifyReject({ candidate_id, candidate_name, candidate
 
     // Gọi Luồng 5 n8n để gửi email thông báo từ chối qua Gmail
     try {
-        await fetch("http://localhost:5678/webhook/send-interview-invite", {
+        await fetch(`${N8N_URL}/webhook/send-interview-invite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -845,7 +845,7 @@ app.post("/api/auto-schedule-pass", async (req, res) => {
         // Gọi Luồng 4 n8n để xếp lịch phỏng vấn và tạo Google Meet
         let l4Result = {};
         try {
-            const responseL4 = await fetch("http://localhost:5678/webhook/interview-schedule", {
+            const responseL4 = await fetch(`${N8N_URL}/webhook/interview-schedule`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -881,7 +881,7 @@ app.post("/api/auto-schedule-pass", async (req, res) => {
 
         // Tự động kích hoạt Luồng 5 (gửi thư mời Gmail) để bảo đảm 100% email được gửi đi
         try {
-            fetch("http://localhost:5678/webhook/send-interview-invite", {
+            fetch(`${N8N_URL}/webhook/send-interview-invite`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -973,7 +973,7 @@ app.post("/api/auto-notify-reject", async (req, res) => {
         }
 
         // Gọi Luồng 5 n8n để gửi email thông báo từ chối qua Gmail
-        const n8nWebhookUrl = "http://localhost:5678/webhook/send-interview-invite";
+        const n8nWebhookUrl = `${N8N_URL}/webhook/send-interview-invite`;
         try {
             fetch(n8nWebhookUrl, {
                 method: "POST",
@@ -1493,7 +1493,7 @@ app.post("/api/notifications/send-reminder", async (req, res) => {
         `, [Number(candidate_id), `Tác tử Luồng 5: Đã gửi email nhắc hẹn trước 1-2h cho lịch phỏng vấn ${cand.time || ''}`]).catch(e => console.warn(e));
 
         // Gọi Luồng 5 n8n
-        fetch("http://localhost:5678/webhook/send-interview-invite", {
+        fetch(`${N8N_URL}/webhook/send-interview-invite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             signal: AbortSignal.timeout(4000),
@@ -1581,7 +1581,7 @@ async function scanAndAutoSendReminders() {
                 totalAutoRemindersSentToday++;
 
                 // Kích hoạt webhook Luồng 5 n8n
-                fetch("http://localhost:5678/webhook/send-interview-invite", {
+                fetch(`${N8N_URL}/webhook/send-interview-invite`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     signal: AbortSignal.timeout(4000),
@@ -1691,7 +1691,7 @@ app.post("/api/candidates/send-offer", async (req, res) => {
         `, [Number(candidate_id), offerNote]);
 
         // Kích hoạt Luồng 5 gửi email Offer chính thức
-        fetch("http://localhost:5678/webhook/send-interview-invite", {
+        fetch(`${N8N_URL}/webhook/send-interview-invite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             signal: AbortSignal.timeout(4000),
@@ -1770,7 +1770,7 @@ app.post("/api/interviews/evaluate", async (req, res) => {
             const [cRows] = await db.query("SELECT * FROM candidates WHERE id = ?", [Number(candidate_id)]);
             if (cRows && cRows.length > 0) {
                 const cand = cRows[0];
-                fetch("http://localhost:5678/webhook/send-interview-invite", {
+                fetch(`${N8N_URL}/webhook/send-interview-invite`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     signal: AbortSignal.timeout(4000),
