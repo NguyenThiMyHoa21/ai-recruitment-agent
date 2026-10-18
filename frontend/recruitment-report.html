@@ -220,12 +220,7 @@
           Báo Cáo & Phân Tích Tuyển Dụng Tổng Quan
         </h3>
         <p class="text-muted small mb-0">
-          Tác tử AI tổng hợp dữ liệu thời gian thực từ cơ sở dữ liệu MySQL, phân tích phễu chuyển đổi và đề xuất chiến lược tuyển dụng.
-        </p>
-      </div>
-
-        <p class="text-muted mb-0 small">
-          <strong>Báo cáo chỉ dành cho HR Manager & Ban Giám Đốc:</strong> Thống kê chỉ số phễu tuyển dụng, phân tích đánh giá và nhận định chiến lược từ AI Gemini.
+          <strong>Dành cho HR Manager & Ban Giám Đốc:</strong> Tác tử AI tổng hợp dữ liệu thời gian thực từ cơ sở dữ liệu MySQL, phân tích phễu chuyển đổi và đề xuất chiến lược tuyển dụng.
         </p>
       </div>
 
@@ -1095,7 +1090,9 @@ function renderDefaultReport() {
 // =========================================================
 window.candidatesCache = [];
 window.currentFilter = 'ALL';
-const API_BASE = (window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
+const API_BASE = (window.location.protocol === 'file:' || window.location.port === '5500') 
+  ? 'http://localhost:3000' 
+  : (window.location.origin || 'http://localhost:3000');
 
 async function loadRecentCandidates() {
   const countBadge = document.getElementById("candidateCountBadge");

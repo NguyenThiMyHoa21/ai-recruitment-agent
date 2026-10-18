@@ -4,8 +4,7 @@ const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
     host: "127.0.0.1",
-    port: 3307,
-    socketPath: "/tmp/mysql.sock",
+    port: 3306,
     user: "recruitment",
     password: "recruitment123",
     database: "recruitment_db",
@@ -23,7 +22,12 @@ const path = require("path");
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.join(__dirname, "../frontend")));
+
+// Trang chủ mặc định điều hướng sang Cổng Ứng Viên
+app.get("/", (req, res) => {
+    res.redirect("/candidate-portal.html");
+});
 
 // Kiểm tra backend
 app.get("/api/health", (req, res) => {
