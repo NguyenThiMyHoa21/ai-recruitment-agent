@@ -4,8 +4,7 @@ const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
     host: "127.0.0.1",
-    port: 3307,
-    socketPath: "/tmp/mysql.sock",
+    port: 3306,
     user: "recruitment",
     password: "recruitment123",
     database: "recruitment_db",
