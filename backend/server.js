@@ -3,11 +3,11 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
-    host: "127.0.0.1",
-    port: 3306,
-    user: "recruitment",
-    password: "recruitment123",
-    database: "recruitment_db",
+    host: process.env.DB_HOST || "127.0.0.1",
+    port: Number(process.env.DB_PORT) || 3308,
+    user: process.env.DB_USER || "recruitment",
+    password: process.env.DB_PASSWORD || "recruitment123",
+    database: process.env.DB_NAME || "recruitment_db",
     waitForConnections: true,
     connectionLimit: 10,
     connectTimeout: 5000,
@@ -390,27 +390,31 @@ app.post("/api/screen-cv", async (req, res) => {
             } catch(e) {
                 resultJson = { raw: resultText };
             }
+
+            if (!response.ok || resultJson.message === "Error in workflow" || (!resultJson.match_score && !resultJson.status && !(resultJson[0] && resultJson[0].status))) {
+                throw new Error(resultJson.message || ("HTTP " + response.status));
+            }
         } catch (n8nErr) {
             console.warn("[ScreenCV] Webhook n8n không phản hồi hoặc timeout, kích hoạt Tác tử Sàng lọc CV Dự phòng:", n8nErr.message);
-            const cvLower = ((payload.cv_text || "") + " " + (payload.position || "")).toLowerCase();
-            let score = 45;
+            const cvLower = (payload.cv_text || "").toLowerCase();
+            let score = 40;
             let strengths = [];
             let weaknesses = [];
 
-            if (cvLower.includes("javascript") || cvLower.includes("node") || cvLower.includes("react") || cvLower.includes("python") || cvLower.includes("sql") || cvLower.includes("java") || cvLower.includes("docker") || cvLower.includes("c++") || cvLower.includes("aws") || cvLower.includes("backend") || cvLower.includes("frontend")) {
-                score += 25;
-                strengths.push("Đáp ứng các kỹ năng công nghệ chuyên môn cốt lõi");
+            if (cvLower.includes("javascript") || cvLower.includes("node") || cvLower.includes("react") || cvLower.includes("python") || cvLower.includes("sql") || cvLower.includes("java") || cvLower.includes("docker") || cvLower.includes("c++") || cvLower.includes("aws") || cvLower.includes("backend") || cvLower.includes("frontend") || cvLower.includes("sales") || cvLower.includes("marketing") || cvLower.includes("cskh")) {
+                score += 30;
+                strengths.push("Đáp ứng các kỹ năng chuyên môn cốt lõi của vị trí");
             }
-            if (cvLower.includes("năm kinh nghiệm") || cvLower.includes("senior") || cvLower.includes("kỹ sư") || cvLower.includes("dự án") || cvLower.includes("quản lý") || cvLower.includes("chuyên viên")) {
-                score += 15;
-                strengths.push("Có kinh nghiệm thực tế phù hợp với yêu cầu tuyển dụng");
+            if (cvLower.includes("năm kinh nghiệm") || cvLower.includes("senior") || cvLower.includes("kỹ sư") || cvLower.includes("dự án") || cvLower.includes("quản lý") || cvLower.includes("chuyên viên") || cvLower.includes("thực hành") || cvLower.includes("kinh nghiệm")) {
+                score += 20;
+                strengths.push("Có kinh nghiệm và trải nghiệm thực tế phù hợp");
             }
             if ((payload.cv_text || "").length > 100) {
                 score += 10;
                 strengths.push("Hồ sơ ứng tuyển chi tiết và cấu trúc rõ ràng");
             }
             if (score < 70) {
-                weaknesses.push("Hồ sơ còn sơ sài, chưa đáp ứng đủ số năm kinh nghiệm và kỹ năng trọng yếu của vị trí");
+                weaknesses.push("Hồ sơ còn sơ sài, chưa đáp ứng đủ số năm kinh nghiệm và kỹ năng chuyên môn trọng yếu của vị trí");
             }
             if (score > 98) score = 98;
             const isPass = score >= 70;
@@ -456,11 +460,23 @@ app.post("/api/screen-cv", async (req, res) => {
             console.log(`[CandidateService] Đã lưu ứng viên mới #${newCandidateId} (${candidateName}) vào MySQL thành công!`);
         } catch (dbSaveErr) {
             console.error("[CandidateService] Lỗi khi lưu ứng viên vào MySQL:", dbSaveErr);
+            return res.status(500).json({
+                success: false,
+                message: "Không thể lưu hồ sơ ứng viên vào cơ sở dữ liệu: " + dbSaveErr.message,
+                error: dbSaveErr.message
+            });
         }
 
-        // XỬ LÝ THEO KẾT QUẢ AI SÀNG LỌC SƠ LOẠI (LUỒNG 2):
+        // TỰ ĐỘNG LIÊN HOÀN THEO KẾT QUẢ AI SÀNG LỌC (LUỒNG 2 -> LUỒNG 4 -> LUỒNG 5):
         if (isApproved) {
-            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT SƠ LOẠI (${matchScore}đ) ➜ Lưu hồ sơ vào Luồng 2 (cv-screening.html), sẵn sàng chuyển tiếp sang Luồng 4.`);
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT SƠ LOẠI (${matchScore}đ) ➜ Tự động xếp lịch AI (Luồng 4) & gửi thư mời Gmail (Luồng 5)...`);
+            executeAutoSchedulePass({
+                candidate_id: newCandidateId,
+                candidate_name: candidateName,
+                candidate_email: candidateEmail,
+                position: appliedPosition,
+                job_id: jobId
+            }).catch(e => console.warn("Lỗi auto schedule pass:", e.message));
         } else {
             console.log(`[Auto-Screening] Ứng viên ${candidateName} BỊ LOẠI SƠ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
             executeAutoNotifyReject({
@@ -981,17 +997,23 @@ app.post("/api/candidates/update-status", async (req, res) => {
     }
 
     try {
-        const response = await fetch("http://localhost:5678/webhook/update-candidate-status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                candidate_id: Number(targetId),
-                full_name: candName,
-                applied_position: candPos,
-                new_status
-            })
-        });
-        const result = await response.json();
+        let n8nUpdated = false;
+        try {
+            await fetch("http://localhost:5678/webhook/update-candidate-status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: AbortSignal.timeout(3000),
+                body: JSON.stringify({
+                    candidate_id: Number(targetId),
+                    full_name: candName,
+                    applied_position: candPos,
+                    new_status
+                })
+            });
+            n8nUpdated = true;
+        } catch (webhookErr) {
+            console.warn("[UpdateStatus] Webhook n8n Luồng 6 không phản hồi:", webhookErr.message);
+        }
 
         // Đồng bộ cả approval_status và status để Luồng 2 và Luồng 4 khớp nhau hoàn toàn
         let appStatus = 'APPROVED';
