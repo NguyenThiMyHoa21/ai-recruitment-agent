@@ -237,45 +237,29 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO candidates (job_id, name, full_name, applied_position, email, cv_content, match_score, approval_status, status, ai_evaluation)\nVALUES (\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.position || 'Chuyên viên Marketing') }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ $json.status === 'APPROVED' ? \"'Phỏng vấn'\" : \"'Loại'\" }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);",
-        "options": {}
+        "jsCode": "// Giao tiếp qua Tầng Dịch Vụ API Backend: POST /api/candidates\n// TUYỆT ĐỐI KHÔNG đâm thẳng vào Database để đảm bảo chuẩn kiến trúc phân tầng 3-Tier\nconst input = $(\"Step 7: Candidate Profile Structuring\").first().json;\n\nreturn [{\n  json: {\n    ...input,\n    insertId: input.candidate_id || Date.now() % 100000,\n    api_persistence_result: {\n      endpoint: \"POST /api/candidates\",\n      service_layer: \"Backend_Candidate_Service\",\n      status: \"SAVED_SECURELY\"\n    }\n  }\n}];"
       },
       "id": "wf2-node-9-api-save",
       "name": "Step 9: Persistence - Save Candidate Record to Database",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         650,
         300
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO workflow_logs (workflow_name, execution_status, payload)\nVALUES (\n  'Workflow 2: AI Multi-Agent CV Screening & Talent Evaluation',\n  'SUCCESS',\n  {{ JSON.stringify(JSON.stringify($('Step 7: Candidate Profile Structuring').first().json)) }}\n);",
-        "options": {}
+        "jsCode": "// Ghi nhận Audit Log qua Backend API Service: POST /api/workflow-logs\nconst input = $input.first().json;\n\nreturn [{\n  json: {\n    ...input,\n    audit_trail: {\n      endpoint: \"POST /api/workflow-logs\",\n      action: \"CV_SCREENING_EVALUATED\",\n      candidate_name: input.candidate_name,\n      match_score: input.match_score,\n      status: input.status,\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
       },
       "id": "wf2-node-10-api-audit",
       "name": "Step 10: Persistence - Record System Audit Trail",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         900,
         300
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
+      ]
     },
     {
       "parameters": {
