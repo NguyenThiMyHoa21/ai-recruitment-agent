@@ -3,11 +3,16 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
-    host: "localhost",
-    port: 3306,
+    host: "127.0.0.1",
+    port: 3307,
+    socketPath: "/tmp/mysql.sock",
     user: "recruitment",
     password: "recruitment123",
-    database: "recruitment_db"
+    database: "recruitment_db",
+    waitForConnections: true,
+    connectionLimit: 10,
+    connectTimeout: 5000,
+    queueLimit: 0
 });
 
 const app = express();
@@ -440,7 +445,7 @@ app.get("/api/candidates", async (req, res) => {
             FROM candidates c
             LEFT JOIN jobs j ON c.job_id = j.id
             ORDER BY c.id DESC
-            LIMIT 50
+            LIMIT 100
         `);
 
         res.json({
@@ -455,6 +460,42 @@ app.get("/api/candidates", async (req, res) => {
             message: "Cannot load candidates",
             error: error.message
         });
+    }
+});
+
+// API nạp 50 ứng viên mẫu nhanh cho kiểm thử và trình diễn đồ án (Demo Seed)
+app.post("/api/seed-candidates", async (req, res) => {
+    const fs = require("fs");
+    const path = require("path");
+    try {
+        const sqlPath = path.join(__dirname, "../seed_50_candidates.sql");
+        if (!fs.existsSync(sqlPath)) {
+            return res.status(404).json({ success: false, message: "File seed_50_candidates.sql không tồn tại" });
+        }
+        const sqlContent = fs.readFileSync(sqlPath, "utf-8");
+        
+        // Tạo kết nối tạm hỗ trợ multipleStatements
+        const seedConn = await mysql.createConnection({
+            host: "localhost",
+            port: 3306,
+            user: "recruitment",
+            password: "recruitment123",
+            database: "recruitment_db",
+            multipleStatements: true
+        });
+
+        await seedConn.query(sqlContent);
+        await seedConn.end();
+
+        const [countRows] = await db.query("SELECT COUNT(*) as total FROM candidates");
+        res.json({
+            success: true,
+            message: `Đã nạp thành công ${countRows[0].total} ứng viên mẫu chuẩn doanh nghiệp vào cơ sở dữ liệu!`,
+            total: countRows[0].total
+        });
+    } catch (error) {
+        console.error("Lỗi seed candidates:", error);
+        res.status(500).json({ success: false, message: "Lỗi nạp dữ liệu: " + error.message });
     }
 });
 
@@ -555,7 +596,9 @@ app.post("/api/schedule-interview", async (req, res) => {
 
 // Route API dời/đổi giờ phỏng vấn linh hoạt cho ứng viên (Reschedule)
 app.post("/api/reschedule-interview", async (req, res) => {
-    const { candidate_id, new_interview_time, reason } = req.body;
+    const candidate_id = req.body.candidate_id || req.body.id;
+    const new_interview_time = req.body.new_interview_time || req.body.new_time || req.body.interview_time;
+    const reason = req.body.reason || "";
     try {
         if (!candidate_id || !new_interview_time) {
             return res.status(400).json({ success: false, message: "Thiếu candidate_id hoặc new_interview_time" });
@@ -571,11 +614,18 @@ app.post("/api/reschedule-interview", async (req, res) => {
             [Number(candidate_id)]
         );
 
+        // Ghi nhận Audit Trail vào bảng candidate_history
+        db.query(`
+            INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+            VALUES (?, 'RESCHEDULE_INTERVIEW', ?, NOW())
+        `, [Number(candidate_id), `Đổi lịch phỏng vấn mới sang: ${new_interview_time}. Lý do: ${reason || 'Yêu cầu từ ứng viên/HR'}`]).catch(e => console.warn("Lỗi ghi log candidate_history:", e.message));
+
         if (cRows && cRows.length > 0) {
             const cand = cRows[0];
             fetch("http://localhost:5678/webhook/send-interview-invite", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                signal: AbortSignal.timeout(4000),
                 body: JSON.stringify({
                     candidate_id: Number(cand.id),
                     candidate_name: cand.full_name || cand.name,
@@ -1046,6 +1096,560 @@ app.post("/api/workflow-logs", async (req, res) => {
     }
 });
 
+// ==========================================
+// CÁC RESTFUL API CHO N8N AGENT (LOẠI BỎ 100% TRUY VẤN MYSQL TRỰC TIẾP TỪ N8N)
+// ==========================================
+
+// 1. API lấy chi tiết ứng viên theo ID
+app.get("/api/candidates/:id", async (req, res) => {
+    const candidateId = Number(req.params.id);
+    try {
+        const [rows] = await db.query(`
+            SELECT c.id, c.job_id, 
+                   COALESCE(c.full_name, c.name, 'Ứng viên') AS full_name,
+                   c.name, c.email, c.cv_content, c.match_score,
+                   c.approval_status, c.status, c.notification_status,
+                   c.ai_evaluation, c.interview_time, c.interviewer_name, c.meeting_link,
+                   COALESCE(c.applied_position, j.position, 'Chuyên viên kỹ thuật') AS applied_position,
+                   COALESCE(c.applied_position, j.position, 'Chuyên viên kỹ thuật') AS position,
+                   j.position AS job_position, j.department AS job_department, j.requirements AS job_requirements
+            FROM candidates c
+            LEFT JOIN jobs j ON c.job_id = j.id
+            WHERE c.id = ?
+        `, [candidateId]);
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy ứng viên" });
+        }
+        res.json({ success: true, candidate: rows[0], data: rows[0] });
+    } catch (error) {
+        console.error("Lỗi lấy chi tiết ứng viên:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 2. API lấy danh sách Lead phỏng vấn khả dụng
+app.get("/api/interviewers/available", (req, res) => {
+    const interviewers = [
+        { id: 1, name: "Trần Văn Tech", role: "Frontend Lead", email: "techlead.fe@company.com", domain: "frontend", slots: ["09:30:00", "14:30:00"] },
+        { id: 2, name: "Lê Hoàng Dev", role: "Backend Lead", email: "techlead.be@company.com", domain: "backend", slots: ["10:00:00", "15:00:00"] },
+        { id: 3, name: "Phạm Trí Tuệ", role: "AI Lead", email: "ai.lead@company.com", domain: "ai", slots: ["09:00:00", "14:00:00"] },
+        { id: 4, name: "Nguyễn HR Lead", role: "HR Manager", email: "hr@company.com", domain: "general", slots: ["08:30:00", "13:30:00"] }
+    ];
+    res.json({ success: true, interviewers, data: interviewers });
+});
+
+// 3. API cập nhật lịch phỏng vấn ứng viên từ Luồng 4
+const handleScheduleUpdate = async (req, res) => {
+    const candidateId = Number(req.params.id);
+    const { interview_time, interviewer_name, meeting_link, ai_reason, focus_topics } = req.body;
+    try {
+        await db.query(`
+            UPDATE candidates 
+            SET interview_time = ?, interviewer_name = ?, meeting_link = ?, 
+                status = 'Phỏng vấn', approval_status = 'INTERVIEW_SCHEDULED'
+            WHERE id = ?
+        `, [interview_time, interviewer_name, meeting_link, candidateId]);
+
+        const note = `Đã xếp lịch lúc ${interview_time} với ${interviewer_name}. Link: ${meeting_link}. ${ai_reason ? 'Lý do: ' + ai_reason : ''} ${focus_topics ? 'Chủ đề: ' + focus_topics : ''}`.trim();
+        await db.query(`
+            INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+            VALUES (?, 'SCHEDULED_INTERVIEW', ?, NOW())
+        `, [candidateId, note]);
+
+        res.json({ success: true, message: "Cập nhật lịch phỏng vấn thành công" });
+    } catch (error) {
+        console.error("Lỗi cập nhật lịch phỏng vấn:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+app.put("/api/candidates/:id/schedule", handleScheduleUpdate);
+app.post("/api/candidates/:id/schedule", handleScheduleUpdate);
+
+// 4. API cập nhật trạng thái thông báo từ Luồng 5
+const handleNotificationStatusUpdate = async (req, res) => {
+    const candidateId = Number(req.params.id);
+    const { notification_status, email } = req.body;
+    try {
+        if (candidateId) {
+            await db.query("UPDATE candidates SET notification_status = ? WHERE id = ?", [notification_status, candidateId]);
+        } else if (email) {
+            await db.query("UPDATE candidates SET notification_status = ? WHERE email = ?", [notification_status, email]);
+        }
+        res.json({ success: true, message: "Cập nhật trạng thái thông báo thành công" });
+    } catch (error) {
+        console.error("Lỗi cập nhật trạng thái thông báo:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+app.patch("/api/candidates/:id/notification-status", handleNotificationStatusUpdate);
+app.post("/api/candidates/:id/notification-status", handleNotificationStatusUpdate);
+
+// 5. API cập nhật trạng thái & nhận xét tuyển dụng từ Luồng 6
+const handleCandidateStatusUpdate = async (req, res) => {
+    const candidateId = Number(req.params.id);
+    const { status, ai_evaluation, approval_status } = req.body;
+    try {
+        let appStatus = approval_status;
+        if (!appStatus) {
+            if (status === 'Loại' || status === 'Không đạt' || status === 'REJECTED') appStatus = 'REJECTED';
+            else if (status === 'Phỏng vấn' || status === 'INTERVIEW_SCHEDULED') appStatus = 'INTERVIEW_SCHEDULED';
+            else if (status === 'Đạt' || status === 'APPROVED') appStatus = 'APPROVED';
+            else appStatus = 'PENDING';
+        }
+
+        await db.query(`
+            UPDATE candidates 
+            SET status = ?, approval_status = COALESCE(?, approval_status), ai_evaluation = COALESCE(?, ai_evaluation)
+            WHERE id = ?
+        `, [status, appStatus, ai_evaluation, candidateId]);
+
+        await db.query(`
+            INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+            VALUES (?, 'UPDATE_STATUS', ?, NOW())
+        `, [candidateId, `Chuyển trạng thái sang ${status}. Đánh giá AI: ${ai_evaluation || 'N/A'}`]);
+
+        res.json({ success: true, message: "Cập nhật trạng thái ứng viên thành công" });
+    } catch (error) {
+        console.error("Lỗi cập nhật trạng thái ứng viên:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+app.patch("/api/candidates/:id/status", handleCandidateStatusUpdate);
+app.post("/api/candidates/:id/status", handleCandidateStatusUpdate);
+
+// 6. API ghi nhận lịch sử ứng viên (Audit Trail)
+app.post("/api/candidate-history", async (req, res) => {
+    const { candidate_id, action, note } = req.body;
+    try {
+        await db.query(`
+            INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+            VALUES (?, ?, ?, NOW())
+        `, [Number(candidate_id), action || 'AUDIT_LOG', note || '']);
+        res.json({ success: true, message: "Ghi nhận lịch sử thành công" });
+    } catch (error) {
+        console.error("Lỗi ghi nhận lịch sử:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// =========================================================
+// CÁC ENDPOINT NÂNG CẤP TÁC TỬ LUỒNG 5 & LUỒNG 6
+// =========================================================
+
+// Luồng 5: API gửi email nhắc lịch hẹn phỏng vấn trước 1-2 tiếng (Pre-Interview Reminder)
+app.post("/api/notifications/send-reminder", async (req, res) => {
+    const { candidate_id, candidate_name, candidate_email, interview_time, interviewer_name, meeting_link } = req.body;
+    try {
+        let cand = {
+            id: candidate_id,
+            name: candidate_name,
+            email: candidate_email,
+            time: interview_time,
+            interviewer: interviewer_name,
+            link: meeting_link
+        };
+
+        if ((!cand.email || !cand.time) && candidate_id) {
+            const [cRows] = await db.query("SELECT * FROM candidates WHERE id = ?", [Number(candidate_id)]);
+            if (cRows && cRows.length > 0) {
+                cand.name = cand.name || cRows[0].full_name || cRows[0].name;
+                cand.email = cand.email || cRows[0].email;
+                cand.time = cand.time || cRows[0].interview_time;
+                cand.interviewer = cand.interviewer || cRows[0].interviewer_name;
+                cand.link = cand.link || cRows[0].meeting_link;
+            }
+        }
+
+        // Ghi nhận Audit Trail
+        await db.query(`
+            INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+            VALUES (?, 'INTERVIEW_REMINDER_SENT', ?, NOW())
+        `, [Number(candidate_id), `Tác tử Luồng 5: Đã gửi email nhắc hẹn trước 1-2h cho lịch phỏng vấn ${cand.time || ''}`]).catch(e => console.warn(e));
+
+        // Gọi Luồng 5 n8n
+        fetch("http://localhost:5678/webhook/send-interview-invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(4000),
+            body: JSON.stringify({
+                candidate_id: Number(candidate_id),
+                candidate_name: cand.name,
+                candidate_email: cand.email,
+                interview_time: cand.time,
+                interviewer: cand.interviewer || "Hội Đồng Phỏng Vấn",
+                meet_link: cand.link || "https://meet.google.com/dfj-amei-jzt",
+                notification_type: "reminder",
+                subject_prefix: "[NHẮC LỊCH HẸN TRƯỚC 1-2 GIỜ]"
+            })
+        }).catch(e => console.warn("Lỗi gọi n8n nhắc hẹn:", e.message));
+
+        res.json({
+            success: true,
+            message: `Đã gửi thành công email nhắc lịch hẹn phỏng vấn trước 1-2 tiếng tới ứng viên ${cand.name} (${cand.email})!`,
+            candidate: cand
+        });
+    } catch (err) {
+        console.error("Lỗi gửi nhắc hẹn:", err);
+        res.status(500).json({ success: false, message: "Lỗi gửi nhắc hẹn: " + err.message });
+    }
+});
+
+// TÁC TỬ TỰ ĐỘNG NHẮC HẸN PHỎNG VẤN TRƯỚC 1-2 TIẾNG (AUTO-REMINDER DAEMON - LUỒNG 5)
+let isAutoReminderEnabled = true;
+let lastAutoScanTime = null;
+let totalAutoRemindersSentToday = 0;
+const sentReminderCandidatesSet = new Set();
+
+async function scanAndAutoSendReminders() {
+    if (!isAutoReminderEnabled) return;
+    lastAutoScanTime = new Date().toISOString();
+
+    try {
+        const [rows] = await db.query(`
+            SELECT id, full_name, name, email, applied_position, interview_time, interviewer_name, meeting_link, status, approval_status
+            FROM candidates
+            WHERE interview_time IS NOT NULL
+              AND status != 'Loại'
+              AND (approval_status != 'REJECTED' OR approval_status IS NULL)
+        `);
+
+        if (!rows || rows.length === 0) return;
+
+        const now = Date.now();
+        const twoHoursMs = 120 * 60 * 1000;
+
+        for (const cand of rows) {
+            const candTimeStr = cand.interview_time;
+            const candTimeMs = new Date(candTimeStr).getTime();
+            if (isNaN(candTimeMs)) continue;
+
+            const diffMs = candTimeMs - now;
+
+            // Nếu lịch hẹn diễn ra trong vòng 0 - 120 phút tới (1-2 tiếng)
+            if (diffMs > 0 && diffMs <= twoHoursMs) {
+                const candId = Number(cand.id);
+
+                if (sentReminderCandidatesSet.has(candId)) continue;
+
+                const [hist] = await db.query(
+                    "SELECT id FROM candidate_history WHERE candidate_id = ? AND action = 'INTERVIEW_REMINDER_SENT' LIMIT 1",
+                    [candId]
+                ).catch(() => [[]]);
+
+                if (hist && hist.length > 0) {
+                    sentReminderCandidatesSet.add(candId);
+                    continue;
+                }
+
+                const candName = cand.full_name || cand.name || 'Ứng viên';
+                const minsLeft = Math.round(diffMs / 60000);
+                console.log(`[🤖 AUTO-REMINDER DAEMON] Phát hiện buổi phỏng vấn sắp diễn ra sau ${minsLeft} phút! Tự động gửi thư nhắc lịch cho ứng viên #${candId} (${candName})...`);
+
+                // Ghi nhận Audit Trail
+                await db.query(`
+                    INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+                    VALUES (?, 'INTERVIEW_REMINDER_SENT', ?, NOW())
+                `, [candId, `Tác tử Luồng 5 (Tự Động): Đã tự động gửi email nhắc hẹn trước ${minsLeft} phút cho buổi phỏng vấn lúc ${candTimeStr}`]).catch(e => console.warn(e));
+
+                sentReminderCandidatesSet.add(candId);
+                totalAutoRemindersSentToday++;
+
+                // Kích hoạt webhook Luồng 5 n8n
+                fetch("http://localhost:5678/webhook/send-interview-invite", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    signal: AbortSignal.timeout(4000),
+                    body: JSON.stringify({
+                        candidate_id: candId,
+                        candidate_name: candName,
+                        candidate_email: cand.email,
+                        interview_time: candTimeStr,
+                        interviewer: cand.interviewer_name || "Hội Đồng Phỏng Vấn",
+                        meet_link: cand.meeting_link || "https://meet.google.com/dfj-amei-jzt",
+                        notification_type: "reminder",
+                        is_auto: true,
+                        subject_prefix: "[TỰ ĐỘNG NHẮC LỊCH HẸN TRƯỚC 1-2 GIỜ]"
+                    })
+                }).catch(e => console.warn("[AUTO-REMINDER] Lỗi gọi n8n:", e.message));
+            }
+        }
+    } catch (err) {
+        console.warn("[AUTO-REMINDER DAEMON ERROR]:", err.message);
+    }
+}
+
+// Chạy tự động quét ngầm định kỳ mỗi 60 giây (1 phút)
+setInterval(scanAndAutoSendReminders, 60 * 1000);
+// Chạy ngay lần đầu sau 5 giây khi server khởi động
+setTimeout(scanAndAutoSendReminders, 5000);
+
+// API kiểm tra trạng thái Tác tử Tự Động Nhắc Hẹn
+app.get("/api/notifications/auto-reminder-status", (req, res) => {
+    res.json({
+        success: true,
+        is_enabled: isAutoReminderEnabled,
+        last_scan_time: lastAutoScanTime,
+        reminders_sent_today: totalAutoRemindersSentToday,
+        scan_interval_seconds: 60,
+        upcoming_window_minutes: 120
+    });
+});
+
+// API Bật/Tắt Tác tử Tự Động Nhắc Hẹn
+app.post("/api/notifications/auto-reminder-toggle", (req, res) => {
+    if (typeof req.body.enabled === 'boolean') {
+        isAutoReminderEnabled = req.body.enabled;
+    } else {
+        isAutoReminderEnabled = !isAutoReminderEnabled;
+    }
+    res.json({
+        success: true,
+        is_enabled: isAutoReminderEnabled,
+        message: `Tác tử tự động nhắc lịch Luồng 5 đã được ${isAutoReminderEnabled ? 'BẬT' : 'TẮT'}!`
+    });
+});
+
+// API lấy danh sách các buổi phỏng vấn sắp diễn ra trong 2 giờ tới
+app.get("/api/candidates/upcoming-interviews", async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT id, full_name, name, email, applied_position, interview_time, interviewer_name, meeting_link, status, approval_status
+            FROM candidates
+            WHERE interview_time IS NOT NULL
+              AND status != 'Loại'
+              AND (approval_status != 'REJECTED' OR approval_status IS NULL)
+        `);
+        const now = Date.now();
+        const twoHoursMs = 120 * 60 * 1000;
+        const upcoming = (rows || []).filter(c => {
+            const t = new Date(c.interview_time).getTime();
+            return !isNaN(t) && (t - now) > 0 && (t - now) <= twoHoursMs;
+        });
+        res.json({ success: true, count: upcoming.length, data: upcoming });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// Luồng 6: API gửi thư mời nhận việc (Job Offer Letter) sau khi trúng tuyển phỏng vấn
+app.post("/api/candidates/send-offer", async (req, res) => {
+    const { candidate_id, salary, start_date, probation_period, work_location, notes } = req.body;
+    try {
+        if (!candidate_id) {
+            return res.status(400).json({ success: false, message: "Thiếu candidate_id" });
+        }
+
+        const [cRows] = await db.query("SELECT * FROM candidates WHERE id = ?", [Number(candidate_id)]);
+        if (!cRows || cRows.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy ứng viên" });
+        }
+
+        const cand = cRows[0];
+        const candName = cand.full_name || cand.name;
+        const offerNote = `Tác tử Luồng 6: Đã phát hành Thư Mời Nhận Việc (Job Offer). Lương: ${salary || 'Thỏa thuận'}, Ngày bắt đầu: ${start_date || 'Theo thỏa thuận'}, Thử việc: ${probation_period || '2 tháng'}.`;
+
+        // Cập nhật status
+        await db.query(`
+            UPDATE candidates 
+            SET status = 'Đạt', approval_status = 'OFFER_SENT',
+                ai_evaluation = CONCAT(COALESCE(ai_evaluation, ''), ' | [Job Offer]: ', ?)
+            WHERE id = ?
+        `, [offerNote, Number(candidate_id)]);
+
+        // Ghi Audit Trail
+        await db.query(`
+            INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+            VALUES (?, 'OFFER_LETTER_SENT', ?, NOW())
+        `, [Number(candidate_id), offerNote]);
+
+        // Kích hoạt Luồng 5 gửi email Offer chính thức
+        fetch("http://localhost:5678/webhook/send-interview-invite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(4000),
+            body: JSON.stringify({
+                candidate_id: Number(candidate_id),
+                candidate_name: candName,
+                candidate_email: cand.email,
+                position: cand.applied_position,
+                notification_type: "offer",
+                salary: salary,
+                start_date: start_date,
+                subject_prefix: "[THƯ MỜI NHẬN VIỆC - JOB OFFER]"
+            })
+        }).catch(e => console.warn("Lỗi gọi n8n offer:", e.message));
+
+        res.json({
+            success: true,
+            message: `Đã gửi Thư Mời Nhận Việc (Offer Letter) thành công cho ứng viên ${candName} qua Tác tử Luồng 6!`,
+            candidate_id: Number(candidate_id),
+            status: "Đạt",
+            approval_status: "OFFER_SENT"
+        });
+    } catch (err) {
+        console.error("Lỗi gửi offer:", err);
+        res.status(500).json({ success: false, message: "Lỗi gửi offer: " + err.message });
+    }
+});
+
+// Luồng 6: API chấm điểm & đánh giá sau phỏng vấn (Post-Interview Scorecard)
+app.post("/api/interviews/evaluate", async (req, res) => {
+    const { 
+        candidate_id, 
+        technical_score, 
+        communication_score, 
+        problem_solving_score, 
+        decision, 
+        interviewer_notes, 
+        interviewer_name 
+    } = req.body;
+
+    try {
+        if (!candidate_id || !decision) {
+            return res.status(400).json({ success: false, message: "Thiếu candidate_id hoặc decision" });
+        }
+
+        let newStatus = 'Phỏng vấn';
+        let newApprovalStatus = 'INTERVIEW_COMPLETED';
+        let noteSummary = `Đánh giá buổi phỏng vấn: Kỹ thuật ${technical_score}/5, Giao tiếp ${communication_score}/5, Giải quyết vấn đề ${problem_solving_score}/5. Quyết định: ${decision}. Nhận xét: ${interviewer_notes || 'Không có'}`;
+
+        if (decision === 'HIRE' || decision === 'Đạt' || decision === 'OFFER') {
+            newStatus = 'Đạt';
+            newApprovalStatus = 'APPROVED';
+        } else if (decision === 'REJECT' || decision === 'Loại') {
+            newStatus = 'Loại';
+            newApprovalStatus = 'REJECTED';
+        } else if (decision === 'ROUND2') {
+            newStatus = 'Phỏng vấn';
+            newApprovalStatus = 'ROUND_2_SCHEDULED';
+        }
+
+        // Cập nhật candidate
+        await db.query(`
+            UPDATE candidates 
+            SET status = ?, approval_status = ?, ai_evaluation = CONCAT(COALESCE(ai_evaluation, ''), ' | [Đánh giá PV]: ', ?)
+            WHERE id = ?
+        `, [newStatus, newApprovalStatus, noteSummary, Number(candidate_id)]);
+
+        // Ghi Audit Trail
+        await db.query(`
+            INSERT INTO candidate_history (candidate_id, action, note, updated_at)
+            VALUES (?, 'INTERVIEW_EVALUATION', ?, NOW())
+        `, [Number(candidate_id), noteSummary]);
+
+        // Nếu Loại sau phỏng vấn -> Tự động kích hoạt Luồng 5 gửi thư từ chối sau phỏng vấn
+        if (newStatus === 'Loại') {
+            const [cRows] = await db.query("SELECT * FROM candidates WHERE id = ?", [Number(candidate_id)]);
+            if (cRows && cRows.length > 0) {
+                const cand = cRows[0];
+                fetch("http://localhost:5678/webhook/send-interview-invite", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    signal: AbortSignal.timeout(4000),
+                    body: JSON.stringify({
+                        candidate_id: Number(cand.id),
+                        candidate_name: cand.full_name || cand.name,
+                        candidate_email: cand.email,
+                        position: cand.applied_position,
+                        notification_type: "rejection_post_interview",
+                        status: "REJECTED",
+                        evaluation: noteSummary
+                    })
+                }).catch(e => console.warn(e));
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Đã lưu đánh giá phỏng vấn và chuyển trạng thái ứng viên #${candidate_id} sang "${newStatus}" (${decision})!`,
+            decision,
+            new_status: newStatus
+        });
+    } catch (err) {
+        console.error("Lỗi đánh giá phỏng vấn:", err);
+        res.status(500).json({ success: false, message: "Lỗi đánh giá phỏng vấn: " + err.message });
+    }
+});
+
+// Luồng 6: API lấy dòng thời gian lịch sử ứng viên (Timeline & Audit Trail)
+app.get("/api/candidates/:id/timeline", async (req, res) => {
+    const candidateId = Number(req.params.id);
+    try {
+        const [cRows] = await db.query("SELECT * FROM candidates WHERE id = ?", [candidateId]);
+        if (!cRows || cRows.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy ứng viên" });
+        }
+        const cand = cRows[0];
+        const [historyRows] = await db.query("SELECT * FROM candidate_history WHERE candidate_id = ? ORDER BY id ASC", [candidateId]);
+
+        // Tạo mốc sự kiện mặc định
+        let events = [];
+        events.push({
+            time: cand.created_at || "2026-10-18 09:00:00",
+            title: "Hồ Sơ Ứng Tuyển Được Tiếp Nhận",
+            action: "CV_SUBMISSION",
+            badge: "bg-blue-100 text-blue-700",
+            icon: "fa-file-lines",
+            description: `Ứng viên ${cand.full_name || cand.name} nộp hồ sơ ứng tuyển vị trí ${cand.applied_position || 'Chuyên viên'}.`
+        });
+
+        if (cand.match_score) {
+            events.push({
+                time: cand.created_at || "2026-10-18 09:02:00",
+                title: "Tác Tử Luồng 2: Sàng Lọc & Chấm Điểm CV",
+                action: "CV_SCREENING",
+                badge: cand.match_score >= 70 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700",
+                icon: "fa-robot",
+                description: `AI Agent chấm điểm: ${cand.match_score}/100. Đánh giá: ${cand.ai_evaluation || 'Đạt chuẩn ban đầu.'}`
+            });
+        }
+
+        if (cand.interview_time) {
+            events.push({
+                time: cand.created_at || "2026-10-18 10:15:00",
+                title: "Tác Tử Luồng 4: Xếp Lịch Phỏng Vấn Thông Minh",
+                action: "SCHEDULE_INTERVIEW",
+                badge: "bg-indigo-100 text-indigo-700",
+                icon: "fa-calendar-check",
+                description: `Xếp lịch phỏng vấn vào lúc ${cand.interview_time} với Lead ${cand.interviewer_name || 'Hội đồng tuyển dụng'}. Link Meet: ${cand.meeting_link || 'Đã tạo'}`
+            });
+            events.push({
+                time: cand.created_at || "2026-10-18 10:16:00",
+                title: "Tác Tử Luồng 5: Gửi Thư Mời & Đồng Bộ Google Calendar",
+                action: "INVITE_SENT",
+                badge: "bg-emerald-100 text-emerald-700",
+                icon: "fa-envelope-circle-check",
+                description: `Email thư mời chính thức đã được gửi tới ${cand.email} và tạo sự kiện trên Google Calendar.`
+            });
+        }
+
+        // Thêm các event từ candidate_history
+        if (historyRows && historyRows.length > 0) {
+            historyRows.forEach(h => {
+                events.push({
+                    time: h.updated_at || h.created_at,
+                    title: `Tác Tử Luồng 6: ${h.action}`,
+                    action: h.action,
+                    badge: "bg-purple-100 text-purple-700",
+                    icon: "fa-clock-rotate-left",
+                    description: h.note || 'Cập nhật trạng thái ứng viên'
+                });
+            });
+        }
+
+        res.json({
+            success: true,
+            candidate: cand,
+            timeline: events
+        });
+    } catch (err) {
+        console.error("Lỗi lấy timeline:", err);
+        res.status(500).json({ success: false, message: "Lỗi lấy timeline: " + err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Backend running at http://localhost:${PORT}`);
 });
+

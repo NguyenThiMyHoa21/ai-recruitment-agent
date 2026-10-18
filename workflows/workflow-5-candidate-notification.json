@@ -8,15 +8,15 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "step-1-webhook",
-      "name": "1. Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
+      "typeVersion": 2,
       "position": [
-        180,
-        300
+        -1200,
+        100
       ],
-      "webhookId": "send-interview-invite"
+      "id": "wf5-webhook",
+      "name": "1. Webhook Trigger",
+      "webhookId": "b336efc9-25f0-4da2-bb0a-20faee7cf424"
     },
     {
       "parameters": {
@@ -29,132 +29,140 @@
           ]
         }
       },
-      "id": "step-2-validate",
-      "name": "2. Validate Input",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "typeVersion": 2,
       "position": [
-        380,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "=SELECT * FROM candidates WHERE email = '{{ $(\"1. Webhook Trigger\").first().json.body.candidate_email }}' LIMIT 1;"
-      },
-      "id": "step-3-get-db",
-      "name": "3. Query Candidate DB",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.1,
-      "position": [
-        580,
-        200
+        -980,
+        100
       ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
+      "id": "wf5-validate-input",
+      "name": "2. Validate Input"
     },
     {
       "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "candidate_name",
-              "value": "={{ $json.name || $(\"1. Webhook Trigger\").first().json.body.candidate_name }}"
-            },
-            {
-              "name": "candidate_email",
-              "value": "={{ $json.email || $(\"1. Webhook Trigger\").first().json.body.candidate_email }}"
-            },
-            {
-              "name": "position",
-              "value": "={{ $json.position || $(\"1. Webhook Trigger\").first().json.body.position }}"
-            },
-            {
-              "name": "interview_time",
-              "value": "={{ $json.interview_time || $(\"1. Webhook Trigger\").first().json.body.interview_time || \"09:30 02/10/2026\" }}"
-            },
-            {
-              "name": "interviewer",
-              "value": "={{ $json.interviewer || $(\"1. Webhook Trigger\").first().json.body.interviewer || \"Trần Văn Tech\" }}"
-            },
-            {
-              "name": "meet_link",
-              "value": "={{ $json.meet_link || $(\"1. Webhook Trigger\").first().json.body.meet_link || \"https://meet.google.com/abc-defg-hij\" }}"
-            },
-            {
-              "name": "notification_type",
-              "value": "={{ $(\"1. Webhook Trigger\").first().json.body.notification_type || $(\"1. Webhook Trigger\").first().json.body.type || ($json.approval_status === 'REJECTED' || $json.status === 'Loại' ? 'rejection' : 'invite') }}"
-            },
-            {
-              "name": "evaluation",
-              "value": "={{ $(\"1. Webhook Trigger\").first().json.body.evaluation || $json.ai_evaluation || '' }}"
-            }
-          ]
-        },
+        "method": "GET",
+        "url": "=http://172.17.0.1:3000/api/candidates/{{ $('1. Webhook Trigger').first().json.body.candidate_id || 1 }}",
         "options": {}
       },
-      "id": "step-4-set-data",
-      "name": "4. Normalize Candidate Data",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        780,
-        200
-      ]
+        -760,
+        100
+      ],
+      "id": "wf5-fetch-candidate-api",
+      "name": "3. Fetch Candidate Context API"
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst prompt = `Soạn thảo thư mời phỏng vấn cho ${item.candidate_name} ứng tuyển ${item.position} vào lúc ${item.interview_time}`;\nreturn [{ json: { ...item, prompt: prompt } }];"
+        "jsCode": "const trig = $('1. Webhook Trigger').first().json.body || {};\nlet cand = {};\ntry {\n  const res = $('3. Fetch Candidate Context API').first().json;\n  cand = res.candidate || res.data || {};\n} catch(e) {}\n\nconst isRejection = Boolean(\n  trig.notification_type === 'rejection' ||\n  cand.status === 'Loại' ||\n  cand.status === 'Không đạt' ||\n  cand.approval_status === 'REJECTED'\n);\n\nreturn [{\n  json: {\n    candidate_id: cand.id || trig.candidate_id,\n    candidate_name: trig.candidate_name || cand.full_name || cand.name || \"Ứng viên\",\n    candidate_email: trig.candidate_email || cand.email,\n    position: trig.position || cand.applied_position || cand.position || \"Vị trí chuyên môn\",\n    interview_time: trig.interview_time || cand.interview_time || \"2026-10-18 09:30:00\",\n    interviewer: trig.interviewer || cand.interviewer_name || \"Lê Hoàng Dev (Backend Lead)\",\n    meet_link: trig.meet_link || cand.meeting_link || \"https://meet.google.com/rec-meet-vku\",\n    focus_topics: trig.focus_topics || \"Kiến trúc hệ thống, Khả năng chịu tải\",\n    is_rejection: isRejection,\n    prompt: isRejection\n      ? `Soạn thư từ chối mang tính xây dựng cao (Constructive Growth Feedback) cho ứng viên ${cand.full_name || trig.candidate_name} vị trí ${cand.applied_position || trig.position}. Cảm ơn và chỉ ra 2 kỹ năng nên trau dồi để ứng tuyển lại trong tương lai.`\n      : `Soạn thư mời phỏng vấn trang trọng kèm Bộ tài liệu chuẩn bị (Preparation Kit) cho ứng viên ${cand.full_name || trig.candidate_name} vị trí ${cand.applied_position || trig.position} vào lúc ${trig.interview_time || cand.interview_time} với Lead ${trig.interviewer || cand.interviewer_name}.`\n  }\n}];"
       },
-      "id": "step-5-gemini-prompt",
-      "name": "5. Gemini AI Prompt Generator",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        980,
-        200
-      ]
+        -540,
+        100
+      ],
+      "id": "wf5-normalize-context",
+      "name": "4. Normalize Candidate Context"
     },
     {
       "parameters": {
-        "jsCode": "let trig = {};\ntry { trig = $('1. Webhook Trigger').first().json.body || {}; } catch(e) {}\nconst d = $input.first().json;\n\nconst isRejection = Boolean(trig.notification_type === 'rejection' || trig.type === 'rejection' || trig.status === 'REJECTED' || trig.status === 'Loại' || d.notification_type === 'rejection' || d.approval_status === 'REJECTED' || d.status === 'Loại' || d.status === 'Không đạt');\n\nconst candName = trig.candidate_name || d.candidate_name || d.name || 'Ứng viên';\nconst candPos = trig.position || d.position || d.applied_position || 'Vị trí ứng tuyển';\nconst evalReason = trig.evaluation || d.evaluation || d.ai_evaluation || 'Hồ sơ chưa đáp ứng đủ tiêu chuẩn chuyên môn cốt lõi hoặc kinh nghiệm theo yêu cầu.';\n\nlet subject = '';\nlet html_content = '';\n\nif (isRejection) {\n  subject = `[VKU Recruitment] Thông báo kết quả sơ tuyển vị trí ${candPos} - ${candName}`;\n  html_content = `<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px;\"><div style=\"border-bottom: 2px solid #dc3545; padding-bottom: 15px; margin-bottom: 20px;\"><h3 style=\"color: #dc3545; margin: 0;\">THÔNG BÁO KẾT QUẢ SƠ TUYỂN HỒ SƠ</h3><span style=\"color: #64748b; font-size: 13px;\">Hệ thống Tuyển dụng Thông minh AI Recruitment System</span></div><p>Kính gửi bạn <b>${candName}</b>,</p><p>Lời đầu tiên, Hội đồng tuyển dụng xin trân trọng cảm ơn bạn đã quan tâm và nộp hồ sơ ứng tuyển vị trí <b>${candPos}</b>.</p><p>Sau khi hệ thống AI và Hội đồng tuyển dụng rà soát kỹ lưỡng các tiêu chí chuyên môn, chúng tôi rất tiếc phải thông báo rằng hiện tại hồ sơ của bạn <b>chưa phù hợp với yêu cầu trọng yếu</b> của vị trí này ở thời điểm hiện tại.</p><div style=\"background-color: #f8fafc; border-left: 4px solid #dc3545; padding: 12px 15px; margin: 15px 0; border-radius: 4px;\"><p style=\"margin: 0; color: #475569; font-size: 13px;\"><b>Nhận định đánh giá sơ loại:</b></p><p style=\"margin: 5px 0 0 0; color: #334155; font-style: italic; font-size: 14px;\">${evalReason}</p></div><p>Thông tin của bạn đã được lưu giữ trong hệ sinh thái dữ liệu nhân tài của chúng tôi để ưu tiên liên hệ cho các cơ hội nghề nghiệp phù hợp hơn trong tương lai.</p><p>Chúc bạn luôn nhiều sức khỏe và gặt hái nhiều thành công trên con đường sự nghiệp!</p><hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;\"><p style=\"font-size: 13px; color: #64748b; margin: 0;\">Trân trọng,<br><b style=\"color: #1e293b;\">Ban Tuyển Dụng & Phát Triển Nhân Tài</b><br>AI Recruitment Multi-Agent System</p></div>`;\n} else {\n  subject = `[VKU Recruitment] Thư mời phỏng vấn vị trí ${candPos} - ${candName}`;\n  html_content = `<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\"><h2 style=\"color: #2563eb;\">THƯ MỜI PHỎNG VẤN ỨNG VIÊN</h2><p>Chào <b>${candName}</b>,</p><p>Hội đồng tuyển dụng chúc mừng bạn đã vượt qua vòng sơ loại hồ sơ cho vị trí <b>${candPos}</b>.</p><div style=\"background: #f1f5f9; padding: 15px; border-radius: 8px;\"><p><b>Thời gian:</b> ${d.interview_time}</p><p><b>Người phỏng vấn:</b> ${d.interviewer}</p><p><b>Phòng họp trực tuyến:</b> <a href=\"${d.meet_link}\" style=\"color: #2563eb; font-weight: bold;\">${d.meet_link}</a></p></div><p>Vui lòng chuẩn bị đường truyền internet ổn định và tham gia trước 5 phút.</p><p>Trân trọng,<br><b>Phòng Nhân sự Tuyển dụng</b></p></div>`;\n}\n\nreturn [{ json: { ...d, candidate_name: candName, position: candPos, is_rejection: isRejection, subject: subject, html_content: html_content } }];"
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "options": {
+          "systemMessage": "Bạn là Tác tử Truyền thông Nhân sự Thấu cảm (Empathetic Candidate Communication Agent). Luôn soạn thảo email trang trọng, ấm áp, cá nhân hóa sâu sắc và đính kèm cẩm nang chuẩn bị hoặc góp ý phát triển tích cực."
+        }
       },
-      "id": "step-6-parse-invite",
-      "name": "6. Parse Invite Content",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -320,
+        100
+      ],
+      "id": "wf5-ai-agent",
+      "name": "5. AI Agent - Empathetic Communications"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        320
+      ],
+      "id": "wf5-gemini-model",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "name": "interview_prep_kit_builder",
+        "description": "Tạo cẩm nang các câu hỏi và kiến thức trọng tâm giúp ứng viên chuẩn bị tốt nhất trước buổi phỏng vấn",
+        "jsCode": "return JSON.stringify({\n  technical_readiness: [\"Ôn tập kiến trúc phân tán & Microservices\", \"Chuẩn bị demo một dự án tiêu biểu\"],\n  interview_checklist: [\"Kiểm tra webcam & mic trước 10 phút\", \"Tìm không gian yên tĩnh và đường truyền ổn định\"]\n});"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        -280,
+        320
+      ],
+      "id": "wf5-tool-prep-kit",
+      "name": "Tool: Interview Preparation Kit Builder"
+    },
+    {
+      "parameters": {
+        "name": "constructive_feedback_generator",
+        "description": "Tạo nhận xét góp ý mang tính phát triển và truyền cảm hứng cho ứng viên",
+        "jsCode": "return JSON.stringify({\n  highlight: \"Hồ sơ của bạn có nền tảng tư duy lập trình và học vấn tốt.\",\n  growth_recommendation: \"Nếu bổ sung thêm kinh nghiệm triển khai Docker Container trên server thực tế, hồ sơ sẽ vô cùng cạnh tranh.\"\n});"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        -140,
+        320
+      ],
+      "id": "wf5-tool-feedback",
+      "name": "Tool: Constructive Growth Feedback Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('4. Normalize Candidate Context').first().json;\nconst isRejection = d.is_rejection;\n\nlet subject = \"\";\nlet html_body = \"\";\n\nif (isRejection) {\n  subject = `[VKU Tech] Thông báo kết quả ứng tuyển vị trí ${d.position} - ${d.candidate_name}`;\n  html_body = `\n  <div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;\">\n    <h2 style=\"color: #0d47a1; margin-top: 0;\">VKU Tech Talent Acquisition</h2>\n    <p>Xin chào <strong>${d.candidate_name}</strong>,</p>\n    <p>Hội đồng tuyển dụng VKU Tech chân thành cảm ơn bạn đã dành thời gian và sự quan tâm đối với vị trí <strong>${d.position}</strong>.</p>\n    <p>Sau khi xem xét kỹ lưỡng hồ sơ, chúng tôi rất tiếc phải thông báo hiện tại hồ sơ của bạn chưa hoàn toàn phù hợp với các tiêu chí ưu tiên của vị trí này.</p>\n    <div style=\"background: #f4f6f8; border-left: 4px solid #1976d2; padding: 12px 16px; margin: 20px 0;\">\n      <h4 style=\"margin: 0 0 8px 0; color: #1976d2;\">💡 Góc Nhìn Phát Triển Tự Động Từ AI Agent:</h4>\n      <p style=\"margin: 0; font-size: 14px; color: #555;\">Hồ sơ của bạn có tư duy kỹ thuật tốt. Nhóm tuyển dụng kiến nghị bạn tiếp tục trau dồi các dự án thực tế về Cloud & Docker để sẵn sàng cho các cơ hội tiếp theo tại công ty.</p>\n    </div>\n    <p>Thông tin của bạn đã được lưu trữ trong Talent Pool của chúng tôi và chúng tôi sẽ chủ động liên hệ lại khi có vị trí tương thích.</p>\n    <p>Chúc bạn luôn kiên trì và gặt hái nhiều thành công trên con đường sự nghiệp!</p>\n    <hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n    <p style=\"font-size: 13px; color: #777;\">Trân trọng,<br><strong>Ban Tuyển Dụng & AI Agent Coordinator - VKU Tech</strong></p>\n  </div>`;\n} else {\n  subject = `[VKU Tech] Thư mời phỏng vấn vị trí ${d.position} - ${d.candidate_name}`;\n  html_body = `\n  <div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;\">\n    <h2 style=\"color: #2e7d32; margin-top: 0;\">🎉 Thư Mời Phỏng Vấn Chính Thức</h2>\n    <p>Xin chào <strong>${d.candidate_name}</strong>,</p>\n    <p>Chúc mừng bạn đã vượt qua vòng đánh giá hồ sơ xuất sắc cho vị trí <strong>${d.position}</strong> tại VKU Tech!</p>\n    <div style=\"background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 6px; padding: 16px; margin: 20px 0;\">\n      <h3 style=\"margin-top: 0; color: #2e7d32;\">Chi Tiết Buổi Phỏng Vấn Trực Tuyến:</h3>\n      <ul style=\"margin: 0; padding-left: 20px;\">\n        <li><strong>Thời gian:</strong> <span style=\"color: #d32f2f; font-weight: bold;\">${d.interview_time}</span></li>\n        <li><strong>Chuyên gia phỏng vấn:</strong> ${d.interviewer}</li>\n        <li><strong>Hình thức:</strong> Phỏng vấn trực tuyến qua Google Meet</li>\n      </ul>\n      <div style=\"text-align: center; margin-top: 16px;\">\n        <a href=\"${d.meet_link}\" style=\"background: #1a73e8; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;\">Tham Gia Phỏng Vấn (Google Meet)</a>\n      </div>\n    </div>\n    <div style=\"background: #e8f0fe; border-left: 4px solid #1a73e8; padding: 12px 16px; margin: 20px 0;\">\n      <h4 style=\"margin: 0 0 6px 0; color: #1a73e8;\">📚 Cẩm Nang Chuẩn Bị (AI Preparation Kit):</h4>\n      <p style=\"margin: 0; font-size: 14px; color: #444;\">Chủ đề trọng tâm: <em>${d.focus_topics}</em>. Bạn vui lòng chuẩn bị máy tính có kết nối ổn định và vào link trước 5 phút nhé.</p>\n    </div>\n    <p>Lịch hẹn này đã được hệ thống tự động đồng bộ lên Google Calendar của bạn.</p>\n    <hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n    <p style=\"font-size: 13px; color: #777;\">Trân trọng,<br><strong>Ban Tuyển Dụng VKU Tech</strong></p>\n  </div>`;\n}\n\nreturn [{\n  json: {\n    ...d,\n    subject,\n    html_body,\n    is_rejection: isRejection\n  }\n}];"
+      },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1180,
-        200
-      ]
+        -100,
+        100
+      ],
+      "id": "wf5-parse-content",
+      "name": "6. Parse Invite Content"
     },
     {
       "parameters": {
         "sendTo": "={{ $json.candidate_email }}",
         "subject": "={{ $json.subject }}",
-        "message": "={{ $json.html_content }}",
-        "options": {}
+        "message": "={{ $json.html_body }}",
+        "options": {
+          "appendAttribution": false
+        }
       },
-      "id": "step-7-send-invite",
-      "name": "7. Send Official Invite Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1380,
-        200
+        120,
+        100
       ],
+      "id": "wf5-send-email",
+      "name": "7. Send Official Invite Email",
       "credentials": {
         "gmailOAuth2": {
-          "id": "qz5j6p9UxXAmNUJx",
+          "id": "wYPWyMlEKAtAS6Nz",
           "name": "Gmail account"
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "parameters": {
@@ -167,153 +175,150 @@
           ]
         }
       },
-      "id": "step-7-1-check-rejection",
-      "name": "7.1. Check Rejection Branch",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "typeVersion": 2,
       "position": [
-        1480,
-        200
-      ]
+        340,
+        100
+      ],
+      "id": "wf5-check-rejection",
+      "name": "7.1. Check Rejection Branch"
     },
     {
       "parameters": {
         "calendar": {
           "__rl": true,
-          "value": "primary",
-          "mode": "list"
+          "mode": "list",
+          "value": "primary"
         },
-        "start": "={{ new Date().toISOString() }}",
-        "end": "={{ new Date(Date.now() + 3600000).toISOString() }}",
-        "summary": "=Phỏng vấn tuyển dụng: {{ $(\"4. Normalize Candidate Data\").first().json.candidate_name }} ({{ $(\"4. Normalize Candidate Data\").first().json.position }})",
-        "description": "=Link Meet: {{ $(\"4. Normalize Candidate Data\").first().json.meet_link }} | Người PV: {{ $(\"4. Normalize Candidate Data\").first().json.interviewer }}",
-        "options": {}
-      },
-      "id": "step-8-google-calendar",
-      "name": "8. Sync Google Calendar",
-      "type": "n8n-nodes-base.googleCalendar",
-      "typeVersion": 1,
-      "position": [
-        1580,
-        200
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst reminder_subject = `[Nhắc lịch] Buổi phỏng vấn vị trí ${d.position} sắp diễn ra`;\nconst reminder_body = `<p>Xin chào <b>${d.candidate_name}</b>, đừng quên lịch hẹn phỏng vấn lúc <b>${d.interview_time}</b> tại: <a href=\"${d.meet_link}\">${d.meet_link}</a>.</p>`;\nreturn [{ json: { ...d, reminder_subject, reminder_body } }];"
-      },
-      "id": "step-9-gemini-reminder",
-      "name": "9. Gemini AI Gen Reminder",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1780,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "return $input.all();"
-      },
-      "id": "step-10-parse-reminder",
-      "name": "10. Parse Reminder Message",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1980,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "unit": "seconds",
-        "amount": 5
-      },
-      "id": "step-11-wait-delay",
-      "name": "11. Schedule Wait Delay",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        2180,
-        200
-      ],
-      "webhookId": "schedule-reminder-wait"
-    },
-    {
-      "parameters": {
-        "sendTo": "={{ $json.candidate_email }}",
-        "subject": "={{ $json.reminder_subject }}",
-        "message": "={{ $json.reminder_body }}",
-        "options": {}
-      },
-      "id": "step-12-send-reminder",
-      "name": "12. Dispatch Reminder Email",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        2380,
-        200
-      ],
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "qz5j6p9UxXAmNUJx",
-          "name": "Gmail account"
+        "start": "={{ new Date(Date.now() + 3600000).toISOString() }}",
+        "end": "={{ new Date(Date.now() + 7200000).toISOString() }}",
+        "summary": "=Phỏng vấn vị trí: {{ $('4. Normalize Candidate Context').first().json.position }} - Ứng viên: {{ $('4. Normalize Candidate Context').first().json.candidate_name }}",
+        "options": {
+          "description": "=Chuyên gia phỏng vấn: {{ $('4. Normalize Candidate Context').first().json.interviewer }}\nLink Google Meet: {{ $('4. Normalize Candidate Context').first().json.meet_link }}\nChủ đề: {{ $('4. Normalize Candidate Context').first().json.focus_topics }}",
+          "location": "={{ $('4. Normalize Candidate Context').first().json.meet_link }}"
         }
       },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "=UPDATE candidates SET notification_status = '{{ $(\"6. Parse Invite Content\").first().json.is_rejection ? \"Sent_Rejection\" : \"Sent\" }}' WHERE email = '{{ $(\"4. Normalize Candidate Data\").first().json.candidate_email }}';"
-      },
-      "id": "step-13-update-db",
-      "name": "13. Update Notification Status DB",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
       "position": [
-        2580,
-        200
+        560,
+        0
       ],
+      "id": "wf5-google-calendar",
+      "name": "8. Sync Google Calendar",
       "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
+        "googleCalendarOAuth2Api": {
+          "id": "vvUvNivFTeD4AP2v",
+          "name": "Google Calendar account"
         }
       }
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({\n  status: \"success\",\n  message: $(\"6. Parse Invite Content\").first().json.is_rejection ? \"Đã gửi thư cảm ơn & thông báo kết quả sơ tuyển không đạt qua Gmail thành công\" : \"Hoàn tất quy trình: gửi thư mời, đồng bộ calendar và đặt lịch nhắc nhở!\",\n  notification_type: $(\"6. Parse Invite Content\").first().json.is_rejection ? \"rejection\" : \"invite\",\n  candidate: $(\"4. Normalize Candidate Data\").first().json.candidate_name,\n  email: $(\"4. Normalize Candidate Data\").first().json.candidate_email,\n  interview_time: $(\"4. Normalize Candidate Data\").first().json.interview_time,\n  executed_at: new Date().toISOString()\n}) }}",
-        "options": {}
+        "amount": 5,
+        "unit": "seconds"
       },
-      "id": "step-14-respond-success",
-      "name": "14. Final Respond to Backend",
-      "type": "n8n-nodes-base.respondToWebhook",
+      "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2780,
-        200
-      ]
+        780,
+        0
+      ],
+      "id": "wf5-wait-delay",
+      "name": "11. Schedule Wait Delay",
+      "webhookId": "wf5-wait-delay-webhook"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('4. Normalize Candidate Context').first().json.candidate_email }}",
+        "subject": "=[Nhắc Lịch Hẹn] Buổi phỏng vấn tại VKU Tech sắp diễn ra",
+        "message": "=<p>Xin chào <strong>{{ $('4. Normalize Candidate Context').first().json.candidate_name }}</strong>,</p><p>Hệ thống tự động nhắc bạn buổi phỏng vấn vị trí <strong>{{ $('4. Normalize Candidate Context').first().json.position }}</strong> sẽ diễn ra vào lúc <strong>{{ $('4. Normalize Candidate Context').first().json.interview_time }}</strong>.</p><p>Link phòng họp trực tuyến: <a href='{{ $('4. Normalize Candidate Context').first().json.meet_link }}'>{{ $('4. Normalize Candidate Context').first().json.meet_link }}</a></p><p>Chúc bạn có một buổi phỏng vấn thật tự tin và đạt kết quả cao!</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1000,
+        0
+      ],
+      "id": "wf5-send-reminder",
+      "name": "12. Dispatch Reminder Email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wYPWyMlEKAtAS6Nz",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://172.17.0.1:3000/api/candidates/{{ $('4. Normalize Candidate Context').first().json.candidate_id }}/notification-status",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"notification_status\": \"{{ $('6. Parse Invite Content').first().json.is_rejection ? 'Sent_Constructive_Rejection' : 'Sent_Invite_And_Calendar' }}\",\n  \"email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1220,
+        100
+      ],
+      "id": "wf5-update-notif-status-api",
+      "name": "13. Update Notification Status API"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:3000/api/workflow-logs",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"workflow_name\": \"Luong 5 - Agentic Candidate Notification\",\n  \"execution_status\": \"SUCCESS\",\n  \"payload\": {\n    \"candidate_id\": {{ $('4. Normalize Candidate Context').first().json.candidate_id }},\n    \"candidate_email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\",\n    \"notification_type\": \"{{ $('6. Parse Invite Content').first().json.is_rejection ? 'Constructive Rejection' : 'Official Invite with Preparation Kit' }}\",\n    \"delivery_channel\": \"Gmail OAuth2 & Google Calendar\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        100
+      ],
+      "id": "wf5-audit-log-api",
+      "name": "14. Dispatch Audit Log API"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "{\n  \"status\": \"error\",\n  \"message\": \"Dữ liệu ứng viên không hợp lệ hoặc thiếu candidate_email.\"\n}",
-        "options": {
-          "responseCode": 400
-        }
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Notification dispatched successfully via Agentic AI\",\n  \"data\": {\n    \"candidate_id\": {{ $('4. Normalize Candidate Context').first().json.candidate_id }},\n    \"candidate_email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\",\n    \"status\": \"{{ $('6. Parse Invite Content').first().json.is_rejection ? 'Sent_Constructive_Rejection' : 'Sent_Invite_And_Calendar' }}\"\n  }\n}",
+        "options": {}
       },
-      "id": "step-15-error-handler",
-      "name": "15. Error Handler Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        580,
-        420
-      ]
+        1660,
+        100
+      ],
+      "id": "wf5-respond",
+      "name": "15. Final Respond to Backend"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"candidate_email is required and cannot be empty\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -980,
+        320
+      ],
+      "id": "wf5-error-handler",
+      "name": "16. Error Handler Response"
     }
   ],
   "connections": {
@@ -332,43 +337,76 @@
       "main": [
         [
           {
-            "node": "3. Query Candidate DB",
+            "node": "3. Fetch Candidate Context API",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "15. Error Handler Response",
+            "node": "16. Error Handler Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "3. Query Candidate DB": {
+    "3. Fetch Candidate Context API": {
       "main": [
         [
           {
-            "node": "4. Normalize Candidate Data",
+            "node": "4. Normalize Candidate Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "4. Normalize Candidate Data": {
+    "4. Normalize Candidate Context": {
       "main": [
         [
           {
-            "node": "5. Gemini AI Prompt Generator",
+            "node": "5. AI Agent - Empathetic Communications",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "5. Gemini AI Prompt Generator": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "5. AI Agent - Empathetic Communications",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Interview Preparation Kit Builder": {
+      "ai_tool": [
+        [
+          {
+            "node": "5. AI Agent - Empathetic Communications",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Constructive Growth Feedback Generator": {
+      "ai_tool": [
+        [
+          {
+            "node": "5. AI Agent - Empathetic Communications",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. AI Agent - Empathetic Communications": {
       "main": [
         [
           {
@@ -405,7 +443,7 @@
       "main": [
         [
           {
-            "node": "13. Update Notification Status DB",
+            "node": "13. Update Notification Status API",
             "type": "main",
             "index": 0
           }
@@ -420,28 +458,6 @@
       ]
     },
     "8. Sync Google Calendar": {
-      "main": [
-        [
-          {
-            "node": "9. Gemini AI Gen Reminder",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "9. Gemini AI Gen Reminder": {
-      "main": [
-        [
-          {
-            "node": "10. Parse Reminder Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "10. Parse Reminder Message": {
       "main": [
         [
           {
@@ -467,18 +483,29 @@
       "main": [
         [
           {
-            "node": "13. Update Notification Status DB",
+            "node": "13. Update Notification Status API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "13. Update Notification Status DB": {
+    "13. Update Notification Status API": {
       "main": [
         [
           {
-            "node": "14. Final Respond to Backend",
+            "node": "14. Dispatch Audit Log API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14. Dispatch Audit Log API": {
+      "main": [
+        [
+          {
+            "node": "15. Final Respond to Backend",
             "type": "main",
             "index": 0
           }
@@ -486,7 +513,6 @@
       ]
     }
   },
-  "active": false,
   "settings": {
     "executionOrder": "v1"
   }
