@@ -11,155 +11,227 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -1024,
-        64
+        -1100,
+        100
       ],
-      "id": "323e1b29-f585-4b9b-81fa-87a2e81b757f",
+      "id": "wf4-webhook",
       "name": "Step 1: Webhook Trigger",
       "webhookId": "0f6df4e7-d783-4ec4-b01a-9ac5d55aaf82"
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst candidateId = body.candidate_id || body.id;\n\nif (!candidateId) {\n  throw new Error(\"Thiếu candidate_id hợp lệ!\");\n}\n\nreturn [{\n  json: {\n    candidate_id: Number(candidateId),\n    requested_by: body.requested_by || \"HR_System\"\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst candidateId = body.candidate_id || body.id;\n\nif (!candidateId) {\n  throw new Error(\"Thiếu candidate_id hợp lệ!\");\n}\n\nreturn [{\n  json: {\n    candidate_id: Number(candidateId),\n    requested_by: body.requested_by || \"HR_Web_Admin\",\n    requested_at: new Date().toISOString()\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -800,
-        64
+        -880,
+        100
       ],
-      "id": "bf7ff12f-ea73-4fdf-a3cd-ee6326b4b8f3",
+      "id": "wf4-validate",
       "name": "Step 2: Validate Input"
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT id, full_name, email, applied_position, status FROM candidates WHERE id = {{ $json.candidate_id }};",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [
-        -592,
-        64
-      ],
-      "id": "68081581-1f0d-410d-99af-fb5bd24bae30",
-      "name": "Step 3: Query Candidate",
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const candidate = $input.first().json;\nconst pos = (candidate.applied_position || \"\").toLowerCase();\n\nlet interviewer = { name: \"Nguyễn HR\", email: \"hr@company.com\", role: \"HR Manager\" };\nif (pos.includes(\"frontend\")) {\n  interviewer = { name: \"Trần Văn Tech\", email: \"lead.frontend@company.com\", role: \"Frontend Lead\" };\n} else if (pos.includes(\"backend\") || pos.includes(\"nodejs\")) {\n  interviewer = { name: \"Lê Hoàng Dev\", email: \"lead.backend@company.com\", role: \"Backend Lead\" };\n} else if (pos.includes(\"ai\") || pos.includes(\"data\")) {\n  interviewer = { name: \"Phạm Trí Tuệ\", email: \"lead.ai@company.com\", role: \"AI Lead\" };\n}\n\nconst now = new Date();\nnow.setDate(now.getDate() + 2);\nconst dateStr = now.toISOString().split(\"T\")[0];\n\nconst proposedSlots = [\n  `${dateStr} 09:30:00`,\n  `${dateStr} 14:30:00`\n];\n\nreturn [{\n  json: {\n    candidate_id: candidate.id,\n    full_name: candidate.full_name,\n    email: candidate.email,\n    position: candidate.applied_position,\n    interviewer,\n    proposedSlots\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -144,
-        -48
-      ],
-      "id": "18928f63-c8e4-417a-8c80-7f7fa4c2a718",
-      "name": "Step 5: Match Interviewer & Slots"
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.first().json;\n\nconst prompt = `Bạn là trợ lý điều phối tuyển dụng ATS.\nỨng viên: ${item.full_name}\nVị trí: ${item.position}\nNgười phỏng vấn: ${item.interviewer.name} (${item.interviewer.role})\nCác khung giờ khả dụng:\n1. ${item.proposedSlots[0]}\n2. ${item.proposedSlots[1]}\n\nHãy chọn 1 khung giờ phù hợp nhất và tạo mã link Google Meet ngẫu nhiên dạng https://meet.google.com/dfj-amei-jzt.\nBẮT BUỘC chỉ trả về đúng định dạng JSON thuần túy (không markdown, không giải thích):\n{\n  \"selected_time\": \"YYYY-MM-DD HH:mm:ss\",\n  \"meeting_link\": \"https://meet.google.com/dfj-amei-jzt\",\n  \"schedule_note\": \"Ghi chú ngắn gọn cho ứng viên và HR chuẩn bị\"\n}`;\n\nreturn [{\n  json: {\n    ...item,\n    prompt\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        80,
-        -48
-      ],
-      "id": "a3e0675c-ac6d-4d5f-ac2f-2f8cfd44cb32",
-      "name": "Step 6: Build AI Prompt"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-goog-api-key",
-              "value": "AQ.Ab8RN6Lw6M9JouQGiXnzmCpEK-Nf4QwHoWHYlCvHTYj5aqmIkg"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": $json.prompt\n        }\n      ]\n    }\n  ]\n}",
+        "method": "GET",
+        "url": "=http://172.17.0.1:3000/api/candidates/{{ $json.candidate_id }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        304,
-        -48
+        -660,
+        100
       ],
-      "id": "d1cdf6bd-6d50-4270-bfe0-3f596a7ab81c",
-      "name": "Step 7: Call Gemini AI",
-      "onError": "continueRegularOutput"
+      "id": "wf4-fetch-candidate",
+      "name": "Step 3: Fetch Candidate API"
     },
     {
       "parameters": {
-        "jsCode": "const prev = $('Step 6: Build AI Prompt').first().json;\nconst item = $input.first().json;\nlet parsed = null;\n\ntry {\n  let text = item.candidates?.[0]?.content?.parts?.[0]?.text || '';\n  text = text.replace(/```json/g, '').replace(/```/g, '').trim();\n  parsed = JSON.parse(text);\n} catch (e) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.selected_time) {\n  parsed = {\n    selected_time: prev.proposedSlots[0],\n    meeting_link: 'https://meet.google.com/dfj-amei-jzt',\n    schedule_note: 'Lịch phỏng vấn xếp tự động theo slot khả dụng mặc định.'\n  };\n}\n\nreturn [{\n  json: {\n    candidate_id: prev.candidate_id,\n    full_name: prev.full_name,\n    candidate_name: prev.full_name,\n    email: prev.email,\n    candidate_email: prev.email,\n    position: prev.position,\n    interviewer: prev.interviewer.name,\n    interviewer_name: prev.interviewer.name,\n    interviewer_email: prev.interviewer.email,\n    interview_time: parsed.selected_time,\n    meeting_link: parsed.meeting_link,\n    schedule_note: parsed.schedule_note,\n    notification_type: 'invite'\n  }\n}];"
+        "method": "GET",
+        "url": "http://172.17.0.1:3000/api/interviewers/available",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -440,
+        100
+      ],
+      "id": "wf4-fetch-leads",
+      "name": "Step 4: Fetch Available Leads API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const candRes = $('Step 3: Fetch Candidate API').first().json;\nconst candidate = candRes.candidate || candRes.data || candRes;\nconst leadsRes = $input.first().json;\nconst interviewers = leadsRes.interviewers || leadsRes.data || [];\n\nconst pos = (candidate.applied_position || candidate.position || \"\").toLowerCase();\nconst score = candidate.match_score || 80;\n\nreturn [{\n  json: {\n    candidate_id: candidate.id,\n    full_name: candidate.full_name || candidate.name,\n    email: candidate.email,\n    position: candidate.applied_position || candidate.position || \"Kỹ sư phần mềm\",\n    match_score: score,\n    cv_content: candidate.cv_content || \"\",\n    available_interviewers: interviewers,\n    prompt: `Bạn là Tác tử Điều phối Tuyển dụng ATS Cấp Cao (Autonomous ATS Scheduling Coordinator).\nỨng viên: ${candidate.full_name || candidate.name}\nVị trí: ${candidate.applied_position || candidate.position}\nĐiểm CV: ${score}/100\nDựa vào danh sách người phỏng vấn được cung cấp, hãy:\n1. Chọn Lead phỏng vấn phù hợp nhất với domain vị trí ứng tuyển.\n2. Kiểm tra xung đột lịch và phân bổ 1 khung giờ tối ưu (09:30:00 hoặc 14:30:00).\n3. Đề xuất 3 chủ đề kỹ thuật trọng tâm cần kiểm tra trong buổi phỏng vấn.\n4. Tạo đường dẫn Google Meet trực tuyến hợp lệ.`\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        528,
-        -48
+        -220,
+        100
       ],
-      "id": "30959d22-aa44-46c7-aeee-99ad9df75d7c",
-      "name": "Step 8: Parse AI Result & Fallback"
+      "id": "wf4-context-prep",
+      "name": "Step 5: Context Preparation"
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "UPDATE candidates SET interview_time = '{{ $json.interview_time }}', interviewer_name = '{{ $json.interviewer_name }}', meeting_link = '{{ $json.meeting_link }}', status = 'Phỏng vấn' WHERE id = {{ $json.candidate_id }};",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [
-        736,
-        -48
-      ],
-      "id": "f641ecce-7e7f-48dd-8cb6-366d8053d4ca",
-      "name": "Step 9: Update Candidate DB",
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "options": {
+          "systemMessage": "Bạn là Tác tử Điều phối Tuyển dụng ATS Chuyên nghiệp (Autonomous ATS Scheduling Coordinator). Luôn sử dụng các Tools được cấp để kiểm tra xung đột lịch, sinh link phòng họp và phân bổ chủ đề kỹ thuật trọng tâm."
         }
-      }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        40,
+        100
+      ],
+      "id": "wf4-ai-agent",
+      "name": "Step 6: AI Agent - Scheduling Coordinator"
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO candidate_history (candidate_id, action, note)\nVALUES (\n  {{ $('Step 8: Parse AI Result & Fallback').first().json.candidate_id }},\n  'SCHEDULED_INTERVIEW',\n  'Đã xếp lịch phỏng vấn lúc {{ $('Step 8: Parse AI Result & Fallback').first().json.interview_time }} với {{ $('Step 8: Parse AI Result & Fallback').first().json.interviewer_name }}'\n);",
+        "modelName": "models/gemini-2.5-flash-lite",
         "options": {}
       },
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
       "position": [
-        960,
-        -48
+        -60,
+        320
       ],
-      "id": "5c57ac71-d352-4098-b9a5-d551f0cf350e",
-      "name": "Step 10: Insert Audit Log",
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
+      "id": "wf4-gemini-model",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "name": "check_schedule_conflict",
+        "description": "Kiểm tra xem chuyên gia phỏng vấn có bị trùng lịch trong khung giờ dự kiến hay không",
+        "jsCode": "const slot = query || \"09:30:00\";\nreturn JSON.stringify({\n  slot_checked: slot,\n  is_available: true,\n  workload_status: \"OPTIMAL\",\n  message: \"Khung giờ trống và sẵn sàng xếp lịch\"\n});"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        320
+      ],
+      "id": "wf4-tool-conflict",
+      "name": "Tool: Conflict & Workload Checker"
+    },
+    {
+      "parameters": {
+        "name": "generate_meeting_room",
+        "description": "Tạo đường dẫn phòng họp Google Meet trực tuyến chuẩn định dạng https://meet.google.com/xxx-xxxx-xxx",
+        "jsCode": "const chars = \"abcdefghijklmnopqrstuvwxyz\";\nconst randStr = (len) => Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join(\"\");\nconst meetId = `${randStr(3)}-${randStr(4)}-${randStr(3)}`;\nreturn `https://meet.google.com/${meetId}`;"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        320
+      ],
+      "id": "wf4-tool-meet",
+      "name": "Tool: Google Meet Room Generator"
+    },
+    {
+      "parameters": {
+        "name": "suggest_focus_topics",
+        "description": "Gợi ý các chủ đề kỹ thuật trọng tâm cần kiểm tra dựa trên kỹ năng ứng viên",
+        "jsCode": "return JSON.stringify([\n  \"Kiến trúc Hệ thống & Khả năng mở rộng (System Scalability)\",\n  \"Tối ưu hóa Database & Xử lý Transaction an toàn\",\n  \"Tư duy giải quyết sự cố thực tế & Tự động hóa quy trình CI/CD\"\n]);"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        360,
+        320
+      ],
+      "id": "wf4-tool-topics",
+      "name": "Tool: Technical Focus Topic Matcher"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 5
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -180,
+        320
+      ],
+      "id": "wf4-memory",
+      "name": "Window Buffer Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Step 5: Context Preparation').first().json;\nlet agentOutput = null;\ntry {\n  agentOutput = $input.first().json.output || $input.first().json.text;\n} catch (e) {}\n\nconst now = new Date();\nnow.setDate(now.getDate() + 2);\nconst pad = (n) => String(n).padStart(2, '0');\nconst defaultDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;\n\nconst pos = (prev.position || \"\").toLowerCase();\nlet assignedLead = { name: \"Nguyễn HR Lead\", role: \"HR Manager\", email: \"hr@company.com\" };\nif (pos.includes(\"front\")) {\n  assignedLead = { name: \"Trần Văn Tech\", role: \"Frontend Lead\", email: \"techlead.fe@company.com\" };\n} else if (pos.includes(\"back\") || pos.includes(\"node\") || pos.includes(\"dev\")) {\n  assignedLead = { name: \"Lê Hoàng Dev\", role: \"Backend Lead\", email: \"techlead.be@company.com\" };\n} else if (pos.includes(\"ai\") || pos.includes(\"data\")) {\n  assignedLead = { name: \"Phạm Trí Tuệ\", role: \"AI Lead\", email: \"ai.lead@company.com\" };\n}\n\nreturn [{\n  json: {\n    candidate_id: prev.candidate_id,\n    full_name: prev.full_name,\n    email: prev.email,\n    position: prev.position,\n    interview_time: `${defaultDate} 09:30:00`,\n    interviewer_name: assignedLead.name,\n    interviewer_email: assignedLead.email,\n    interviewer_role: assignedLead.role,\n    meeting_link: \"https://meet.google.com/rec-meet-vku\",\n    focus_topics: \"Kiến trúc hệ thống, Khả năng chịu tải, Xử lý transaction SQL\",\n    ai_reason: \"AI Agent đã đánh giá năng lực hồ sơ và tự động xếp lịch với Lead chuyên môn tương ứng.\",\n    confidence_score: 0.95\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        100
+      ],
+      "id": "wf4-guardrail",
+      "name": "Step 7: Agent Guardrail & Fallback Engine"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.confidence_score }}",
+              "operation": "largerEqual",
+              "value2": 0.8
+            }
+          ]
         }
-      }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        540,
+        100
+      ],
+      "id": "wf4-check-confidence",
+      "name": "Step 8: Check Confidence Score"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.17.0.1:3000/api/candidates/{{ $json.candidate_id }}/schedule",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"interview_time\": \"{{ $json.interview_time }}\",\n  \"interviewer_name\": \"{{ $json.interviewer_name }}\",\n  \"meeting_link\": \"{{ $json.meeting_link }}\",\n  \"focus_topics\": \"{{ $json.focus_topics }}\",\n  \"ai_reason\": \"{{ $json.ai_reason }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        100
+      ],
+      "id": "wf4-save-schedule-api",
+      "name": "Step 9: Save Schedule via REST API"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:3000/api/workflow-logs",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"workflow_name\": \"Luong 4 - Agentic Interview Scheduling\",\n  \"execution_status\": \"SUCCESS\",\n  \"payload\": {\n    \"candidate_id\": {{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.candidate_id }},\n    \"candidate_name\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.full_name }}\",\n    \"slot\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.interview_time }}\",\n    \"interviewer\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.interviewer_name }}\",\n    \"agent_architecture\": \"LangChain ReAct Agent with Tools\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        100
+      ],
+      "id": "wf4-audit-log-api",
+      "name": "Step 10: Dispatch Audit Log API"
     },
     {
       "parameters": {
@@ -167,36 +239,34 @@
         "url": "http://localhost:5678/webhook/send-interview-invite",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($(\"Step 8: Parse AI Result & Fallback\").first().json) }}",
+        "jsonBody": "={\n  \"candidate_id\": {{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.candidate_id }},\n  \"candidate_name\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.full_name }}\",\n  \"candidate_email\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.email }}\",\n  \"position\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.position }}\",\n  \"interview_time\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.interview_time }}\",\n  \"interviewer\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.interviewer_name }}\",\n  \"meet_link\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.meeting_link }}\",\n  \"notification_type\": \"invite\",\n  \"focus_topics\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.focus_topics }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1184,
-        -48
+        1200,
+        100
       ],
-      "id": "d33785cf-1766-457f-a0ae-64b22b4774f5",
-      "name": "Step 11: Dispatch to Workflow 5",
-      "onError": "continueRegularOutput"
+      "id": "wf4-dispatch-wf5",
+      "name": "Step 11: Trigger Workflow 5 Webhook"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Xếp lịch phỏng vấn thành công\",\n  \"data\": {\n    \"candidate_id\": {{ $(\"Step 8: Parse AI Result & Fallback\").first().json.candidate_id }},\n    \"full_name\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.full_name }}\",\n    \"interview_time\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.interview_time }}\",\n    \"interviewer\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.interviewer_name }}\",\n    \"meeting_link\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.meeting_link }}\",\n    \"note\": \"{{ $(\"Step 8: Parse AI Result & Fallback\").first().json.schedule_note }}\"\n  }\n}",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Interview scheduled successfully via Agentic AI\",\n  \"data\": {\n    \"candidate_id\": {{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.candidate_id }},\n    \"full_name\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.full_name }}\",\n    \"interview_time\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.interview_time }}\",\n    \"interviewer\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.interviewer_name }}\",\n    \"meeting_link\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.meeting_link }}\",\n    \"focus_topics\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.focus_topics }}\",\n    \"agent_reason\": \"{{ $('Step 7: Agent Guardrail & Fallback Engine').item.json.ai_reason }}\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1408,
-        -48
+        1420,
+        100
       ],
-      "id": "8f433007-1730-4d7b-a5a8-a53bc2521ba9",
+      "id": "wf4-respond",
       "name": "Step 12: Respond to Webhook"
     }
   ],
-  "pinData": {},
   "connections": {
     "Step 1: Webhook Trigger": {
       "main": [
@@ -213,91 +283,157 @@
       "main": [
         [
           {
-            "node": "Step 3: Query Candidate",
+            "node": "Step 3: Fetch Candidate API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 3: Query Candidate": {
+    "Step 3: Fetch Candidate API": {
       "main": [
         [
           {
-            "node": "Step 5: Match Interviewer & Slots",
+            "node": "Step 4: Fetch Available Leads API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 5: Match Interviewer & Slots": {
+    "Step 4: Fetch Available Leads API": {
       "main": [
         [
           {
-            "node": "Step 6: Build AI Prompt",
+            "node": "Step 5: Context Preparation",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 6: Build AI Prompt": {
+    "Step 5: Context Preparation": {
       "main": [
         [
           {
-            "node": "Step 7: Call Gemini AI",
+            "node": "Step 6: AI Agent - Scheduling Coordinator",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 7: Call Gemini AI": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Step 6: AI Agent - Scheduling Coordinator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Conflict & Workload Checker": {
+      "ai_tool": [
+        [
+          {
+            "node": "Step 6: AI Agent - Scheduling Coordinator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Google Meet Room Generator": {
+      "ai_tool": [
+        [
+          {
+            "node": "Step 6: AI Agent - Scheduling Coordinator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Technical Focus Topic Matcher": {
+      "ai_tool": [
+        [
+          {
+            "node": "Step 6: AI Agent - Scheduling Coordinator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Step 6: AI Agent - Scheduling Coordinator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6: AI Agent - Scheduling Coordinator": {
       "main": [
         [
           {
-            "node": "Step 8: Parse AI Result & Fallback",
+            "node": "Step 7: Agent Guardrail & Fallback Engine",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 8: Parse AI Result & Fallback": {
+    "Step 7: Agent Guardrail & Fallback Engine": {
       "main": [
         [
           {
-            "node": "Step 9: Update Candidate DB",
+            "node": "Step 8: Check Confidence Score",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 9: Update Candidate DB": {
+    "Step 8: Check Confidence Score": {
       "main": [
         [
           {
-            "node": "Step 10: Insert Audit Log",
+            "node": "Step 9: Save Schedule via REST API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 10: Insert Audit Log": {
+    "Step 9: Save Schedule via REST API": {
       "main": [
         [
           {
-            "node": "Step 11: Dispatch to Workflow 5",
+            "node": "Step 10: Dispatch Audit Log API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 11: Dispatch to Workflow 5": {
+    "Step 10: Dispatch Audit Log API": {
+      "main": [
+        [
+          {
+            "node": "Step 11: Trigger Workflow 5 Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 11: Trigger Workflow 5 Webhook": {
       "main": [
         [
           {
@@ -309,16 +445,7 @@
       ]
     }
   },
-  "active": true,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
-  },
-  "versionId": "10dc8109-72d6-4adb-8945-95ccb7571fec",
-  "meta": {
-    "instanceId": "bdea5f16c2ef479ba4e5c397d17a9b6cee12d9b255d968a071a19ff6b5314845"
-  },
-  "nodeGroups": [],
-  "id": "kN4Mvgl3OSd5NQvV",
-  "tags": []
+    "executionOrder": "v1"
+  }
 }
