@@ -1,3 +1,7 @@
+const API_BASE = (window.location.protocol === 'file:' || window.location.port === '5500') 
+  ? 'http://localhost:3000' 
+  : (window.location.origin || 'http://localhost:3000');
+
 const form = document.getElementById("jobForm");
 const btnSubmit = document.getElementById("btnSubmit");
 const resultBox = document.getElementById("resultBox");
@@ -41,7 +45,7 @@ form.addEventListener("submit", async (event) => {
             }
         } catch (errDirect) {
             // 2. Dự phòng gửi qua backend Node.js (Cổng 3000)
-            response = await fetch("http://localhost:3000/api/jobs", {
+            response = await fetch(`${API_BASE}/api/jobs`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(jobData)
@@ -76,7 +80,7 @@ form.addEventListener("submit", async (event) => {
 
             // Tự động lưu tin tuyển dụng & JD vào MySQL thông qua Tầng Backend Service
             try {
-                await fetch("http://localhost:3000/api/jobs/save", {
+                await fetch(`${API_BASE}/api/jobs/save`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -182,7 +186,7 @@ async function loadActiveJobs() {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const res = await fetch("http://localhost:3000/api/jobs", { signal: controller.signal });
+        const res = await fetch(`${API_BASE}/api/jobs`, { signal: controller.signal });
         clearTimeout(timeoutId);
 
         const data = await res.json();
@@ -301,7 +305,7 @@ async function toggleJobStatus(jobId, newStatus, selectEl) {
 
     // 4. Gửi API lên Backend Node.js để lưu vào MySQL
     try {
-        const res = await fetch("http://localhost:3000/api/jobs/update-status", {
+        const res = await fetch(`${API_BASE}/api/jobs/update-status`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: Number(jobId), status: newStatus })
@@ -374,7 +378,7 @@ async function deleteJob(jobId, jobPosition) {
     }
 
     try {
-        const res = await fetch(`http://localhost:3000/api/jobs/${jobId}`, {
+        const res = await fetch(`${API_BASE}/api/jobs/${jobId}`, {
             method: "DELETE"
         });
         const data = await res.json();

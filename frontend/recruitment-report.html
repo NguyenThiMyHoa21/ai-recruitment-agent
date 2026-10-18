@@ -1090,7 +1090,9 @@ function renderDefaultReport() {
 // =========================================================
 window.candidatesCache = [];
 window.currentFilter = 'ALL';
-const API_BASE = (window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
+const API_BASE = (window.location.protocol === 'file:' || window.location.port === '5500') 
+  ? 'http://localhost:3000' 
+  : (window.location.origin || 'http://localhost:3000');
 
 async function loadRecentCandidates() {
   const countBadge = document.getElementById("candidateCountBadge");
