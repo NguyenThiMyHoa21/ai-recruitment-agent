@@ -33,18 +33,23 @@ form.addEventListener("submit", async (event) => {
         let response;
         let n8nData = {};
 
-        try {
-            // 1. Gửi trực tiếp đến n8n Webhook (Cổng 5678)
-            response = await fetch("http://localhost:5678/webhook/job-posting", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(jobData)
-            });
-            if (response.ok) {
-                n8nData = await response.json();
-            }
-        } catch (errDirect) {
-            // 2. Dự phòng gửi qua backend Node.js (Cổng 3000)
+        // Nếu đang ở localhost thì thử n8n trước, nếu ở Cloud (Render HTTPS) thì gửi thẳng qua API_BASE
+        if (window.location.protocol === 'http:' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+            try {
+                response = await fetch("http://localhost:5678/webhook/job-posting", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    signal: AbortSignal.timeout(2000),
+                    body: JSON.stringify(jobData)
+                });
+                if (response.ok) {
+                    n8nData = await response.json();
+                }
+            } catch (errDirect) {}
+        }
+
+        // Nếu chưa có response thành công từ n8n thì gửi qua backend Node.js
+        if (!response || !response.ok) {
             response = await fetch(`${API_BASE}/api/jobs`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
