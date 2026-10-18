@@ -126,11 +126,8 @@ app.post("/api/jobs", async (req, res) => {
             job_description: jobDescription,
             status: "published"
         };
-        // Cập nhật ngay vào MOCK_JOBS để Cổng ứng viên và API /api/jobs nhận diện lập tức
-        const exists = MOCK_JOBS.find(j => j.id === newJobId || j.position === position);
-        if (!exists) {
-            MOCK_JOBS.unshift(newJob);
-        }
+        // Luôn cho phép tạo thêm tin tuyển dụng mới lên đầu danh sách
+        MOCK_JOBS.unshift(newJob);
 
         res.json({
             success: true,
@@ -142,7 +139,7 @@ app.post("/api/jobs", async (req, res) => {
 
     } catch (error) {
         console.error("Error in POST /api/jobs:", error);
-        const fallbackJobId = (MOCK_JOBS[0]?.id || 30) + 1;
+        const fallbackJobId = (MOCK_JOBS.reduce((m, j) => Math.max(m, Number(j.id) || 0), 0)) + 1;
         const newJob = {
             id: fallbackJobId,
             position: req.body.position || "Vị trí tuyển dụng mới",
@@ -169,7 +166,8 @@ app.post("/api/jobs/save", async (req, res) => {
     try {
         const { position, department, location, salary, requirements, job_description, status } = req.body;
         console.log(`[JobService] POST /api/jobs/save - Lưu vị trí: ${position}`);
-        let newJobId = (MOCK_JOBS[0]?.id || 30) + 1;
+        const maxId = MOCK_JOBS.reduce((m, j) => Math.max(m, Number(j.id) || 0), 0);
+        let newJobId = maxId + 1;
 
         try {
             const [insertResult] = await db.query(
@@ -193,18 +191,21 @@ app.post("/api/jobs/save", async (req, res) => {
             console.warn("[JobService] CSDL offline khi save job:", dbErr.message);
         }
 
-        const exists = MOCK_JOBS.find(j => j.id === newJobId || j.position === position);
-        if (!exists) {
-            MOCK_JOBS.unshift({
-                id: newJobId,
-                position: position || "Vị trí tuyển dụng",
-                department: department || "Phòng Nhân sự",
-                location: location || "Đà Nẵng",
-                salary: salary || "Thỏa thuận",
-                requirements: requirements || "",
-                job_description: job_description || "",
-                status: status || "published"
-            });
+        const savedJob = {
+            id: newJobId,
+            position: position || "Vị trí tuyển dụng",
+            department: department || "Phòng Nhân sự",
+            location: location || "Đà Nẵng",
+            salary: salary || "Thỏa thuận",
+            requirements: requirements || "",
+            job_description: job_description || "",
+            status: status || "published"
+        };
+        const existingIdx = MOCK_JOBS.findIndex(j => j.id === newJobId);
+        if (existingIdx !== -1) {
+            MOCK_JOBS[existingIdx] = savedJob;
+        } else {
+            MOCK_JOBS.unshift(savedJob);
         }
 
         res.json({
