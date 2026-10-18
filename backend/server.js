@@ -627,6 +627,18 @@ app.post("/api/schedule-interview", async (req, res) => {
     try {
         const smartTime = await getSmartStaggeredInterviewTime(Number(candidate_id));
 
+        let cand = null;
+        try {
+            const [cRows] = await db.query(
+                "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+                [Number(candidate_id)]
+            ).catch(() => [[]]);
+            if (cRows && cRows.length > 0) cand = cRows[0];
+        } catch (dbFindErr) {}
+        if (!cand) {
+            cand = MOCK_CANDIDATES.find(c => c.id === Number(candidate_id));
+        }
+
         let result;
         try {
             const response = await fetch(`${N8N_URL}/webhook/interview-schedule`, {
@@ -635,6 +647,10 @@ app.post("/api/schedule-interview", async (req, res) => {
                 signal: AbortSignal.timeout(15000),
                 body: JSON.stringify({
                     candidate_id: Number(candidate_id),
+                    candidate_name: cand ? (cand.full_name || cand.name) : "Ứng viên #" + candidate_id,
+                    candidate_email: cand ? cand.email : "",
+                    email: cand ? cand.email : "",
+                    position: cand ? (cand.job_title || cand.position || cand.applied_position) : "Chuyên viên",
                     requested_by: requested_by || "HR_Web_Admin",
                     interview_time: smartTime
                 })
