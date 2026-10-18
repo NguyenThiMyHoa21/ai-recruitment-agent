@@ -635,19 +635,44 @@
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
 
+        const candData = data.data || {};
+        const score = Number(candData.match_score || 0);
+        const isApproved = (candData.status === 'APPROVED' || candData.initial_status === 'Đạt sơ loại' || score >= 70);
+        const statusLabel = isApproved ? '🟢 Đạt sơ loại' : '🔴 Loại sơ loại';
+        const statusBg = isApproved ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200';
+
         Swal.fire({
-          icon: 'success',
-          title: '🎉 Nộp Hồ Sơ Thành Công!',
-          html: `Cảm ơn <b>${payload.candidate_name}</b> đã ứng tuyển vị trí <b>${payload.position}</b>.<br><br>Hồ sơ đã được chuyển đến <b>Tác tử Sàng lọc AI (Luồng 2)</b>. Trạng thái hồ sơ đã tự động đồng bộ sang <b>Luồng 4 (Xếp Lịch Phỏng Vấn)</b>!`,
+          icon: isApproved ? 'success' : 'info',
+          title: isApproved ? '🎉 Tiếp Nhận & Sàng Lọc Sơ Tuyển Đạt!' : '📋 Tiếp Nhận & Đánh Giá Hồ Sơ',
+          html: `
+            <div class="text-left space-y-3 text-sm">
+              <p>Cảm ơn <b>${payload.candidate_name}</b> đã ứng tuyển vị trí <b>${payload.position}</b>.</p>
+              <div class="p-3.5 rounded-xl border ${statusBg} text-xs space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold">Điểm Đánh Giá AI:</span>
+                  <span class="font-mono font-bold text-sm">${score} / 100</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="font-bold">Kết Quả Sơ Tuyển (Luồng 2):</span>
+                  <span class="font-bold">${statusLabel}</span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-500">
+                ${isApproved 
+                  ? 'Hồ sơ đã được nạp vào <b>Trang Sàng Lọc CV (Luồng 2)</b> với trạng thái <b>Đạt sơ loại</b>, sẵn sàng để quản trị viên kiểm tra hoặc chuyển tiếp sang Luồng 4 xếp lịch.' 
+                  : 'Hồ sơ đã được lưu trữ vào <b>Trang Sàng Lọc CV (Luồng 2)</b>. Tác tử Luồng 5 sẽ tự động gửi thư cảm ơn phản hồi.'}
+              </p>
+            </div>
+          `,
           showCancelButton: true,
           confirmButtonColor: '#4f46e5',
           cancelButtonColor: '#64748b',
-          confirmButtonText: '<i class="fa-solid fa-calendar-check mr-1.5"></i> Chuyển Sang Lịch Phỏng Vấn (Luồng 4)',
-          cancelButtonText: 'Ở lại trang này',
+          confirmButtonText: '<i class="fa-solid fa-users-viewfinder mr-1.5"></i> Chuyển Sang Trang Sàng Lọc CV (Luồng 2)',
+          cancelButtonText: 'Ở lại Cổng ứng viên',
           customClass: { popup: 'rounded-2xl' }
         }).then((result) => {
           if (result.isConfirmed) {
-            window.location.href = `interview-management.html?filter=CHO_XEP_LICH&search=${encodeURIComponent(payload.candidate_name)}`;
+            window.location.href = `cv-screening.html?search=${encodeURIComponent(payload.candidate_name)}`;
           }
         });
 

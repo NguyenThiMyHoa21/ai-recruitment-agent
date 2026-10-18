@@ -429,7 +429,13 @@
             } catch(e) {}
           }
 
-          renderCandidatesTable(allCandidatesCache);
+          const searchInput = document.getElementById('candSearchInput');
+          const currentQuery = (searchInput ? searchInput.value : '').trim();
+          if (currentQuery) {
+            filterCandidatesTable();
+          } else {
+            renderCandidatesTable(allCandidatesCache);
+          }
           updateKPIs(allCandidatesCache);
           
           const now = new Date();
@@ -641,14 +647,17 @@
     }
 
     function filterCandidatesTable() {
-      const query = (document.getElementById('candSearchInput').value || '').toLowerCase();
+      const query = (document.getElementById('candSearchInput')?.value || '').toLowerCase().trim();
       const filtered = allCandidatesCache.filter(c => {
         const name = (c.full_name || c.name || '').toLowerCase();
         const email = (c.email || '').toLowerCase();
         const pos = (c.position || c.applied_position || '').toLowerCase();
-        return name.includes(query) || email.includes(query) || pos.includes(query);
+        const id = String(c.id || '');
+        return name.includes(query) || email.includes(query) || pos.includes(query) || id === query;
       });
       renderCandidatesTable(filtered);
+      const countEl = document.getElementById('candCount');
+      if (countEl) countEl.innerText = query ? `${filtered.length}/${allCandidatesCache.length}` : allCandidatesCache.length;
     }
 
     function openCandDetailModal(candId) {
@@ -804,6 +813,16 @@
         });
       }
     };
+
+    // Tự động kiểm tra URL query (?search=...) khi chuyển từ Cổng Ứng Viên hoặc trang khác sang
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      const searchInput = document.getElementById('candSearchInput');
+      if (searchInput) {
+        searchInput.value = searchParam;
+      }
+    }
 
     // Tự động tải & cập nhật danh sách ứng viên liên tục
     loadIncomingCandidates();

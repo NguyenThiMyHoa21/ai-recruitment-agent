@@ -3,7 +3,8 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 
 const db = mysql.createPool({
-    socketPath: "/tmp/mysql.sock",
+    host: "127.0.0.1",
+    port: 3306,
     user: "recruitment",
     password: "recruitment123",
     database: "recruitment_db",
@@ -379,7 +380,7 @@ app.post("/api/screen-cv", async (req, res) => {
             const response = await fetch("http://localhost:5678/webhook/cv-screening-clean", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                signal: AbortSignal.timeout(4000),
+                signal: AbortSignal.timeout(2500),
                 body: JSON.stringify(payload)
             });
 
@@ -392,22 +393,31 @@ app.post("/api/screen-cv", async (req, res) => {
         } catch (n8nErr) {
             console.warn("[ScreenCV] Webhook n8n không phản hồi hoặc timeout, kích hoạt Tác tử Sàng lọc CV Dự phòng:", n8nErr.message);
             const cvLower = ((payload.cv_text || "") + " " + (payload.position || "")).toLowerCase();
-            let score = 76;
+            let score = 45;
             let strengths = [];
-            if (cvLower.includes("javascript") || cvLower.includes("node") || cvLower.includes("react") || cvLower.includes("python") || cvLower.includes("sql") || cvLower.includes("kinh nghiệm") || cvLower.includes("developer") || cvLower.includes("kỹ sư")) {
+            let weaknesses = [];
+
+            if (cvLower.includes("javascript") || cvLower.includes("node") || cvLower.includes("react") || cvLower.includes("python") || cvLower.includes("sql") || cvLower.includes("java") || cvLower.includes("docker") || cvLower.includes("c++") || cvLower.includes("aws") || cvLower.includes("backend") || cvLower.includes("frontend")) {
+                score += 25;
+                strengths.push("Đáp ứng các kỹ năng công nghệ chuyên môn cốt lõi");
+            }
+            if (cvLower.includes("năm kinh nghiệm") || cvLower.includes("senior") || cvLower.includes("kỹ sư") || cvLower.includes("dự án") || cvLower.includes("quản lý") || cvLower.includes("chuyên viên")) {
+                score += 15;
+                strengths.push("Có kinh nghiệm thực tế phù hợp với yêu cầu tuyển dụng");
+            }
+            if ((payload.cv_text || "").length > 100) {
                 score += 10;
-                strengths.push("Kỹ năng chuyên môn và nền tảng kỹ thuật tốt");
+                strengths.push("Hồ sơ ứng tuyển chi tiết và cấu trúc rõ ràng");
             }
-            if (cvLower.length > 200) {
-                score += 5;
-                strengths.push("Hồ sơ ứng tuyển chi tiết, mục tiêu nghề nghiệp rõ ràng");
+            if (score < 70) {
+                weaknesses.push("Hồ sơ còn sơ sài, chưa đáp ứng đủ số năm kinh nghiệm và kỹ năng trọng yếu của vị trí");
             }
-            if (score > 95) score = 95;
+            if (score > 98) score = 98;
             const isPass = score >= 70;
             resultJson = {
                 status: isPass ? "APPROVED" : "REJECTED",
                 match_score: score,
-                ai_evaluation: `[AI Sàng Lọc Sơ Loại] Đánh giá: ${score}/100 điểm. ${isPass ? 'Đạt tiêu chuẩn sơ tuyển chuyên môn.' : 'Hồ sơ chưa đạt tiêu chuẩn kinh nghiệm tối thiểu.'} ${strengths.join('. ')}. Đề xuất: ${isPass ? 'Chuyển sang giai đoạn Xếp lịch phỏng vấn.' : 'Lưu trữ hồ sơ dự phòng.'}`
+                ai_evaluation: `[AI Sàng Lọc Sơ Loại] Đánh giá: ${score}/100 điểm. ${isPass ? 'Đạt tiêu chuẩn sơ tuyển chuyên môn.' : 'Hồ sơ chưa đạt tiêu chuẩn kinh nghiệm tối thiểu.'} ${strengths.length > 0 ? strengths.join('. ') + '.' : ''} ${weaknesses.length > 0 ? weaknesses.join('. ') + '.' : ''} Đề xuất: ${isPass ? 'Đạt sơ loại, sẵn sàng chuyển sang xếp lịch phỏng vấn.' : 'Loại sơ loại, kích hoạt gửi thư từ chối tự động.'}`
             };
         }
 
@@ -448,18 +458,11 @@ app.post("/api/screen-cv", async (req, res) => {
             console.error("[CandidateService] Lỗi khi lưu ứng viên vào MySQL:", dbSaveErr);
         }
 
-        // TỰ ĐỘNG LIÊN HOÀN DỰA TRÊN KẾT QUẢ AI CHẤM ĐIỂM:
+        // XỬ LÝ THEO KẾT QUẢ AI SÀNG LỌC SƠ LOẠI (LUỒNG 2):
         if (isApproved) {
-            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẬU (${matchScore}đ) ➜ Tự động xếp lịch AI (Luồng 4) & gửi thư mời Gmail (Luồng 5)...`);
-            executeAutoSchedulePass({
-                candidate_id: newCandidateId,
-                candidate_name: candidateName,
-                candidate_email: candidateEmail,
-                position: appliedPosition,
-                job_id: jobId
-            }).catch(e => console.warn("Lỗi auto schedule pass:", e.message));
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT SƠ LOẠI (${matchScore}đ) ➜ Lưu hồ sơ vào Luồng 2 (cv-screening.html), sẵn sàng chuyển tiếp sang Luồng 4.`);
         } else {
-            console.log(`[Auto-Screening] Ứng viên ${candidateName} BỊ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} BỊ LOẠI SƠ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
             executeAutoNotifyReject({
                 candidate_id: newCandidateId,
                 candidate_name: candidateName,
@@ -471,13 +474,17 @@ app.post("/api/screen-cv", async (req, res) => {
 
         res.json({
             success: true,
-            message: "Hồ sơ ứng tuyển đã được tiếp nhận, lưu trữ an toàn và xử lý tự động liên hoàn!",
+            message: isApproved 
+                ? "Hồ sơ ứng tuyển đã được tiếp nhận và thẩm định Đạt sơ loại (Luồng 2)!" 
+                : "Hồ sơ ứng tuyển đã được tiếp nhận và xử lý sàng lọc (Luồng 2)!",
             candidateId: newCandidateId,
             data: {
                 ...resultJson,
                 candidate_id: newCandidateId,
                 status: approvalStatus,
-                match_score: matchScore
+                initial_status: initialStatus,
+                match_score: matchScore,
+                is_approved: isApproved
             }
         });
     } catch (error) {
@@ -541,12 +548,14 @@ app.post("/api/seed-candidates", async (req, res) => {
         const sqlContent = fs.readFileSync(sqlPath, "utf-8");
         
         // Tạo kết nối tạm hỗ trợ multipleStatements
-        const socketExists = fs.existsSync("/tmp/mysql.sock");
-        const seedConn = await mysql.createConnection(
-            socketExists
-                ? { socketPath: "/tmp/mysql.sock", user: "recruitment", password: "recruitment123", database: "recruitment_db", multipleStatements: true }
-                : { host: "127.0.0.1", port: 3306, user: "recruitment", password: "recruitment123", database: "recruitment_db", multipleStatements: true }
-        );
+        const seedConn = await mysql.createConnection({
+            host: "127.0.0.1",
+            port: 3306,
+            user: "recruitment",
+            password: "recruitment123",
+            database: "recruitment_db",
+            multipleStatements: true
+        });
 
         await seedConn.query(sqlContent);
         await seedConn.end();
