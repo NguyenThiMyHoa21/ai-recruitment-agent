@@ -563,6 +563,16 @@
               </select>
             </td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
+              ${isApproved ? `
+                <a href="interview-management.html?filter=CHO_XEP_LICH&search=${encodeURIComponent(candName)}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-2xs mr-1 transition no-underline" title="Chuyển sang Luồng 4 để xếp lịch phỏng vấn">
+                  <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Xếp Lịch (L4)
+                </a>
+              ` : ''}
+              ${isInterview ? `
+                <a href="interview-management.html?filter=DANG_PHONG_VAN&search=${encodeURIComponent(candName)}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-sky-500 hover:bg-sky-600 text-white shadow-2xs mr-1 transition no-underline" title="Xem lịch phỏng vấn bên Luồng 4">
+                  <i class="fa-solid fa-calendar-check text-[10px]"></i> Lịch PV
+                </a>
+              ` : ''}
               ${isRejected ? `
                 <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 shadow-2xs mr-1 transition" onclick="sendRejectEmail(${c.id}, '${candName.replace(/'/g, "\\'")}')" title="Kích hoạt Luồng 5 n8n gửi thư từ chối">
                   <i class="fa-solid fa-paper-plane text-[10px]"></i> Mail Loại

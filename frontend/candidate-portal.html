@@ -609,13 +609,27 @@
       };
 
       try {
-        const res = await fetch(`${API_BASE}/api/screen-cv`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        let res;
+        try {
+          res = await fetch(`${API_BASE}/api/screen-cv`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } catch (networkErr) {
+          // Thử tiếp địa chỉ dự phòng giữa 127.0.0.1 và localhost
+          const altBase = API_BASE.includes('127.0.0.1') ? 'http://localhost:3000' : 'http://127.0.0.1:3000';
+          res = await fetch(`${altBase}/api/screen-cv`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
 
         const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || data.error || 'Máy chủ xử lý hồ sơ gặp sự cố.');
+        }
         
         const modalEl = document.getElementById('applyModal');
         const modal = bootstrap.Modal.getInstance(modalEl);
@@ -624,14 +638,26 @@
         Swal.fire({
           icon: 'success',
           title: '🎉 Nộp Hồ Sơ Thành Công!',
-          html: `Cảm ơn <b>${payload.candidate_name}</b> đã ứng tuyển vị trí <b>${payload.position}</b>.<br><br>Hồ sơ đã được chuyển đến Tác tử Sàng lọc AI. Kết quả sẽ được gửi tự động về hòm thư: <b>${payload.candidate_email}</b>.`,
-          confirmButtonColor: '#4f46e5'
+          html: `Cảm ơn <b>${payload.candidate_name}</b> đã ứng tuyển vị trí <b>${payload.position}</b>.<br><br>Hồ sơ đã được chuyển đến <b>Tác tử Sàng lọc AI (Luồng 2)</b>. Trạng thái hồ sơ đã tự động đồng bộ sang <b>Luồng 4 (Xếp Lịch Phỏng Vấn)</b>!`,
+          showCancelButton: true,
+          confirmButtonColor: '#4f46e5',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: '<i class="fa-solid fa-calendar-check mr-1.5"></i> Chuyển Sang Lịch Phỏng Vấn (Luồng 4)',
+          cancelButtonText: 'Ở lại trang này',
+          customClass: { popup: 'rounded-2xl' }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = `interview-management.html?filter=CHO_XEP_LICH&search=${encodeURIComponent(payload.candidate_name)}`;
+          }
         });
 
         document.getElementById('candidateApplyForm').reset();
         removeUploadedCvFile();
       } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+        const errorMsg = (err.message.includes('fetch') || err.message.includes('NetworkError'))
+          ? 'Không thể kết nối đến máy chủ Backend (Port 3000). Vui lòng đảm bảo backend đang chạy: node backend/server.js'
+          : err.message;
+        Swal.fire({ icon: 'error', title: 'Lỗi Nộp Hồ Sơ', text: errorMsg });
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-1"></i> Gửi Hồ Sơ Ứng Tuyển`;

@@ -927,10 +927,22 @@
               }
             }
           } catch(e) {}
+        updateCounts();
+
+        // Tự động kích hoạt bộ lọc và tìm kiếm từ URL query (khi chuyển từ Luồng 2 hoặc Cổng Ứng Viên sang)
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterParam = urlParams.get('filter');
+        const searchParam = urlParams.get('search');
+        if (filterParam && !window._hasAppliedUrlFilter) {
+          window._hasAppliedUrlFilter = true;
+          if (searchParam && document.getElementById('interviewSearchInput')) {
+            document.getElementById('interviewSearchInput').value = searchParam;
+          }
+          filterStatus(filterParam);
+        } else {
+          applyFilter();
         }
 
-        updateCounts();
-        applyFilter();
         if (userClick) {
           showToast('Đã làm mới dữ liệu ứng viên mới nhất từ hệ thống!', true);
         }
