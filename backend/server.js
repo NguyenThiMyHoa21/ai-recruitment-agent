@@ -359,7 +359,7 @@ app.post("/api/screen-cv", async (req, res) => {
         const aiEval = resultJson.ai_evaluation || resultJson.evaluation || (resultJson[0] && resultJson[0].ai_evaluation) || "Hồ sơ ứng viên đã được AI phân tích và đánh giá tự động.";
         const isApproved = (candStatus === 'APPROVED' || candStatus === 'Đạt' || matchScore >= 70);
         const approvalStatus = isApproved ? 'APPROVED' : 'REJECTED';
-        const initialStatus = isApproved ? 'Phỏng vấn' : 'Loại';
+        const initialStatus = isApproved ? 'Đạt' : 'Loại';
         const jobId = Number(payload.job_id) || Number(resultJson.job_id) || 1;
 
         // Lưu hồ sơ ứng viên vào MySQL qua Tầng Dịch Vụ Backend (Đảm bảo Clean 3-Tier Architecture)
@@ -382,23 +382,16 @@ app.post("/api/screen-cv", async (req, res) => {
                 ]
             );
             newCandidateId = insertCandResult.insertId;
-            console.log(`[CandidateService] Đã lưu ứng viên mới #${newCandidateId} (${candidateName}) vào MySQL thành công!`);
+            console.log(`[CandidateService] Đã lưu ứng viên mới #${newCandidateId} (${candidateName}) vào MySQL thành công! Trạng thái: ${initialStatus}`);
         } catch (dbSaveErr) {
             console.error("[CandidateService] Lỗi khi lưu ứng viên vào MySQL:", dbSaveErr);
         }
 
-        // TỰ ĐỘNG LIÊN HOÀN DỰA TRÊN KẾT QUẢ AI CHẤM ĐIỂM:
+        // Xử lý vòng Sơ loại CV (Luồng 2):
         if (isApproved) {
-            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẬU (${matchScore}đ) ➜ Tự động xếp lịch AI (Luồng 4) & gửi thư mời Gmail (Luồng 5)...`);
-            executeAutoSchedulePass({
-                candidate_id: newCandidateId,
-                candidate_name: candidateName,
-                candidate_email: candidateEmail,
-                position: appliedPosition,
-                job_id: jobId
-            }).catch(e => console.warn("Lỗi auto schedule pass:", e.message));
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT VÒNG SƠ LOẠI (${matchScore}đ) ➜ Lưu trạng thái 'Đạt' (Chờ HR xếp lịch phỏng vấn ở Luồng 4).`);
         } else {
-            console.log(`[Auto-Screening] Ứng viên ${candidateName} BỊ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} CHƯA PHÙ HỢP (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
             executeAutoNotifyReject({
                 candidate_id: newCandidateId,
                 candidate_name: candidateName,

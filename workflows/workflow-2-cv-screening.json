@@ -238,7 +238,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO candidates (job_id, name, full_name, applied_position, email, cv_content, match_score, approval_status, status, ai_evaluation)\nVALUES (\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.position || 'Chuyên viên Marketing') }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ $json.status === 'APPROVED' ? \"'Phỏng vấn'\" : \"'Loại'\" }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);",
+        "query": "INSERT INTO candidates (job_id, name, full_name, applied_position, email, cv_content, match_score, approval_status, status, ai_evaluation)\nVALUES (\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.position || 'Chuyên viên Marketing') }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ $json.status === 'APPROVED' ? \"'Đạt'\" : \"'Loại'\" }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);",
         "options": {}
       },
       "id": "wf2-node-9-api-save",
