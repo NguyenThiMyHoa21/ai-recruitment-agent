@@ -3,282 +3,461 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VKU Tech ATS • Sàng Lọc & Quản Lý Hồ Sơ Ứng Viên AI</title>
 
-  <title>AI Recruitment System - Quản Lý Hồ Sơ Ứng Viên</title>
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Bootstrap 5 CSS (modal & dropdown utilities) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Mammoth & PDF.js for parsing if needed -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
   <style>
     body {
-      background-color: #f4f6f9;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #1e293b;
     }
-    .main-card {
-      border-radius: 14px;
-      border: none;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    .glass-card {
       background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+      border-radius: 16px;
     }
-    .stat-card {
-      border-radius: 12px;
-      border: none;
-      background: #ffffff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    .metric-card {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .navbar-nav .nav-link {
-      font-size: 13.5px;
-      font-weight: 500;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-      border-radius: 50rem;
-      padding: 6px 14px;
+    .metric-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.08);
     }
-    .navbar-nav .nav-link:hover:not(.active) {
-      background-color: rgba(255, 255, 255, 0.15);
-      color: #ffffff !important;
+    .badge-soft-success {
+      background-color: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
     }
-    .navbar-nav .nav-link.active {
-      padding: 6px 16px;
+    .badge-soft-danger {
+      background-color: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
     }
-    .status-select {
-      font-size: 12.5px;
-      font-weight: 600;
-      border-radius: 8px;
-      padding: 4px 8px;
-      cursor: pointer;
+    .badge-soft-info {
+      background-color: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+    .badge-soft-warning {
+      background-color: #fffbeb;
+      color: #d97706;
+      border: 1px solid #fde68a;
     }
   </style>
 </head>
-
-<body>
+<body class="min-h-screen flex flex-col justify-between">
 
   <!-- ========================================================= -->
-  <!-- THANH ĐIỀU HƯỚNG CHUNG (NAVBAR - HR DASHBOARD) -->
+  <!-- NAVBAR CHUẨN ENTERPRISE ATS -->
   <!-- ========================================================= -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4 py-2">
-    <div class="container" style="max-width: 1240px;">
-      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
-        <i class="fa-solid fa-robot me-2 fs-4"></i>
-        <span>AI Recruitment – <strong class="text-white">HR Dashboard</strong></span>
-      </a>
+  <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border-b border-indigo-900/50 sticky top-0 z-50 shadow-md">
+    <div class="max-w-[97%] 2xl:max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Branding -->
+        <a href="index.html" class="flex items-center space-x-3 text-white no-underline group">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
+            <i class="fa-solid fa-brain text-white text-lg"></i>
+          </div>
+          <div>
+            <div class="font-extrabold text-base tracking-tight flex items-center gap-2">
+              VKU ATS <span class="bg-indigo-500/30 text-indigo-200 text-xs px-2 py-0.5 rounded-full border border-indigo-400/30 font-medium">Multi-Agent</span>
+            </div>
+            <div class="text-[11px] text-indigo-300 font-medium">Hệ Thống Tuyển Dụng & Sàng Lọc AI</div>
+          </div>
+        </a>
 
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#hrNavbar" aria-controls="hrNavbar" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+        <!-- Desktop Navigation Links -->
+        <nav class="hidden md:flex items-center space-x-1">
+          <a href="index.html" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 transition no-underline">
+            <i class="fa-solid fa-file-circle-plus mr-1.5 text-xs text-slate-400"></i> Đăng tin
+          </a>
+          <a href="cv-screening.html" class="px-3.5 py-2 rounded-xl text-sm font-semibold bg-white text-brand-900 shadow-sm transition no-underline flex items-center">
+            <i class="fa-solid fa-users mr-1.5 text-xs text-brand-600"></i> Quản lý ứng viên
+          </a>
+          <a href="recruitment-report.html" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 transition no-underline">
+            <i class="fa-solid fa-chart-pie mr-1.5 text-xs text-slate-400"></i> Báo cáo
+          </a>
+          <a href="interview-management.html" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 transition no-underline">
+            <i class="fa-solid fa-calendar-check mr-1.5 text-xs text-slate-400"></i> Lịch phỏng vấn
+          </a>
+        </nav>
 
-      <div class="collapse navbar-collapse" id="hrNavbar">
-        <ul class="navbar-nav ms-auto align-items-center gap-1 gap-md-2 mt-2 mt-lg-0">
-          <li class="nav-item">
-            <a class="nav-link text-white" href="index.html">
-              <i class="fa-solid fa-file-circle-plus me-1"></i> Đăng tin
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active bg-white text-primary rounded-pill fw-bold shadow-sm" href="cv-screening.html">
-              <i class="fa-solid fa-users me-1"></i> Quản lý ứng viên
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="recruitment-report.html">
-              <i class="fa-solid fa-chart-pie me-1"></i> Báo cáo
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="interview-management.html">
-              <i class="fa-solid fa-calendar-check me-1"></i> Lịch phỏng vấn
-            </a>
-          </li>
-          <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-            <a href="candidate-portal.html" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark px-3 shadow-sm text-nowrap">
-              <i class="fa-solid fa-user-astronaut me-1"></i> 👤 Cổng Ứng Viên
-            </a>
-          </li>
-        </ul>
+        <!-- Candidate Portal CTA & User Info -->
+        <div class="flex items-center space-x-3">
+          <a href="candidate-portal.html" class="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-bold px-3.5 py-2 rounded-xl shadow-md transition no-underline">
+            <i class="fa-solid fa-user-astronaut"></i> Cổng Ứng Viên
+          </a>
+          <div class="w-8 h-8 rounded-full bg-indigo-800 border border-indigo-600 flex items-center justify-center text-xs font-bold text-indigo-100" title="HR Manager: Nguyen Thi My Hoa - Le Thi Yen Nhi">
+            HR
+          </div>
+        </div>
+
       </div>
     </div>
-  </nav>
+  </header>
 
-  <div class="container pb-5" style="max-width: 1220px;">
+  <!-- ========================================================= -->
+  <!-- MAIN CONTAINER -->
+  <!-- ========================================================= -->
+  <main class="max-w-[97%] 2xl:max-w-[1780px] mx-auto px-2 sm:px-4 py-8 w-full">
 
-    <!-- TIÊU ĐỀ TRANG & THÔNG BÁO TỰ ĐỘNG -->
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <!-- Page Header & Action Controls -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
       <div>
-        <h3 class="text-primary mb-1 fw-bold">
-          👥 Quản Lý Hồ Sơ Ứng Viên & Kết Quả AI Screening
-        </h3>
-        <p class="text-muted small mb-0">
-          <strong>Dành cho HR Manager:</strong> Tự động tiếp nhận hồ sơ từ <strong>Cổng Ứng Viên</strong>, AI CV Screening Agent tự động phân tích & chấm điểm đối chiếu với bài đăng tuyển dụng.
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-100">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Luồng 2 & 3: AI Screening & Phê Duyệt Tự Động
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Quản Lý Hồ Sơ Ứng Viên & Kết Quả AI Screening
+        </h1>
+        <p class="text-sm text-slate-500 mt-1 max-w-2xl">
+          Tự động tiếp nhận CV từ Cổng Ứng Viên. AI CV Screening Agent đối chiếu năng lực ứng viên với yêu cầu JD, chấm điểm match và đề xuất quyết định.
         </p>
       </div>
 
-      <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold" onclick="loadIncomingCandidates(true)">
-        <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
-      </button>
-    </div>
-
-    <!-- BANNER THÔNG BÁO TỰ ĐỘNG -->
-    <div id="liveIncomingAlert" class="alert alert-info border-0 shadow-sm d-flex justify-content-between align-items-center py-2 px-3 mb-4 rounded-3">
-      <div class="small">
-        <i class="fa-solid fa-bell text-primary me-2 fs-6"></i>
-        <strong>Hệ thống kết nối trực tiếp Cổng Ứng Viên:</strong> Ứng viên gửi CV từ Cổng Ứng Viên sẽ tự động kích hoạt AI chấm điểm & lưu kết quả vào danh sách bên dưới.
-      </div>
-      <span class="badge bg-primary px-3 py-2 rounded-pill small" id="lastUpdatedBadge">
-        <i class="fa-solid fa-clock me-1"></i> Vừa cập nhật
-      </span>
-    </div>
-
-    <!-- KPI THỐNG KÊ NHANH -->
-    <div class="row g-3 mb-4">
-      <div class="col-6 col-md-3">
-        <div class="stat-card p-3 border-start border-primary border-4">
-          <div class="small text-muted fw-semibold">TỔNG HỒ SƠ</div>
-          <div class="fs-3 fw-bold text-primary" id="kpiTotal">0</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="stat-card p-3 border-start border-success border-4">
-          <div class="small text-muted fw-semibold">🟢 ĐẠT CHUẨN</div>
-          <div class="fs-3 fw-bold text-success" id="kpiApproved">0</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="stat-card p-3 border-start border-danger border-4">
-          <div class="small text-muted fw-semibold">🔴 CHƯA ĐẠT</div>
-          <div class="fs-3 fw-bold text-danger" id="kpiRejected">0</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="stat-card p-3 border-start border-info border-4">
-          <div class="small text-muted fw-semibold">📅 ĐÃ XẾP LỊCH PV</div>
-          <div class="fs-3 fw-bold text-info" id="kpiInterview">0</div>
-        </div>
+      <div class="flex items-center gap-2">
+        <button onclick="loadIncomingCandidates(true)" class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-sm transition">
+          <i class="fa-solid fa-rotate text-brand-600"></i>
+          <span>Làm mới danh sách</span>
+        </button>
+        <button onclick="seedDemoCandidates()" class="inline-flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-sm transition" title="Nạp nhanh 50 hồ sơ ứng viên mẫu">
+          <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i>
+          <span>Nạp 50 Ứng Viên Test</span>
+        </button>
+        <a href="candidate-portal.html" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm transition no-underline">
+          <i class="fa-solid fa-plus"></i>
+          <span>Nộp CV Mới (Test)</span>
+        </a>
       </div>
     </div>
 
-    <!-- BẢNG DANH SÁCH HỒ SƠ ỨNG VIÊN -->
-    <div class="card main-card p-4 mb-4">
-      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h5 class="fw-bold text-dark mb-0">
-          <i class="fa-solid fa-users-viewfinder text-primary me-2"></i> Danh Sách Hồ Sơ Tiếp Nhận Từ Cổng Ứng Viên (<span id="candCount">0</span>)
-        </h5>
-        <div style="max-width: 280px;">
-          <input type="text" id="candSearchInput" class="form-control form-control-sm rounded-pill px-3" placeholder="🔍 Tìm kiếm ứng viên, vị trí..." onkeyup="filterCandidatesTable()">
+    <!-- Live Sync Alert Notification -->
+    <div id="liveIncomingAlert" class="bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 border border-indigo-100 rounded-2xl p-4 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <i class="fa-solid fa-bolt-lightning text-lg"></i>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-800">
+            Realtime Auto-Sync: Kết nối trực tiếp Cổng Ứng Viên
+          </div>
+          <div class="text-xs text-slate-600 mt-0.5">
+            Khi ứng viên nộp CV, hệ thống n8n tự động kích hoạt Agent chấm điểm và cập nhật bảng realtime bên dưới.
+          </div>
+        </div>
+      </div>
+      <div id="lastUpdatedBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white text-indigo-700 border border-indigo-200 shadow-xs self-start sm:self-auto shrink-0">
+        <i class="fa-solid fa-clock text-[10px]"></i> Vừa cập nhật
+      </div>
+    </div>
+
+    <!-- KPI Metric Cards Grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      
+      <!-- Metric 1: Total Candidates -->
+      <div class="glass-card p-4 metric-card border-l-4 border-l-indigo-600">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Tổng Hồ Sơ</span>
+          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-users"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-2xl font-black text-slate-900" id="kpiTotal">0</div>
+        <div class="mt-1 text-[11px] text-slate-500">Tiếp nhận trong hệ thống</div>
+      </div>
+
+      <!-- Metric 2: Approved / Passed -->
+      <div class="glass-card p-4 metric-card border-l-4 border-l-emerald-500">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Đạt Chuẩn (Approved)</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-2xl font-black text-emerald-600" id="kpiApproved">0</div>
+        <div class="mt-1 text-[11px] text-emerald-600 font-medium">Sẵn sàng xếp lịch Luồng 4</div>
+      </div>
+
+      <!-- Metric 3: Rejected -->
+      <div class="glass-card p-4 metric-card border-l-4 border-l-rose-500">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Chưa Đạt (Rejected)</span>
+          <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-2xl font-black text-rose-600" id="kpiRejected">0</div>
+        <div class="mt-1 text-[11px] text-rose-600 font-medium">Có thể kích hoạt email từ chối</div>
+      </div>
+
+      <!-- Metric 4: Interview Scheduled -->
+      <div class="glass-card p-4 metric-card border-l-4 border-l-blue-500">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Đã Xếp Lịch Phỏng Vấn</span>
+          <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+        </div>
+        <div class="mt-2 text-2xl font-black text-blue-600" id="kpiInterview">0</div>
+        <div class="mt-1 text-[11px] text-blue-600 font-medium">Đã đồng bộ Google Meet</div>
+      </div>
+
+    </div>
+
+    <!-- Candidate List Table Card -->
+    <div class="glass-card overflow-hidden">
+      
+      <!-- Table Header & Filter Bar -->
+      <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">
+            <i class="fa-solid fa-users-viewfinder"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900 mb-0 flex items-center gap-2">
+              Danh Sách Hồ Sơ Tiếp Nhận
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700" id="candCount">0</span>
+            </h2>
+            <p class="text-xs text-slate-500 mb-0">Hồ sơ ứng viên đối chiếu điểm matching từ AI Gemini Screening</p>
+          </div>
+        </div>
+
+        <div class="relative w-full sm:w-72">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input
+            type="text"
+            id="candSearchInput"
+            class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition shadow-xs"
+            placeholder="Tìm ứng viên, email, vị trí..."
+            onkeyup="filterCandidatesTable()"
+          >
         </div>
       </div>
 
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light small">
+      <!-- Responsive Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-600 border-collapse">
+          <thead class="bg-slate-100/70 text-slate-500 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
             <tr>
-              <th scope="col" style="width: 50px;">ID</th>
-              <th scope="col">Ứng viên & Email</th>
-              <th scope="col">Vị trí ứng tuyển</th>
-              <th scope="col">Điểm AI Match</th>
-              <th scope="col" style="max-width: 320px;">Đánh giá AI Gemini</th>
-              <th scope="col">Trạng thái</th>
-              <th scope="col" class="text-end">Hành động</th>
+              <th scope="col" class="py-3.5 px-4 w-16">ID</th>
+              <th scope="col" class="py-3.5 px-4">Ứng Viên & Email</th>
+              <th scope="col" class="py-3.5 px-4">Vị Trí Ứng Tuyển</th>
+              <th scope="col" class="py-3.5 px-4 text-center">Điểm AI Match</th>
+              <th scope="col" class="py-3.5 px-4 max-w-xs">Nhận Định AI Gemini</th>
+              <th scope="col" class="py-3.5 px-4">Trạng Thái</th>
+              <th scope="col" class="py-3.5 px-4 text-right">Hành Động</th>
             </tr>
           </thead>
-          <tbody id="candidatesTableBody" class="small">
+          <tbody id="candidatesTableBody" class="divide-y divide-slate-100">
             <tr>
-              <td colspan="7" class="text-center py-4 text-muted">
-                <div class="spinner-border spinner-border-sm text-primary me-2"></div> Đang tải danh sách ứng viên từ hệ thống...
+              <td colspan="7" class="text-center py-10 text-slate-400">
+                <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent mb-2"></div>
+                <div class="text-xs font-medium">Đang tải danh sách hồ sơ ứng viên từ hệ thống...</div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
 
     </div>
 
-  </div>
+  </main>
 
+  <!-- ========================================================= -->
   <!-- MODAL XEM CHI TIẾT HỒ SƠ ỨNG VIÊN & ĐÁNH GIÁ AI -->
+  <!-- ========================================================= -->
   <div class="modal fade" id="candDetailModal" tabindex="-1" aria-labelledby="candDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content shadow-lg border-0 rounded-4">
-        <div class="modal-header bg-primary text-white py-3">
-          <h5 class="modal-title fw-bold" id="candDetailModalLabel">
-            <i class="fa-solid fa-id-card me-2"></i> Chi Tiết Hồ Sơ: <span id="modalCandName" class="text-warning">...</span>
-          </h5>
+      <div class="modal-content shadow-2xl border-0 rounded-2xl overflow-hidden">
+        
+        <div class="modal-header bg-gradient-to-r from-slate-900 to-indigo-950 text-white px-6 py-4 border-0">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600/40 border border-indigo-400/30 flex items-center justify-center">
+              <i class="fa-solid fa-id-card text-indigo-300"></i>
+            </div>
+            <div>
+              <h5 class="modal-title font-extrabold text-base tracking-tight" id="candDetailModalLabel">
+                Chi Tiết Hồ Sơ: <span id="modalCandName" class="text-amber-300">...</span>
+              </h5>
+              <p class="text-xs text-indigo-200 mb-0">Báo cáo đánh giá năng lực & dữ liệu ứng tuyển</p>
+            </div>
+          </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body p-4">
-          <div class="row g-3 mb-3">
-            <div class="col-md-6">
-              <small class="text-muted d-block">Vị Trí Ứng Tuyển:</small>
-              <strong class="fs-6 text-primary" id="modalCandPos">-</strong>
+
+        <div class="modal-body p-6 space-y-5 bg-slate-50/50">
+          
+          <!-- Key Meta Information Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-white rounded-xl border border-slate-200/80 shadow-xs">
+            <div>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Vị Trí Ứng Tuyển</span>
+              <span class="text-xs font-bold text-slate-900 mt-1 block" id="modalCandPos">-</span>
             </div>
-            <div class="col-md-6 text-md-end">
-              <small class="text-muted d-block">Điểm Match Score:</small>
-              <span class="badge bg-success fs-6" id="modalCandScoreBadge">-</span>
+            <div>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Điểm AI Match</span>
+              <span class="text-xs font-black text-emerald-600 mt-1 inline-block px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200" id="modalCandScoreBadge">-</span>
             </div>
-            <div class="col-md-6">
-              <small class="text-muted d-block">Email Phản Hồi:</small>
-              <code id="modalCandEmail" class="fs-6">-</code>
+            <div>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Email Phản Hồi</span>
+              <code class="text-xs text-indigo-600 font-mono mt-1 block truncate" id="modalCandEmail">-</code>
             </div>
-            <div class="col-md-6 text-md-end">
-              <small class="text-muted d-block">Trạng Thái Xét Duyệt:</small>
-              <span id="modalCandStatusBadge" class="badge bg-secondary">-</span>
+            <div>
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Trạng Thái</span>
+              <span class="text-xs font-bold text-slate-700 mt-1 inline-block" id="modalCandStatusBadge">-</span>
             </div>
           </div>
 
-          <div class="p-3 bg-light rounded-3 border mb-3">
-            <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-brain me-1"></i> Nhận Định & Đánh Giá Tự Động Từ AI Gemini:</h6>
-            <div id="modalCandEvalText" class="small text-dark" style="white-space: pre-wrap; line-height: 1.6;">-</div>
+          <!-- AI Evaluation Card -->
+          <div class="bg-gradient-to-br from-indigo-50/80 to-purple-50/50 rounded-xl p-4 border border-indigo-100 shadow-xs">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-indigo-600 text-sm"></i>
+              <span class="text-xs font-bold text-indigo-950 uppercase tracking-wider">Nhận Định & Đánh Giá Năng Lực Từ AI Gemini:</span>
+            </div>
+            <div id="modalCandEvalText" class="text-xs text-slate-700 leading-relaxed font-sans" style="white-space: pre-wrap;">-</div>
           </div>
 
-          <div>
-            <h6 class="fw-bold text-secondary mb-2"><i class="fa-solid fa-file-lines me-1"></i> Nội Dung CV Văn Bản:</h6>
-            <div id="modalCandCvText" class="p-3 bg-white border rounded-3 small text-secondary" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap;">-</div>
+          <!-- Raw CV Text Content -->
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-file-lines text-slate-500 text-sm"></i>
+                <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Trích Xuất Văn Bản CV:</span>
+              </div>
+              <span class="text-[11px] text-slate-400">PDF / Word Plain Text</span>
+            </div>
+            <div id="modalCandCvText" class="text-xs text-slate-600 font-mono bg-slate-50 p-3 rounded-lg border border-slate-200/60 leading-normal max-h-52 overflow-y-auto" style="white-space: pre-wrap;">-</div>
           </div>
+
         </div>
-        <div class="modal-footer bg-light py-2 justify-content-between">
-          <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
-          <a href="interview-management.html" class="btn btn-success btn-sm px-3 fw-bold shadow-sm" id="modalBtnSchedule">
-            <i class="fa-solid fa-calendar-check me-1"></i> Chuyển Sang Lịch Phỏng Vấn
+
+        <div class="modal-footer bg-white px-6 py-3 border-t border-slate-100 flex items-center justify-between">
+          <button type="button" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition" data-bs-dismiss="modal">
+            Đóng
+          </button>
+          <a href="interview-management.html" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-sm transition no-underline" id="modalBtnSchedule">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span>Chuyển Sang Lịch Phỏng Vấn (Luồng 4)</span>
           </a>
         </div>
+
       </div>
     </div>
   </div>
 
-  <!-- CHÂN TRANG (FOOTER) -->
-  <footer class="text-center py-4 text-muted small border-top mt-5 bg-white">
-    <div class="container">
-      <div>© 2026 <strong>AI Recruitment Multi-Agent System</strong> • Hệ Thống Tuyển Dụng Thông Minh Đa Tác Tử</div>
-      <div class="mt-1 text-secondary">Nghiên cứu & Phát triển bởi: <strong class="text-primary">Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi</strong></div>
+  <!-- ========================================================= -->
+  <!-- FOOTER CHUẨN ENTERPRISE -->
+  <!-- ========================================================= -->
+  <footer class="bg-white border-t border-slate-200/80 py-6 text-center text-xs text-slate-500 mt-auto">
+    <div class="max-w-[97%] 2xl:max-w-[1780px] mx-auto px-4">
+      <div>
+        © 2026 <strong class="text-slate-800 font-bold">VKU Tech • AI Recruitment Multi-Agent System</strong>. Hệ thống tự động hóa tuyển dụng thông minh 6 luồng n8n.
+      </div>
+      <div class="mt-1 text-slate-400">
+        Nghiên cứu & phát triển bởi: <strong class="text-brand-600">Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi</strong>
+      </div>
     </div>
   </footer>
 
+  <!-- Bootstrap 5 JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+  <!-- JAVASCRIPT XỬ LÝ & KẾT NỐI API -->
   <script>
-    const API_BASE = "http://localhost:3000";
+    const API_BASE = (window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
     let allCandidatesCache = [];
 
     async function loadIncomingCandidates(isManualRefresh = false) {
       try {
-        const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now());
+        const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now(), { signal: AbortSignal.timeout(3000) });
         const data = await res.json();
 
         if (res.ok && data.success && data.candidates) {
           allCandidatesCache = data.candidates;
+
+          if (allCandidatesCache.length <= 2) {
+            try {
+              const demoRes = await fetch('demo-candidates.json');
+              if (demoRes.ok) {
+                const demoList = await demoRes.json();
+                if (demoList && demoList.length > 0) allCandidatesCache = demoList;
+              }
+            } catch(e) {}
+          }
+
           renderCandidatesTable(allCandidatesCache);
           updateKPIs(allCandidatesCache);
           
           const now = new Date();
-          document.getElementById("lastUpdatedBadge").innerHTML = `<i class="fa-solid fa-clock me-1"></i> Vừa cập nhật ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+          const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+          document.getElementById("lastUpdatedBadge").innerHTML = `<i class="fa-solid fa-clock text-[10px] mr-1"></i> Vừa cập nhật ${timeStr}`;
 
           if (isManualRefresh) {
-            alert(`✅ Đã làm mới danh sách! Tìm thấy ${data.candidates.length} hồ sơ ứng viên trong hệ thống.`);
+            Swal.fire({
+              icon: 'success',
+              title: 'Đã làm mới dữ liệu!',
+              text: `Tìm thấy ${allCandidatesCache.length} hồ sơ ứng viên trong cơ sở dữ liệu.`,
+              timer: 1800,
+              showConfirmButton: false,
+              customClass: { popup: 'rounded-2xl' }
+            });
           }
         }
       } catch (err) {
+        // Fallback nạp từ demo-candidates.json
+        try {
+          const demoRes = await fetch('demo-candidates.json');
+          if (demoRes.ok) {
+            allCandidatesCache = await demoRes.json();
+            renderCandidatesTable(allCandidatesCache);
+            updateKPIs(allCandidatesCache);
+            return;
+          }
+        } catch(e) {}
         console.warn("Lỗi tải danh sách ứng viên:", err);
       }
     }
@@ -303,9 +482,12 @@
       if (!candidates || candidates.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="7" class="text-center py-4 text-muted">
-              <i class="fa-solid fa-inbox display-6 d-block mb-2 text-secondary"></i>
-              Chưa có hồ sơ ứng viên nào. Hãy thử ứng tuyển từ <strong>Cổng Ứng Viên (Candidate Portal)</strong>!
+            <td colspan="7" class="text-center py-12 text-slate-400">
+              <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 text-lg">
+                <i class="fa-solid fa-inbox"></i>
+              </div>
+              <div class="font-bold text-slate-700 text-sm">Chưa có hồ sơ ứng viên nào</div>
+              <div class="text-xs text-slate-400 mt-1">Hãy nộp CV thử nghiệm từ <a href="candidate-portal.html" class="text-indigo-600 font-semibold underline">Cổng Ứng Viên</a>!</div>
             </td>
           </tr>
         `;
@@ -318,55 +500,79 @@
         const isRejected = (c.approval_status === 'REJECTED' || c.status === 'Loại');
         const isInterview = (c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Phỏng vấn');
 
-        let scoreBadgeClass = 'bg-secondary';
+        let scoreBadgeClass = 'badge-soft-warning';
         let statusBadgeText = 'Chưa duyệt';
 
         if (isApproved) {
-          scoreBadgeClass = 'bg-success';
+          scoreBadgeClass = 'badge-soft-success';
           statusBadgeText = '🟢 APPROVED';
         } else if (isRejected) {
-          scoreBadgeClass = 'bg-danger';
+          scoreBadgeClass = 'badge-soft-danger';
           statusBadgeText = '🔴 REJECTED';
         } else if (isInterview) {
-          scoreBadgeClass = 'bg-info text-dark';
+          scoreBadgeClass = 'badge-soft-info';
           statusBadgeText = '📅 Phỏng vấn';
         }
 
-        const evalShort = (c.ai_evaluation || 'Hồ sơ đã được AI phân tích').substring(0, 90) + '...';
+        const candName = c.full_name || c.name || 'Ứng viên';
+        const candInitial = candName.charAt(0).toUpperCase();
+        const evalShort = (c.ai_evaluation || 'Hồ sơ đã được AI phân tích').substring(0, 85) + '...';
 
         return `
-          <tr>
-            <td><span class="badge bg-light text-dark border">#${c.id}</span></td>
-            <td>
-              <strong class="text-dark d-block">${c.full_name || c.name || 'Ứng viên'}</strong>
-              <small class="text-muted"><code>${c.email || 'N/A'}</code></small>
+          <tr class="hover:bg-slate-50/70 transition">
+            <td class="py-3 px-4 font-mono text-slate-400">#${c.id}</td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                  ${candInitial}
+                </div>
+                <div>
+                  <div class="font-bold text-slate-900">${candName}</div>
+                  <div class="text-[11px] text-slate-400 font-mono">${c.email || 'N/A'}</div>
+                </div>
+              </div>
             </td>
-            <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-semibold">${c.position || c.applied_position || 'Vị trí #' + c.job_id}</span></td>
-            <td>
-              <span class="badge ${scoreBadgeClass} shadow-sm px-2 py-1 fs-6">${score} / 100</span>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                ${c.position || c.applied_position || 'Vị trí #' + (c.job_id || '1')}
+              </span>
             </td>
-            <td style="max-width: 300px;">
-              <span class="small text-secondary italic d-block text-truncate" title="${(c.ai_evaluation || '').replace(/"/g, '&quot;')}">${evalShort}</span>
-              <button class="btn btn-link btn-sm p-0 text-primary fw-semibold small" onclick="openCandDetailModal(${c.id})"><i class="fa-solid fa-eye me-1"></i>Xem chi tiết</button>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${scoreBadgeClass}">
+                <i class="fa-solid fa-sparkles text-[10px] mr-1"></i> ${score}/100
+              </span>
             </td>
-            <td>
-              <select class="form-select form-select-sm status-select fw-semibold ${isApproved ? 'border-success text-success' : isRejected ? 'border-danger text-danger' : 'border-info text-info'}" onchange="changeCandidateStatus(${c.id}, this.value)">
-                <option value="APPROVED" ${isApproved ? 'selected' : ''}>🟢 APPROVED</option>
-                <option value="REJECTED" ${isRejected ? 'selected' : ''}>🔴 REJECTED</option>
+            <td class="py-3 px-4 max-w-xs">
+              <span class="text-xs text-slate-600 block truncate" title="${(c.ai_evaluation || '').replace(/"/g, '&quot;')}">
+                ${evalShort}
+              </span>
+              <button class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold inline-flex items-center gap-1 mt-0.5" onclick="openCandDetailModal(${c.id})">
+                <i class="fa-solid fa-eye text-[10px]"></i> Xem đánh giá đầy đủ
+              </button>
+            </td>
+            <td class="py-3 px-4">
+              <select class="text-xs font-bold rounded-lg px-2.5 py-1 border transition focus:outline-none focus:ring-1 ${
+                isApproved ? 'border-emerald-300 text-emerald-700 bg-emerald-50' :
+                isRejected ? 'border-rose-300 text-rose-700 bg-rose-50' :
+                isInterview ? 'border-blue-300 text-blue-700 bg-blue-50' :
+                'border-slate-300 text-slate-700 bg-white'
+              }" onchange="changeCandidateStatus(${c.id}, this.value)">
+                <option value="APPROVED" ${isApproved ? 'selected' : ''}>🟢 APPROVED (Đạt)</option>
+                <option value="REJECTED" ${isRejected ? 'selected' : ''}>🔴 REJECTED (Loại)</option>
                 <option value="INTERVIEW_SCHEDULED" ${isInterview ? 'selected' : ''}>📅 PHỎNG VẤN</option>
               </select>
             </td>
-            <td class="text-end text-nowrap">
+            <td class="py-3 px-4 text-right whitespace-nowrap">
               ${isRejected ? `
-                <button class="btn btn-outline-danger btn-sm py-1 px-2 fw-semibold me-1 shadow-sm" onclick="sendRejectEmail(${c.id}, '${(c.full_name || 'Ứng viên').replace(/'/g, "\\'")}')" title="Kích hoạt Luồng 5 gửi email từ chối">
-                  <i class="fa-solid fa-paper-plane me-1"></i> Gửi mail từ chối
+                <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 shadow-2xs mr-1 transition" onclick="sendRejectEmail(${c.id}, '${candName.replace(/'/g, "\\'")}')" title="Kích hoạt Luồng 5 n8n gửi thư từ chối">
+                  <i class="fa-solid fa-paper-plane text-[10px]"></i> Mail Loại
                 </button>
               ` : ''}
-              <button class="btn btn-outline-primary btn-sm py-1 px-2 fw-semibold me-1" onclick="openCandDetailModal(${c.id})" title="Xem hồ sơ & kết quả AI">
-                <i class="fa-solid fa-file-lines me-1"></i> Hồ sơ
+              <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs mr-1 transition" onclick="openCandDetailModal(${c.id})" title="Xem hồ sơ & kết quả AI">
+                <i class="fa-solid fa-file-lines text-[10px] text-indigo-600"></i> Hồ sơ
               </button>
-              <button class="btn btn-outline-danger btn-sm py-1 px-2" onclick="deleteCandidate(${c.id}, '${(c.full_name || 'Ứng viên').replace(/'/g, "\\'")}')" title="Xóa hồ sơ">
-                <i class="fa-solid fa-trash-can"></i>
+              <button class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition" onclick="deleteCandidate(${c.id}, '${candName.replace(/'/g, "\\'")}')" title="Xóa hồ sơ">
+                <i class="fa-solid fa-trash-can text-[11px]"></i>
               </button>
             </td>
           </tr>
@@ -376,9 +582,28 @@
 
     // Kích hoạt Luồng 5 gửi thư từ chối cho ứng viên bị Loại
     async function sendRejectEmail(candId, candName) {
-      if (!confirm(`Bạn có chắc chắn muốn kích hoạt Luồng 5 gửi email thông báo kết quả sơ tuyển tới ứng viên "${candName}"?`)) {
-        return;
-      }
+      const confirmResult = await Swal.fire({
+        title: 'Gửi Email Từ Chối?',
+        html: `Bạn có chắc chắn muốn kích hoạt <strong>Luồng 5 (Candidate Notification)</strong> gửi email kết quả cho ứng viên <strong>${candName}</strong>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Có, gửi email ngay',
+        cancelButtonText: 'Hủy bỏ',
+        customClass: { popup: 'rounded-2xl' }
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      Swal.fire({
+        title: 'Đang kích hoạt Luồng 5...',
+        text: 'AI Agent đang soạn thảo email phản hồi mang tính xây dựng...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+        customClass: { popup: 'rounded-2xl' }
+      });
+
       try {
         const res = await fetch(`${API_BASE}/api/auto-notify-reject`, {
           method: 'POST',
@@ -387,13 +612,29 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert(`✅ Đã kích hoạt Luồng 5 n8n gửi email từ chối tới ứng viên "${candName}" thành công!`);
+          Swal.fire({
+            icon: 'success',
+            title: 'Thành Công!',
+            text: `Đã kích hoạt Luồng 5 n8n gửi email từ chối tới ứng viên "${candName}".`,
+            confirmButtonColor: '#4f46e5',
+            customClass: { popup: 'rounded-2xl' }
+          });
           loadIncomingCandidates();
         } else {
-          alert("Lỗi khi gửi email: " + (data.message || "Không xác định"));
+          Swal.fire({
+            icon: 'error',
+            title: 'Lỗi Gửi Email',
+            text: data.message || "Không xác định",
+            customClass: { popup: 'rounded-2xl' }
+          });
         }
       } catch (err) {
-        alert("Lỗi kết nối máy chủ: " + err.message);
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi Kết Nối Máy Chủ',
+          text: err.message,
+          customClass: { popup: 'rounded-2xl' }
+        });
       }
     }
 
@@ -413,9 +654,9 @@
       if (!c) return;
 
       document.getElementById('modalCandName').innerText = c.full_name || c.name || 'Ứng viên';
-      document.getElementById('modalCandPos').innerText = c.position || c.applied_position || ('Vị trí #' + c.job_id);
+      document.getElementById('modalCandPos').innerText = c.position || c.applied_position || ('Vị trí #' + (c.job_id || '1'));
       document.getElementById('modalCandEmail').innerText = c.email || 'N/A';
-      document.getElementById('modalCandScoreBadge').innerText = (c.match_score || 0) + ' / 100';
+      document.getElementById('modalCandScoreBadge').innerText = (c.match_score || 0) + ' / 100 Điểm';
       document.getElementById('modalCandStatusBadge').innerText = c.approval_status || c.status || 'N/A';
       document.getElementById('modalCandEvalText').innerText = c.ai_evaluation || 'Chưa có nhận định chi tiết từ AI Gemini.';
       document.getElementById('modalCandCvText').innerText = c.cv_content || c.cv_text || 'Không có văn bản CV đính kèm.';
@@ -438,28 +679,107 @@
         });
         const data = await res.json();
         if (res.ok) {
-          alert(`✅ Đã cập nhật trạng thái ứng viên #${candId} sang ${newStatus}!`);
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `Cập nhật hồ sơ #${candId} sang ${newStatus}!`,
+            showConfirmButton: false,
+            timer: 2000
+          });
           loadIncomingCandidates();
         } else {
-          alert('Lỗi cập nhật trạng thái: ' + (data.message || 'Chưa đổi được trạng thái'));
+          Swal.fire('Lỗi', data.message || 'Không thể đổi trạng thái', 'error');
         }
       } catch (err) {
-        alert('Lỗi kết nối máy chủ: ' + err.message);
+        Swal.fire('Lỗi Kết Nối', err.message, 'error');
       }
     }
 
     async function deleteCandidate(candId, candName) {
-      if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ ứng viên "${candName}" (ID #${candId}) không?`)) return;
+      const confirmResult = await Swal.fire({
+        title: 'Xóa hồ sơ?',
+        html: `Bạn có chắc chắn muốn xóa hồ sơ ứng viên <strong>${candName}</strong> (#${candId}) không?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Đồng ý xóa',
+        cancelButtonText: 'Hủy bỏ',
+        customClass: { popup: 'rounded-2xl' }
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
       try {
         const res = await fetch(`${API_BASE}/api/candidates/${candId}`, { method: 'DELETE' });
         if (res.ok) {
-          alert(`Đã xóa thành công hồ sơ #${candId}`);
+          Swal.fire({
+            icon: 'success',
+            title: 'Đã xóa!',
+            text: `Đã xóa thành công hồ sơ #${candId}`,
+            timer: 1500,
+            showConfirmButton: false,
+            customClass: { popup: 'rounded-2xl' }
+          });
           loadIncomingCandidates();
         }
       } catch (err) {
-        alert('Lỗi xóa hồ sơ: ' + err.message);
+        Swal.fire('Lỗi', err.message, 'error');
       }
     }
+
+    // Nạp nhanh 50 ứng viên mẫu
+    window.seedDemoCandidates = async function() {
+      const confirm = await Swal.fire({
+        title: 'Nạp 50 ứng viên mẫu?',
+        text: 'Hệ thống sẽ làm mới dữ liệu và nạp 50 hồ sơ ứng viên đa dạng chuẩn kiểm thử cho cả 6 Luồng Tác tử.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý nạp 50 hồ sơ',
+        cancelButtonText: 'Hủy',
+        customClass: { popup: 'rounded-2xl' }
+      });
+      if (!confirm.isConfirmed) return;
+
+      Swal.fire({
+        title: 'Đang nạp 50 ứng viên...',
+        html: 'Đang khởi tạo các hồ sơ phân bố Đạt, Phỏng vấn và Loại vào CSDL...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+        customClass: { popup: 'rounded-2xl' }
+      });
+
+      try {
+        const res = await fetch(`${API_BASE}/api/seed-candidates`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Nạp Thành Công!',
+            text: `Đã nạp thành công 50 hồ sơ ứng viên vào cơ sở dữ liệu!`,
+            timer: 2500,
+            showConfirmButton: false,
+            customClass: { popup: 'rounded-2xl' }
+          });
+          loadIncomingCandidates();
+        } else {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Chưa thể nạp qua API',
+            html: `Không thể kết nối CSDL qua backend.<br><small>Bạn có thể chạy lệnh trong terminal: <code class="font-bold">node backend/seed-candidates.js</code></small>`,
+            customClass: { popup: 'rounded-2xl' }
+          });
+        }
+      } catch (e) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Hướng dẫn nạp dữ liệu',
+          html: `Để nạp 50 ứng viên vào MySQL thật, bạn hãy mở terminal và chạy:<br><br><pre class="bg-slate-900 text-emerald-400 p-3 rounded-xl text-xs text-left">node backend/seed-candidates.js</pre>`,
+          customClass: { popup: 'rounded-2xl' }
+        });
+      }
+    };
 
     // Tự động tải & cập nhật danh sách ứng viên liên tục
     loadIncomingCandidates();

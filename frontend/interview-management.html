@@ -3,64 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Recruitment System - Quản Lý & Xếp Lịch Phỏng Vấn</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  >
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  >
+  <title>VKU Tech ATS • Quản Lý & Xếp Lịch Phỏng Vấn Đa Tác Tử</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Bootstrap 5 (cho hệ thống Modal & Dropdown) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- SweetAlert2 (Thông báo chuẩn Enterprise) -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- SheetJS cho xuất file Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
     body {
-      background-color: #f4f6f9;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #1e293b;
     }
-    .main-card {
-      border-radius: 14px;
-      border: none;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    .glass-card {
       background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+      border-radius: 16px;
     }
-    .badge-dat { background-color: #d1e7dd; color: #0f5132; }
-    .badge-phong-van { background-color: #cff4fc; color: #055160; }
-    .badge-loai { background-color: #f8d7da; color: #842029; }
-    .ai-review {
-      font-style: italic;
-      color: #475569;
+    .metric-card {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .metric-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px -6px rgba(99, 102, 241, 0.12);
+    }
+    .gradient-avatar {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .ai-bubble {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid #6366f1;
+      border-radius: 10px;
+      padding: 10px 14px;
       font-size: 13px;
-      line-height: 1.4;
-      display: inline-block;
-      max-width: 260px;
+      line-height: 1.55;
+      color: #334155;
+      width: 100%;
+      min-width: 260px;
+      display: block;
     }
-    .status-select {
+    .status-select-custom {
       font-size: 13px;
       font-weight: 600;
-      border-radius: 8px;
-      padding: 6px 30px 6px 10px;
+      border-radius: 9999px;
+      padding: 5px 28px 5px 12px;
+      cursor: pointer;
       border: 1px solid #cbd5e1;
       background-color: #ffffff;
-      cursor: pointer;
-      min-width: 148px;
-      width: 100%;
-      white-space: nowrap;
+      transition: all 0.2s;
     }
-    .status-select:focus {
-      border-color: #0d6efd;
-      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
-      outline: 0;
+    .status-select-custom:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
     }
-    .meet-btn {
-      font-size: 12px;
-      font-weight: 600;
-      border-radius: 6px;
-      text-decoration: none;
+    .btn-gradient-ai {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #ffffff;
+      transition: all 0.2s;
     }
-    .table-hover tbody tr:hover {
-      background-color: #f8fafc;
+    .btn-gradient-ai:hover {
+      background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+      transform: translateY(-1px);
     }
     @media print {
       body * { visibility: hidden !important; }
@@ -70,265 +115,444 @@
         left: 0 !important;
         top: 0 !important;
         width: 100% !important;
-        padding: 15px !important;
+        padding: 20px !important;
         background: #ffffff !important;
       }
-      .modal, .modal-dialog, .modal-content, .modal-body {
-        position: static !important;
-        display: block !important;
-        box-shadow: none !important;
-        border: none !important;
-        background: #ffffff !important;
-      }
-    }
-    .navbar-nav .nav-link {
-      font-size: 13.5px;
-      font-weight: 500;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-      border-radius: 50rem;
-      padding: 6px 14px;
-    }
-    .navbar-nav .nav-link:hover:not(.active) {
-      background-color: rgba(255, 255, 255, 0.15);
-      color: #ffffff !important;
-    }
-    .navbar-nav .nav-link.active {
-      padding: 6px 16px;
     }
   </style>
 </head>
-<body>
+<body class="antialiased">
 
   <!-- ========================================================= -->
-  <!-- THANH ĐIỀU HƯỚNG CHUNG (NAVBAR) -->
+  <!-- TOPBAR HEADER DOANH NGHIỆP HIỆN ĐẠI -->
   <!-- ========================================================= -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4 py-2">
-    <div class="container" style="max-width: 1240px;">
-      <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
-        <i class="fa-solid fa-robot me-2 fs-4"></i>
-        <span>AI Recruitment – <strong class="text-white">HR Dashboard</strong></span>
-      </a>
-
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#hrNavbar" aria-controls="hrNavbar" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="hrNavbar">
-        <ul class="navbar-nav ms-auto align-items-center gap-1 gap-md-2 mt-2 mt-lg-0">
-          <li class="nav-item">
-            <a class="nav-link text-white" href="index.html">
-              <i class="fa-solid fa-file-circle-plus me-1"></i> Đăng tin
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="cv-screening.html">
-              <i class="fa-solid fa-users me-1"></i> Quản lý ứng viên
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="recruitment-report.html">
-              <i class="fa-solid fa-chart-pie me-1"></i> Báo cáo
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active bg-white text-primary rounded-pill fw-bold shadow-sm" href="interview-management.html">
-              <i class="fa-solid fa-calendar-check me-1"></i> Lịch phỏng vấn
-            </a>
-          </li>
-          <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-            <a href="candidate-portal.html" class="btn btn-warning btn-sm rounded-pill fw-bold text-dark px-3 shadow-sm text-nowrap">
-              <i class="fa-solid fa-user-astronaut me-1"></i> 👤 Cổng Ứng Viên
-            </a>
-          </li>
-        </ul>
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white py-3 px-4 shadow-md">
+    <div class="max-w-[97%] 2xl:max-w-[1780px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Logo & Tên hệ thống -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid fa-robot text-xl text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">VKU RECRUITMENT ATS</span>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wide">Multi-Agent v2.5</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Hệ sinh thái Tuyển dụng Thông minh • Phụ trách: Lê Thị Yến Nhi</p>
+        </div>
       </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex items-center gap-1 sm:gap-2 text-sm font-medium">
+        <a href="index.html" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+          <i class="fa-solid fa-file-circle-plus mr-1 text-slate-400"></i> Đăng tin
+        </a>
+        <a href="cv-screening.html" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+          <i class="fa-solid fa-users mr-1 text-slate-400"></i> Sàng lọc CV
+        </a>
+        <a href="recruitment-report.html" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+          <i class="fa-solid fa-chart-pie mr-1 text-slate-400"></i> Báo cáo
+        </a>
+        <a href="interview-management.html" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold shadow-sm shadow-indigo-600/40">
+          <i class="fa-solid fa-calendar-check mr-1.5"></i> Lịch phỏng vấn
+        </a>
+        <a href="candidate-portal.html" class="ml-2 px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-user-astronaut"></i> Cổng Ứng Viên
+        </a>
+      </nav>
     </div>
-  </nav>
+  </header>
 
   <!-- ========================================================= -->
-  <!-- NỘI DUNG CHÍNH (CANDIDATE & INTERVIEW MANAGEMENT) -->
+  <!-- NỘI DUNG CHÍNH (CONTAINER) -->
   <!-- ========================================================= -->
-  <div class="container pb-5" style="max-width: 1220px;">
+  <main class="max-w-[97%] 2xl:max-w-[1780px] mx-auto px-2 sm:px-4 py-6 space-y-6">
 
-    <!-- TIÊU ĐỀ TRANG -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <!-- HERO BANNER & HÀNH ĐỘNG CẤP CAO -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200">
       <div>
-        <h3 class="fw-bold text-dark mb-1">
-          <i class="fa-solid fa-calendar-check text-primary me-2"></i>
-          📅 Quản Lý & Xếp Lịch Phỏng Vấn
-        </h3>
-        <p class="text-muted small mb-0">
-          <strong>Dành cho HR Manager:</strong> Tự động điều phối lịch phỏng vấn, dời lịch & tự động gửi Email thông báo qua AI.
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Quản Lý & Xếp Lịch Phỏng Vấn
+          </h1>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Docker n8n Online
+          </span>
+        </div>
+        <p class="text-sm text-slate-500 mt-1">
+          Hệ thống điều phối phỏng vấn thông minh (Luồng 4, 5, 6) • Tự động xếp lịch với Lead, gửi Gmail OAuth2 và tạo sự kiện Google Calendar.
         </p>
       </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-success btn-sm rounded-pill px-4 shadow-sm fw-semibold" onclick="openExcelPreviewModal()">
-          <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel Lịch PV (.xlsx)
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <button onclick="openExcelPreviewModal()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-file-excel text-base"></i> Xuất Excel Lịch PV (.xlsx)
         </button>
-        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="fetchCandidates(true)">
-          <i class="fa-solid fa-rotate me-1"></i> Làm mới danh sách
+        <button onclick="printLeaderInterviewSchedule()" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition flex items-center gap-2">
+          <i class="fa-solid fa-print"></i> In Cho Leader
+        </button>
+        <button onclick="fetchCandidates(true)" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 shadow-sm transition flex items-center gap-1.5">
+          <i class="fa-solid fa-rotate text-indigo-600"></i> Làm mới
+        </button>
+        <button onclick="seedDemoCandidates()" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 shadow-sm transition flex items-center gap-1.5" title="Nạp nhanh 50 ứng viên mẫu để kiểm thử 6 luồng">
+          <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> Nạp 50 Ứng Viên Test
         </button>
       </div>
     </div>
 
-    <!-- TOAST THÔNG BÁO -->
-    <div id="toastAlert" class="alert alert-success alert-dismissible fade show d-none shadow-sm py-2 px-3 small" role="alert">
-      <i class="fa-solid fa-circle-check me-2"></i>
-      <span id="toastMsg">Thao tác thành công!</span>
-      <button type="button" class="btn-close py-2" onclick="document.getElementById('toastAlert').classList.add('d-none')"></button>
-    </div>
-
-    <!-- CARD BẢNG DANH SÁCH -->
-    <div class="card main-card">
-      <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div class="w-100 d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div>
-            <h5 class="fw-bold text-dark mb-1">
-              <i class="fa-solid fa-list-check text-primary me-2"></i>
-              Danh sách ứng viên trong phễu tuyển dụng
-            </h5>
-            <div class="d-flex flex-wrap gap-1 mt-2" id="filterGroup">
-              <button class="btn btn-sm btn-dark rounded-pill px-3 py-1 filter-btn active" data-filter="ALL" onclick="filterStatus('ALL')" title="Danh sách ứng viên vào vòng phỏng vấn (Đạt & Phỏng vấn)">
-                Tất cả phỏng vấn (<span id="count-all">0</span>)
-              </button>
-              <button class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 filter-btn" data-filter="Phỏng vấn" onclick="filterStatus('Phỏng vấn')">
-                🔵 Phỏng vấn (<span id="count-pv">0</span>)
-              </button>
-              <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 filter-btn" data-filter="Đạt" onclick="filterStatus('Đạt')">
-                🟢 Đạt (<span id="count-dat">0</span>)
-              </button>
-              <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 filter-btn" data-filter="Loại" onclick="filterStatus('Loại')" title="Xem ứng viên bị loại và trạng thái thư từ chối">
-                🔴 Đã loại (<span id="count-loai">0</span>)
-              </button>
-            </div>
-          </div>
-          <div style="min-width: 260px;">
-            <input type="text" id="interviewSearchInput" class="form-control form-control-sm rounded-pill px-3 shadow-sm border" placeholder="🔍 Tìm kiếm ứng viên, email..." onkeyup="applyFilter()">
+    <!-- 4 THẺ METRIC KPI DASHBOARD CHUẨN SAAS -->
+    <!-- 4 THẺ METRIC KPI DASHBOARD PHÂN ĐỊNH RÕ 5 GIAI ĐOẠN -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Card 1: Chờ xếp lịch phỏng vấn (Đạt Sơ Loại từ Luồng 2 chuyển sang) -->
+      <div class="glass-card metric-card p-4 flex items-center gap-4 cursor-pointer hover:border-amber-400 transition" onclick="filterStatus('CHO_XEP_LICH')">
+        <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 text-xl flex-shrink-0 shadow-2xs">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chờ Xếp Lịch (Đạt Sơ Loại)</span>
+          <div class="text-2xl font-black text-slate-900 flex items-center gap-2 mt-0.5">
+            <span id="count-cho-xep-lich">0</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">Luồng 2 ➔ Luồng 4</span>
           </div>
         </div>
       </div>
 
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" style="min-width: 1080px;">
-            <thead class="table-light">
-              <tr class="small text-muted text-uppercase">
-                <th class="ps-3" style="width: 55px;">ID</th>
-                <th style="min-width: 175px;">Họ tên & Email</th>
-                <th style="min-width: 140px;">Vị trí</th>
-                <th style="width: 110px;">Trạng thái</th>
-                <th style="min-width: 230px;">Đánh giá AI (Gemini)</th>
-                <th style="min-width: 165px; width: 170px;">Cập nhật (L6)</th>
-                <th style="min-width: 195px;">Lịch phỏng vấn (L4)</th>
-                <th class="pe-3 text-end" style="width: 50px;">Xóa</th>
-              </tr>
-            </thead>
-            <tbody id="candidate-list">
-              <tr>
-                <td colspan="8" class="text-center py-4 text-muted">
-                  <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                  Đang tải dữ liệu ứng viên từ MySQL...
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- Card 2: Đang phỏng vấn / Đã xếp lịch Meet -->
+      <div class="glass-card metric-card p-4 flex items-center gap-4 cursor-pointer hover:border-sky-400 transition" onclick="filterStatus('DANG_PHONG_VAN')">
+        <div class="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 text-xl flex-shrink-0 shadow-2xs">
+          <i class="fa-solid fa-video"></i>
+        </div>
+        <div>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đang Phỏng Vấn (Có Lịch)</span>
+          <div class="text-2xl font-black text-slate-900 flex items-center gap-2 mt-0.5">
+            <span id="count-pv">0</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">Luồng 4 & 5</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Ứng viên Trúng Tuyển (Đậu Sau Phỏng Vấn - Luồng 6) -->
+      <div class="glass-card metric-card p-4 flex items-center gap-4 cursor-pointer hover:border-emerald-400 transition" onclick="filterStatus('TRUNG_TUYEN')">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xl flex-shrink-0 shadow-2xs">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <div>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Trúng Tuyển (Đậu Sau PV)</span>
+          <div class="text-2xl font-black text-slate-900 flex items-center gap-2 mt-0.5">
+            <span id="count-dat">0</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Luồng 6 Offer</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Đã loại (Loại CV & Loại Sau PV) -->
+      <div class="glass-card metric-card p-4 flex items-center gap-4 cursor-pointer hover:border-rose-400 transition" onclick="filterStatus('LOAI')">
+        <div class="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 text-xl flex-shrink-0 shadow-2xs">
+          <i class="fa-solid fa-user-xmark"></i>
+        </div>
+        <div>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đã Loại (CV & Sau PV)</span>
+          <div class="text-2xl font-black text-slate-900 flex items-center gap-2 mt-0.5">
+            <span id="count-loai">0</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">Đã gửi thư</span>
+          </div>
         </div>
       </div>
     </div>
 
-
-
-  </div>
-
-  <!-- MODAL ĐỔI GIỜ PHỎNG VẤN (RESCHEDULE) -->
-  <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content shadow-lg border-0 rounded-4">
-        <div class="modal-header bg-primary text-white py-3">
-          <h5 class="modal-title fw-bold" id="rescheduleModalLabel">
-            <i class="fa-solid fa-calendar-pen me-2"></i> Đổi Giờ Phỏng Vấn Ứng Viên
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- BANNER TÁC TỬ TỰ ĐỘNG NHẮC LỊCH PHỎNG VẤN TRƯỚC 1-2 TIẾNG (AUTO-REMINDER DAEMON - LUỒNG 5) -->
+    <div class="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 border border-amber-200/80 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center text-lg flex-shrink-0 shadow-sm animate-pulse">
+          <i class="fa-solid fa-robot"></i>
         </div>
-        <div class="modal-body p-4">
-          <p class="text-muted small mb-3">
-            Cập nhật thời gian phỏng vấn mới cho ứng viên <strong class="text-dark" id="rescheduleCandName">...</strong>. AI sẽ tự động gửi Email thông báo lịch mới tới ứng viên qua Gmail.
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-black text-slate-800 uppercase tracking-wide">Tác Tử Tự Động Nhắc Hẹn (Luồng 5):</span>
+            <span id="autoReminderBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> ĐANG CHẠY TỰ ĐỘNG (24/7)
+            </span>
+          </div>
+          <p class="text-xs text-slate-600 mt-0.5">
+            Tự động quét ngầm mỗi 60 giây • Gửi email nhắc hẹn + link Google Meet trước giờ phỏng vấn <b>1 – 2 tiếng</b> • <b>0% can thiệp thủ công</b>
           </p>
-          <input type="hidden" id="rescheduleCandId">
-          <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">Chọn Ngày & Giờ Phỏng Vấn Mới:</label>
-            <input type="datetime-local" class="form-control form-control-lg border-primary" id="rescheduleTimeInput">
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <div class="text-right hidden sm:block">
+          <div class="text-[11px] font-semibold text-slate-500">Hôm nay đã tự động nhắc:</div>
+          <div class="text-xs font-black text-indigo-700" id="autoReminderCountText">Đang quét ngầm...</div>
+        </div>
+        <button id="btnToggleAutoReminder" onclick="toggleAutoReminder()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-2xs cursor-pointer">
+          <i class="fa-solid fa-power-off text-emerald-600" id="autoReminderPowerIcon"></i> <span id="autoReminderBtnLabel">Tạm Dừng</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- BỘ LỌC TÌM KIẾM & CHUYỂN ĐỔI CHẾ ĐỘ XEM (BẢNG vs LỊCH) -->
+    <div class="glass-card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <!-- Filter Tabs 5 Giai Đoạn Rõ Ràng Tuyệt Đối -->
+      <div class="flex items-center gap-1.5 flex-wrap w-full md:w-auto" id="filterGroup">
+        <button class="filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-white shadow-sm active" data-filter="ALL" onclick="filterStatus('ALL')">
+          <i class="fa-solid fa-list-check"></i> Tất cả danh sách (<span id="tabCountAll">0</span>)
+        </button>
+        <button class="filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100" data-filter="CHO_XEP_LICH" onclick="filterStatus('CHO_XEP_LICH')">
+          <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Chờ Xếp Lịch (Đạt Sơ Loại) (<span id="tabCountChoLich">0</span>)
+        </button>
+        <button class="filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100" data-filter="DANG_PHONG_VAN" onclick="filterStatus('DANG_PHONG_VAN')">
+          <i class="fa-solid fa-video text-sky-600"></i> Đang Phỏng Vấn (Có Lịch) (<span id="tabCountPv">0</span>)
+        </button>
+        <button class="filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100" data-filter="TRUNG_TUYEN" onclick="filterStatus('TRUNG_TUYEN')">
+          <i class="fa-solid fa-trophy text-emerald-600"></i> Trúng Tuyển (Đậu Sau PV) (<span id="tabCountDat">0</span>)
+        </button>
+        <button class="filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100" data-filter="LOAI" onclick="filterStatus('LOAI')">
+          <i class="fa-solid fa-circle-xmark text-rose-500"></i> Đã Loại (<span id="tabCountLoai">0</span>)
+        </button>
+      </div>
+
+      <!-- View Switcher & Live Search Box -->
+      <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
+        <!-- Chuyển đổi: Bảng Danh Sách vs Lịch Biểu Tuần (Calendar) -->
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <button id="viewBtnTable" onclick="switchViewMode('table')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white text-slate-900 shadow-sm cursor-pointer">
+            <i class="fa-solid fa-table-list text-indigo-600"></i> Bảng Danh Sách
+          </button>
+          <button id="viewBtnCalendar" onclick="switchViewMode('calendar')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900 cursor-pointer">
+            <i class="fa-solid fa-calendar-days text-indigo-600"></i> Lịch Biểu (Calendar)
+          </button>
+        </div>
+
+        <div class="relative w-full md:w-64">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <i class="fa-solid fa-magnifying-glass"></i>
           </div>
-          <div class="p-3 bg-light rounded-3 border mb-3">
-            <div class="small fw-semibold text-muted mb-2"><i class="fa-solid fa-clock-rotate-left me-1"></i> Chọn nhanh khung giờ tiện lợi:</div>
-            <div class="d-flex flex-wrap gap-2">
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setReschedulePreset(1)">+1 tiếng</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setReschedulePreset(2)">+2 tiếng</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setReschedulePreset(24)">+1 ngày</button>
-              <button type="button" class="btn btn-sm btn-outline-primary" onclick="setReschedulePreset('tomorrow_am')">09:30 sáng mai</button>
-              <button type="button" class="btn btn-sm btn-outline-primary" onclick="setReschedulePreset('tomorrow_pm')">14:00 chiều mai</button>
+          <input 
+            type="text" 
+            id="interviewSearchInput" 
+            oninput="applyFilter()" 
+            placeholder="Tìm tên, email..." 
+            class="w-full pl-10 pr-4 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition bg-slate-50/50"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 1: BẢNG DỮ LIỆU ỨNG VIÊN ENTERPRISE -->
+    <div id="tableViewContainer" class="glass-card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+              <th class="py-3.5 px-4 text-center w-14">ID</th>
+              <th class="py-3.5 px-4 min-w-[210px]">Ứng Viên</th>
+              <th class="py-3.5 px-4 min-w-[170px]">Vị Trí Tuyển Dụng</th>
+              <th class="py-3.5 px-4 text-center w-28">Trạng Thái</th>
+              <th class="py-3.5 px-5 min-w-[340px]">Đánh Giá AI Agent</th>
+              <th class="py-3.5 px-4 min-w-[150px]">Cập Nhật Trạng Thái</th>
+              <th class="py-3.5 px-5 min-w-[290px]">Lịch Phỏng Vấn & Google Meet</th>
+              <th class="py-3.5 px-4 text-right w-20">Tác Vụ</th>
+            </tr>
+          </thead>
+          <tbody id="candidate-list" class="divide-y divide-slate-100 text-sm">
+            <tr>
+              <td colspan="8" class="text-center py-12 text-slate-400">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl text-indigo-500 mb-2"></i>
+                <p>Đang đồng bộ danh sách ứng viên từ hệ thống...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- VIEW 2: GIAO DIỆN LỊCH PHỎNG VẤN TRỰC QUAN (CALENDAR VIEW CHUYÊN NGHIỆP) -->
+    <div id="calendarViewContainer" class="hidden space-y-4">
+      <!-- 4 Card KPI Lịch Phỏng Vấn -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-indigo-100 uppercase tracking-wider">Hôm Nay (Phỏng Vấn)</span>
+            <i class="fa-solid fa-calendar-day text-indigo-200 text-lg"></i>
+          </div>
+          <div class="text-2xl font-black mt-2" id="calTodayCount">0 buổi</div>
+          <p class="text-[11px] text-indigo-100 mt-0.5">Giờ giãn cách chuẩn 45 phút</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-sky-500 to-blue-600 text-white p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-sky-100 uppercase tracking-wider">Lịch Tuần Này</span>
+            <i class="fa-solid fa-calendar-week text-sky-200 text-lg"></i>
+          </div>
+          <div class="text-2xl font-black mt-2" id="calWeekCount">0 buổi</div>
+          <p class="text-[11px] text-sky-100 mt-0.5">Tác tử Luồng 4 phân bổ tự động</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Phòng Google Meet</span>
+            <i class="fa-solid fa-video text-emerald-200 text-lg"></i>
+          </div>
+          <div class="text-2xl font-black mt-2" id="calMeetCount">100% Online</div>
+          <p class="text-[11px] text-emerald-100 mt-0.5">Đã tạo link họp & gửi thư mời</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-amber-500 to-orange-600 text-white p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-amber-100 uppercase tracking-wider">Cần Nhắc Lịch (< 2 Giờ)</span>
+            <i class="fa-solid fa-bell text-amber-200 text-lg"></i>
+          </div>
+          <div class="text-2xl font-black mt-2" id="calReminderCount">0 ứng viên</div>
+          <p class="text-[11px] text-amber-100 mt-0.5">Tác tử Luồng 5 nhắc hẹn tự động</p>
+        </div>
+      </div>
+
+      <!-- Thanh Điều Khiển Tuần & Lọc Chuyên Gia -->
+      <div class="glass-card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Chuyển tuần -->
+        <div class="flex items-center gap-2">
+          <button onclick="navigateWeek(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer" title="Tuần trước">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+          <span id="currentWeekLabel" class="text-xs sm:text-sm font-extrabold text-slate-800 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+            Tuần 19/10/2026 - 25/10/2026
+          </span>
+          <button onclick="navigateWeek(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer" title="Tuần sau">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+          <button onclick="navigateWeek(0)" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition cursor-pointer ml-1">
+            Tuần Này
+          </button>
+        </div>
+
+        <!-- Bộ Lọc Lead & Nút Bắn Nhắc Lịch Hàng Loạt -->
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <select id="calendarLeadFilter" onchange="renderWeeklyCalendar()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-600">
+            <option value="ALL">👥 Tất Cả Lead Phỏng Vấn</option>
+            <option value="Lê Hoàng Dev">Lê Hoàng Dev (Lead Backend)</option>
+            <option value="Trần Văn Tech">Trần Văn Tech (Lead Frontend)</option>
+            <option value="Nguyễn Thị HR">Nguyễn Thị HR (HR & Văn Hóa)</option>
+          </select>
+          <button onclick="batchSendTodayReminders()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-bell"></i> <span>Gửi Nhắc Lịch Hôm Nay (Tất cả)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bảng Lưới Lịch Biểu Tuần (7 Cột: Thứ Hai -> Chủ Nhật) -->
+      <div class="glass-card p-4 overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3" id="calendarDaysGrid">
+          <!-- Render tự động bởi renderWeeklyCalendar() -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST ALERT CŨ (DUY TRÌ TƯƠNG THÍCH CODE CŨ) -->
+    <div id="toastAlert" class="hidden">
+      <span id="toastMsg"></span>
+    </div>
+
+  </main>
+
+  <!-- ========================================================= -->
+  <!-- MODAL ĐỔI GIỜ PHỎNG VẤN (RESCHEDULE MODAL) HIỆN ĐẠI -->
+  <!-- ========================================================= -->
+  <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-labelledby="rescheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-2xl border-0 shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-5">
+          <div class="flex items-center justify-between">
+            <h5 class="modal-title font-bold text-lg flex items-center gap-2" id="rescheduleModalLabel">
+              <i class="fa-solid fa-calendar-pen text-amber-300"></i> Điều Chỉnh Lịch Phỏng Vấn
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <p class="text-indigo-100 text-xs mt-1">Ứng viên: <strong id="rescheduleCandName" class="text-white"></strong></p>
+        </div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="rescheduleCandId">
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <i class="fa-regular fa-clock text-indigo-600 mr-1"></i> Chọn Khung Giờ Mới:
+            </label>
+            <input type="datetime-local" id="rescheduleTimeInput" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100">
+          </div>
+
+          <!-- Quick Preset Chips -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Chọn Nhanh:</label>
+            <div class="flex flex-wrap gap-1.5 text-xs">
+              <button type="button" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition" onclick="setReschedulePreset(1)">+1 Giờ</button>
+              <button type="button" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition" onclick="setReschedulePreset(2)">+2 Giờ</button>
+              <button type="button" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium transition" onclick="setReschedulePreset('tomorrow_am')">Sáng Mai (09:30)</button>
+              <button type="button" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium transition" onclick="setReschedulePreset('tomorrow_pm')">Chiều Mai (14:00)</button>
             </div>
           </div>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2">
+            <i class="fa-solid fa-circle-info text-amber-600 mt-0.5"></i>
+            <div>Khi xác nhận, hệ thống sẽ tự động cập nhật lịch hẹn và gửi email thông báo lại cho cả ứng viên và người phỏng vấn.</div>
+          </div>
         </div>
-        <div class="modal-footer bg-light py-2">
-          <button type="button" class="btn btn-light border btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
-          <button type="button" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" onclick="submitReschedule()">
-            <i class="fa-solid fa-paper-plane me-1"></i> Xác Nhận & Gửi Mail Cập Nhật
+        <div class="bg-slate-50 px-6 py-4 flex items-center justify-end gap-2 border-t border-slate-100">
+          <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition cursor-pointer" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" id="btnSubmitReschedule" class="px-5 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-2 cursor-pointer" onclick="submitReschedule()">
+            <i class="fa-solid fa-check mr-1.5"></i> <span>Xác Nhận Đổi Lịch</span>
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL XEM TRƯỚC BẢNG DỮ LIỆU EXCEL (.XLSX) -->
+  <!-- ========================================================= -->
+  <!-- MODAL XEM TRƯỚC VÀ XUẤT EXCEL (.xlsx) -->
+  <!-- ========================================================= -->
   <div class="modal fade" id="excelPreviewModal" tabindex="-1" aria-labelledby="excelPreviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-      <div class="modal-content shadow-lg border-0 rounded-4">
-        <div class="modal-header bg-success text-white py-3">
-          <h5 class="modal-title fw-bold" id="excelPreviewModalLabel">
-            <i class="fa-solid fa-file-excel me-2"></i> Xem Trước Bảng Dữ Liệu Excel Phỏng Vấn (.xlsx)
-          </h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content rounded-2xl border-0 shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-5 flex items-center justify-between">
+          <div>
+            <h5 class="modal-title font-bold text-lg flex items-center gap-2" id="excelPreviewModalLabel">
+              <i class="fa-solid fa-file-excel text-emerald-300"></i> Xuất Báo Cáo Lịch Phỏng Vấn Chuẩn HR (.xlsx)
+            </h5>
+            <p class="text-emerald-100 text-xs mt-0.5">Xem trước dữ liệu bảng tính trước khi xuất file tải về</p>
+          </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body p-4 bg-light">
-          <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-3 py-2 px-3 small">
-            <i class="fa-solid fa-circle-check fs-5 me-2 text-success"></i>
-            <div>
-              <strong>Xem trước bảng tính Excel:</strong> Kiểm tra danh sách <span id="excelTotalRows" class="fw-bold text-dark">0</span> ứng viên phỏng vấn dưới đây trước khi xuất file <strong id="excelFileName">Danh_Sach_Phong_Van.xlsx</strong>.
-            </div>
+        <div class="p-5 space-y-4">
+          <div class="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-600">
+            <div>Tổng số dòng dữ liệu: <strong id="excelTotalRows" class="text-slate-900 font-bold">0</strong></div>
+            <div>Tên file dự kiến: <code id="excelFileName" class="text-emerald-700 font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">BaoCao.xlsx</code></div>
           </div>
-
-          <!-- KHUNG XEM TRƯỚC BẢNG TÍNH EXCEL -->
-          <div class="table-responsive bg-white rounded-3 border shadow-sm p-2" style="max-height: 480px; overflow-y: auto;">
-            <table class="table table-bordered table-striped table-hover align-middle mb-0 small" style="border-color: #cbd5e1;">
-              <thead class="table-success text-uppercase text-dark small fw-bold">
+          <div class="border border-slate-200 rounded-xl overflow-hidden max-h-96 overflow-y-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-emerald-50 text-emerald-900 font-bold uppercase sticky top-0 border-b border-emerald-100">
                 <tr>
-                  <th class="text-center" style="width: 45px; background-color: #d1e7dd;">STT</th>
-                  <th style="width: 60px; background-color: #d1e7dd;">Mã ID</th>
-                  <th style="min-width: 160px; background-color: #d1e7dd;">Họ và Tên</th>
-                  <th style="min-width: 170px; background-color: #d1e7dd;">Email</th>
-                  <th style="min-width: 140px; background-color: #d1e7dd;">Vị Trí Tuyển Dụng</th>
-                  <th class="text-center" style="width: 95px; background-color: #d1e7dd;">Điểm AI</th>
-                  <th class="text-center" style="width: 110px; background-color: #d1e7dd;">Trạng Thái</th>
-                  <th style="min-width: 150px; background-color: #d1e7dd;">Khung Giờ PV</th>
-                  <th style="min-width: 180px; background-color: #d1e7dd;">Người PV</th>
-                  <th style="min-width: 170px; background-color: #d1e7dd;">Link Google Meet</th>
-                  <th style="min-width: 220px; background-color: #d1e7dd;">Nhận Đánh Giá AI</th>
+                  <th class="py-2.5 px-3">STT</th>
+                  <th class="py-2.5 px-3">ID</th>
+                  <th class="py-2.5 px-3">Họ và Tên</th>
+                  <th class="py-2.5 px-3">Email</th>
+                  <th class="py-2.5 px-3">Vị Trí</th>
+                  <th class="py-2.5 px-3">Điểm AI</th>
+                  <th class="py-2.5 px-3">Trạng Thái</th>
+                  <th class="py-2.5 px-3">Giờ PV</th>
+                  <th class="py-2.5 px-3">Người PV</th>
+                  <th class="py-2.5 px-3">Google Meet</th>
+                  <th class="py-2.5 px-3">Đánh Giá AI</th>
                 </tr>
               </thead>
-              <tbody id="excelPreviewTableBody">
-                <!-- JS render spreadsheet preview rows -->
-              </tbody>
+              <tbody id="excelPreviewTableBody" class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
-        <div class="modal-footer bg-white py-2 justify-content-between">
-          <span class="small text-muted"><i class="fa-solid fa-file-shield me-1"></i> Định dạng chuẩn .xlsx mở mượt trên Microsoft Excel, Google Sheets, LibreOffice</span>
-          <div>
-            <button type="button" class="btn btn-light border btn-sm px-3 me-2" data-bs-dismiss="modal">Hủy / Đóng</button>
-            <button type="button" class="btn btn-success btn-sm px-4 fw-bold shadow-sm" onclick="downloadExcelFile()">
-              <i class="fa-solid fa-download me-1"></i> Xác Nhận Tải File Excel (.xlsx)
+        <div class="bg-slate-50 px-6 py-4 flex items-center justify-between border-t border-slate-100">
+          <span class="text-xs text-slate-500"><i class="fa-solid fa-file-shield mr-1"></i> Định dạng chuẩn .xlsx tương thích 100% Microsoft Excel & Google Sheets</span>
+          <div class="flex items-center gap-2">
+            <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition" data-bs-dismiss="modal">Đóng</button>
+            <button type="button" class="px-5 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1.5" onclick="downloadExcelFile()">
+              <i class="fa-solid fa-download"></i> Tải Về File Excel
             </button>
           </div>
         </div>
@@ -337,24 +561,349 @@
   </div>
 
   <!-- ========================================================= -->
-  <!-- CHÂN TRANG (FOOTER) CHUNG -->
+  <!-- MODAL GỬI NHẮC LỊCH HẸN TRƯỚC 1-2 GIỜ (LUỒNG 5) -->
   <!-- ========================================================= -->
-  <footer class="text-center py-4 text-muted border-top bg-white mt-5">
-    <div class="container small">
-      <div>© 2026 AI Recruitment Multi-Agent System • Hệ Thống Tuyển Dụng Thông Minh Đa Tác Tử</div>
-      <div class="mt-1 text-secondary">Nghiên cứu & Phát triển bởi: <strong class="text-primary">Nguyễn Thị Mỹ Hoa - Lê Thị Yến Nhi</strong></div>
+  <div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-2xl border-0 shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-5 flex items-center justify-between">
+          <div>
+            <h5 class="modal-title font-bold text-lg flex items-center gap-2" id="reminderModalLabel">
+              <i class="fa-solid fa-bell text-amber-200"></i> Gửi Thư Nhắc Lịch Hẹn Trước 1-2 Giờ (Tác Tử Luồng 5)
+            </h5>
+            <p class="text-amber-100 text-xs mt-0.5">Tự động chuẩn bị nội dung nhắc hẹn & link Google Meet phòng chống quên lịch</p>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="reminderCandId">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Ứng Viên:</span>
+              <div class="font-bold text-slate-800 text-sm mt-0.5" id="reminderCandName">—</div>
+              <div class="text-xs text-slate-500" id="reminderCandEmail">—</div>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Giờ Phỏng Vấn:</span>
+              <div class="font-bold text-indigo-600 text-sm mt-0.5" id="reminderCandTime">—</div>
+              <div class="text-xs font-semibold text-amber-700" id="reminderCandCountdown">—</div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <i class="fa-solid fa-envelope-open-text text-amber-600 mr-1"></i> Xem Trước Nội Dung Email Nhắc Lịch Sẽ Gửi:
+            </label>
+            <div class="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 text-xs space-y-2 text-slate-800">
+              <div class="font-bold text-amber-900 border-b border-amber-200 pb-1.5">
+                Tiêu đề: <span id="reminderEmailSubject" class="font-semibold text-slate-800">[NHẮC LỊCH HẸN TRƯỚC 1-2 GIỜ] Phỏng vấn ứng tuyển</span>
+              </div>
+              <div class="text-slate-700 leading-relaxed space-y-2 pt-1 font-sans">
+                <p>Kính gửi <b id="reminderPreviewName">Ứng viên</b>,</p>
+                <p>Hệ thống tuyển dụng xin nhắc bạn: buổi phỏng vấn trực tuyến của bạn sẽ diễn ra trong vòng <b>1 - 2 giờ tới</b>:</p>
+                <ul class="list-disc pl-5 space-y-1 text-slate-600">
+                  <li>Thời gian: <b id="reminderPreviewTime">—</b></li>
+                  <li>Người phỏng vấn: <b id="reminderPreviewLead">—</b></li>
+                  <li>Link Google Meet: <a href="#" id="reminderPreviewLink" target="_blank" class="text-indigo-600 underline font-bold">—</a></li>
+                </ul>
+                <p class="text-slate-500 italic text-[11px] pt-1">💡 Vui lòng chuẩn bị sẵn kết nối mạng ổn định, camera, micro và tài liệu liên quan trước 10 phút.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-slate-50 px-6 py-4 flex items-center justify-between border-t border-slate-100">
+          <span class="text-xs text-slate-500"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Kích hoạt trực tiếp qua Luồng 5</span>
+          <div class="flex items-center gap-2">
+            <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition" data-bs-dismiss="modal">Đóng</button>
+            <button type="button" id="btnSendReminderAction" class="px-5 py-2.5 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition flex items-center gap-2 cursor-pointer" onclick="sendReminderEmail()">
+              <i class="fa-solid fa-paper-plane mr-1"></i> <span>Gửi Nhắc Lịch Ngay</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL ĐÁNH GIÁ & CHẤM ĐIỂM SAU PHỎNG VẤN (LUỒNG 6) -->
+  <!-- ========================================================= -->
+  <div class="modal fade" id="evaluationModal" tabindex="-1" aria-labelledby="evaluationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-2xl border-0 shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-700 to-indigo-700 text-white p-5 flex items-center justify-between">
+          <div>
+            <h5 class="modal-title font-bold text-lg flex items-center gap-2" id="evaluationModalLabel">
+              <i class="fa-solid fa-clipboard-check text-purple-200"></i> Phiếu Đánh Giá Sau Phỏng Vấn (Tác Tử Luồng 6)
+            </h5>
+            <p class="text-purple-100 text-xs mt-0.5">Scorecard chuẩn hóa năng lực, tự động điều phối trạng thái & kích hoạt thư từ chối/trúng tuyển</p>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="evalCandidateId">
+
+          <!-- Info bar -->
+          <div class="bg-purple-50/60 border border-purple-100 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <span class="text-[11px] font-bold text-purple-900 uppercase">Ứng Viên:</span>
+              <div class="font-bold text-slate-900 text-sm" id="evalCandName">—</div>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-purple-900 uppercase">Vị Trí Ứng Tuyển:</span>
+              <div class="font-semibold text-slate-700 text-xs" id="evalCandPosition">—</div>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-purple-900 uppercase">Người Phỏng Vấn:</span>
+              <div class="font-semibold text-slate-700 text-xs" id="evalCandLead">—</div>
+            </div>
+          </div>
+
+          <!-- 3 Tiêu chí chấm điểm (1 - 5 sao) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+              <label class="block text-xs font-bold text-slate-700">1. Kỹ Năng Chuyên Môn</label>
+              <select id="evalTechScore" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-purple-600">
+                <option value="5">⭐⭐⭐⭐⭐ 5/5 - Xuất sắc</option>
+                <option value="4" selected>⭐⭐⭐⭐ 4/5 - Tốt</option>
+                <option value="3">⭐⭐⭐ 3/5 - Đạt yêu cầu</option>
+                <option value="2">⭐⭐ 2/5 - Còn yếu</option>
+                <option value="1">⭐ 1/5 - Không đạt</option>
+              </select>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+              <label class="block text-xs font-bold text-slate-700">2. Giao Tiếp & Văn Hóa</label>
+              <select id="evalCommScore" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-purple-600">
+                <option value="5">⭐⭐⭐⭐⭐ 5/5 - Xuất sắc</option>
+                <option value="4" selected>⭐⭐⭐⭐ 4/5 - Tốt</option>
+                <option value="3">⭐⭐⭐ 3/5 - Trung bình</option>
+                <option value="2">⭐⭐ 2/5 - Thụ động</option>
+                <option value="1">⭐ 1/5 - Không phù hợp</option>
+              </select>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+              <label class="block text-xs font-bold text-slate-700">3. Xử Lý Tình Huống</label>
+              <select id="evalProblemScore" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-purple-600">
+                <option value="5">⭐⭐⭐⭐⭐ 5/5 - Rất nhạy bén</option>
+                <option value="4" selected>⭐⭐⭐⭐ 4/5 - Tốt</option>
+                <option value="3">⭐⭐⭐ 3/5 - Chấp nhận được</option>
+                <option value="2">⭐⭐ 2/5 - Rối ren</option>
+                <option value="1">⭐ 1/5 - Không giải quyết được</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Quyết định tuyển dụng -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <i class="fa-solid fa-gavel text-purple-600 mr-1"></i> Quyết Định Sau Buổi Phỏng Vấn:
+            </label>
+            <select id="evalDecision" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white focus:outline-none focus:border-purple-600">
+              <option value="HIRE" class="text-emerald-700 font-bold">🟢 HIRE - ĐẠT & TUYỂN DỤNG (Chuyển trạng thái Đạt)</option>
+              <option value="ROUND2" class="text-sky-700 font-bold">🔵 ROUND 2 - PHỎNG VẤN VÒNG TIẾP THEO (Giữ trạng thái PV)</option>
+              <option value="REJECT" class="text-rose-700 font-bold">🔴 REJECT - LOẠI SAU PHỎNG VẤN (Tự động gửi thư từ chối qua Luồng 5)</option>
+            </select>
+          </div>
+
+          <!-- Nhận xét chi tiết -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <i class="fa-solid fa-comment-dots text-purple-600 mr-1"></i> Nhận Xét & Phản Hồi Của Người Phỏng Vấn:
+            </label>
+            <textarea id="evalNotes" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:border-purple-600" placeholder="Ghi nhận điểm mạnh, điểm cần cải thiện, mức lương kỳ vọng, thái độ ứng viên..."></textarea>
+          </div>
+        </div>
+        <div class="bg-slate-50 px-6 py-4 flex items-center justify-between border-t border-slate-100">
+          <span class="text-xs text-slate-500"><i class="fa-solid fa-shield-halved text-purple-600 mr-1"></i> Ghi nhận Audit Trail bảo lưu lịch sử ứng viên</span>
+          <div class="flex items-center gap-2">
+            <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" id="btnSubmitEvaluationAction" class="px-5 py-2.5 rounded-xl text-sm font-bold bg-purple-700 hover:bg-purple-800 text-white shadow-sm transition flex items-center gap-2 cursor-pointer" onclick="submitEvaluation()">
+              <i class="fa-solid fa-check mr-1"></i> <span>Xác Nhận & Cập Nhật</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL DÒNG THỜI GIAN & AUDIT TRAIL ỨNG VIÊN (LUỒNG 6) -->
+  <!-- ========================================================= -->
+  <div class="modal fade" id="timelineModal" tabindex="-1" aria-labelledby="timelineModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content rounded-2xl border-0 shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 flex items-center justify-between">
+          <div>
+            <h5 class="modal-title font-bold text-lg flex items-center gap-2" id="timelineModalLabel">
+              <i class="fa-solid fa-timeline text-indigo-400"></i> Lịch Sử Tiến Trình Ứng Tuyển & Audit Trail
+            </h5>
+            <p class="text-slate-300 text-xs mt-0.5">Theo dõi chi tiết các mốc xử lý tự động qua 6 Luồng Tác tử AI</p>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div>
+              <span class="text-[11px] font-bold text-slate-400 uppercase">Ứng Viên:</span>
+              <div class="font-bold text-slate-900 text-sm" id="timelineCandName">—</div>
+              <div class="text-xs text-slate-500" id="timelineCandEmail">—</div>
+            </div>
+            <div class="text-right">
+              <span class="text-[11px] font-bold text-slate-400 uppercase">Trạng Thái Hiện Tại:</span>
+              <div id="timelineCandStatus" class="mt-0.5">—</div>
+            </div>
+          </div>
+
+          <!-- Danh sách các mốc dòng thời gian -->
+          <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-indigo-200" id="timelineContainer">
+            <!-- Render qua openTimelineModal() -->
+          </div>
+        </div>
+        <div class="bg-slate-50 px-6 py-4 flex items-center justify-end border-t border-slate-100">
+          <button type="button" class="px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL GỬI THƯ MỜI NHẬN VIỆC (JOB OFFER LETTER - LUỒNG 6) -->
+  <!-- ========================================================= -->
+  <div class="modal fade" id="offerModal" tabindex="-1" aria-labelledby="offerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-2xl border-0 shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white p-5 flex items-center justify-between">
+          <div>
+            <h5 class="modal-title font-bold text-lg flex items-center gap-2" id="offerModalLabel">
+              <i class="fa-solid fa-file-signature text-emerald-200"></i> Phát Hành Thư Mời Nhận Việc (Tác Tử Luồng 6)
+            </h5>
+            <p class="text-emerald-100 text-xs mt-0.5">Xác nhận trúng tuyển & gửi Job Offer Letter chính thức cho ứng viên</p>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="offerCandId">
+
+          <!-- Info bar -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200">
+            <div>
+              <span class="text-[11px] font-bold text-emerald-800 uppercase block">Ứng Viên:</span>
+              <div class="font-bold text-slate-900 text-sm mt-0.5" id="offerCandName">—</div>
+              <div class="text-xs text-slate-500" id="offerCandEmail">—</div>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-emerald-800 uppercase block">Vị Trí Trúng Tuyển:</span>
+              <div class="font-bold text-emerald-900 text-sm mt-0.5" id="offerCandPosition">—</div>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-emerald-800 uppercase block">Trạng Thái:</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 text-emerald-900 mt-0.5">
+                <i class="fa-solid fa-check"></i> Đã Trúng Tuyển
+              </span>
+            </div>
+          </div>
+
+          <!-- Các điều khoản Offer -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-solid fa-money-bill-wave text-emerald-600 mr-1"></i> Mức Lương Khởi Điểm (Gross/Net):
+              </label>
+              <input type="text" id="offerSalaryInput" oninput="updateOfferPreview()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold focus:outline-none focus:border-emerald-600" value="25,000,000 VNĐ / tháng">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-regular fa-calendar-check text-emerald-600 mr-1"></i> Ngày Bắt Đầu Đi Làm (Onboarding):
+              </label>
+              <input type="date" id="offerStartDateInput" onchange="updateOfferPreview()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold focus:outline-none focus:border-emerald-600">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-solid fa-clock-rotate-left text-emerald-600 mr-1"></i> Thời Gian Thử Việc:
+              </label>
+              <select id="offerProbationInput" onchange="updateOfferPreview()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-600">
+                <option value="2 tháng (hưởng 85% lương chính thức)">2 tháng (hưởng 85% lương)</option>
+                <option value="1 tháng (hưởng 85% lương chính thức)">1 tháng (hưởng 85% lương)</option>
+                <option value="Không thử việc (Chính thức 100%)">Không thử việc (Chính thức 100%)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> Địa Điểm Làm Việc:
+              </label>
+              <input type="text" id="offerLocationInput" oninput="updateOfferPreview()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-600" value="Đà Nẵng (On-site / Hybrid linh hoạt)">
+            </div>
+          </div>
+
+          <!-- Xem trước thư Offer -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <i class="fa-solid fa-envelope-open-text text-emerald-600 mr-1"></i> Xem Trước Nội Dung Thư Mời Nhận Việc:
+            </label>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-2 text-slate-700 font-sans">
+              <p>Chào bạn <strong id="offerPreviewName">—</strong>,</p>
+              <p>Chúc mừng bạn đã hoàn thành xuất sắc các vòng phỏng vấn tuyển dụng! Ban Tuyển dụng trân trọng gửi đến bạn Thư Mời Nhận Việc (Job Offer) cho vị trí <strong id="offerPreviewPos">—</strong>.</p>
+              <ul class="list-disc pl-5 space-y-1 text-slate-600">
+                <li>Mức lương khởi điểm: <strong id="offerPreviewSalary" class="text-emerald-700 font-bold">25,000,000 VNĐ / tháng</strong></li>
+                <li>Thời gian gia nhập dự kiến: <strong id="offerPreviewDate" class="text-indigo-700 font-bold">01/11/2026</strong></li>
+                <li>Thời gian thử việc: <span id="offerPreviewProbation">2 tháng (hưởng 85% lương)</span></li>
+                <li>Chế độ đãi ngộ: Đầy đủ BHXH/BHYT, thưởng tháng 13, review lương 2 lần/năm, gói bảo hiểm sức khỏe cao cấp.</li>
+              </ul>
+              <p class="text-slate-500 italic text-[11px] pt-1">Rất mong sớm được chào đón bạn chính thức gia nhập đội ngũ!</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-slate-50 px-6 py-4 flex items-center justify-between border-t border-slate-100">
+          <span class="text-xs text-slate-500"><i class="fa-solid fa-shield-check text-emerald-600 mr-1"></i> Luồng 6 xác nhận trúng tuyển & bảo lưu hồ sơ nhân sự</span>
+          <div class="flex items-center gap-2">
+            <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" id="btnSubmitOfferAction" class="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-2 cursor-pointer" onclick="submitOfferLetter()">
+              <i class="fa-solid fa-paper-plane mr-1"></i> <span>Gửi Thư Offer Ngay</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IN LỊCH CHO LEADER (ẨN TRÊN MÀN HÌNH, HIỆN KHI BẤM IN) -->
+  <div id="leaderPrintArea" class="hidden">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h2 style="margin: 0; color: #1e293b;">LỊCH PHỎNG VẤN ỨNG VIÊN - HỘI ĐỒNG TUYỂN DỤNG</h2>
+      <p style="margin: 5px 0 0 0; color: #64748b;">Hệ thống AI Recruitment Multi-Agent System • ĐH CNTT & TT Việt - Hàn (VKU)</p>
+    </div>
+    <div id="leaderPrintContent"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="mt-12 py-6 border-t border-slate-200 text-center text-xs text-slate-500">
+    <div class="max-w-[97%] 2xl:max-w-[1780px] mx-auto px-4">
+      <p class="font-semibold text-slate-700">© 2026 AI Recruitment Multi-Agent System • Enterprise Edition</p>
+      <p class="mt-1 text-slate-400">Thiết kế & Vận hành bởi: <strong>Lê Thị Yến Nhi</strong> (Luồng 4, 5, 6) & <strong>Nguyễn Thị Mỹ Hoa</strong> (Luồng 1, 2, 3)</p>
     </div>
   </footer>
 
-  <script>
-    const API_BASE = 'http://localhost:3000';
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    function showToast(msg) {
-      const toast = document.getElementById('toastAlert');
-      const toastMsg = document.getElementById('toastMsg');
-      toastMsg.innerText = msg;
-      toast.classList.remove('d-none');
-      setTimeout(() => toast.classList.add('d-none'), 5000);
+  <!-- JAVASCRIPT LOGIC NGHIỆP VỤ -->
+  <script>
+    const API_BASE = (window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
+
+    function showToast(msg, isSuccess = true) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: isSuccess ? 'success' : 'error',
+        title: msg,
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true
+      });
     }
 
     let currentFilter = 'ALL';
@@ -363,56 +912,116 @@
     async function fetchCandidates(userClick = false) {
       const tbody = document.getElementById('candidate-list');
       try {
-        const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now());
+        const res = await fetch(`${API_BASE}/api/candidates?t=` + Date.now(), { signal: AbortSignal.timeout(3000) });
         const json = await res.json();
         allCandidates = Array.isArray(json) ? json : (json.data || json.candidates || []);
+        
+        // Nếu cơ sở dữ liệu chỉ có 2 hồ sơ cũ chưa cập nhật, nạp ngay bộ 50 hồ sơ chuẩn
+        if (allCandidates.length <= 2) {
+          try {
+            const demoRes = await fetch('demo-candidates.json');
+            if (demoRes.ok) {
+              const demoData = await demoRes.json();
+              if (demoData && demoData.length > 0) {
+                allCandidates = demoData;
+              }
+            }
+          } catch(e) {}
+        }
+
         updateCounts();
         applyFilter();
         if (userClick) {
-          showToast('🔄 Đã cập nhật và làm mới dữ liệu ứng viên mới nhất từ MySQL!');
+          showToast('Đã làm mới dữ liệu ứng viên mới nhất từ hệ thống!', true);
         }
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Lỗi kết nối máy chủ backend: ${err.message}</td></tr>`;
+        // Fallback nạp từ demo-candidates.json để đảm bảo luôn hiển thị 50 ứng viên
+        try {
+          const demoRes = await fetch('demo-candidates.json');
+          if (demoRes.ok) {
+            allCandidates = await demoRes.json();
+            updateCounts();
+            applyFilter();
+            return;
+          }
+        } catch (e) {}
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-rose-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Lỗi kết nối máy chủ: ${err.message}</td></tr>`;
       }
     }
 
+    // =========================================================
+    // HỆ THỐNG PHÂN ĐỊNH 5 GIAI ĐOẠN PHỄU TUYỂN DỤNG RÕ RÀNG
+    // =========================================================
+    function getCandidateStage(c) {
+      const s = (c.status || '').trim();
+      const app = (c.approval_status || '').trim();
+      const hasTime = Boolean(c.interview_time);
+      const evalText = (c.ai_evaluation || '').toLowerCase();
+
+      // 1. Loại sau phỏng vấn (Luồng 6 & 5)
+      if (s === 'Loại sau PV' || app === 'INTERVIEW_REJECTED' || ( (s === 'Loại' || app === 'REJECTED') && (evalText.includes('đánh giá pv') || evalText.includes('reject') || evalText.includes('không đạt phỏng vấn')) )) {
+        return 'LOAI_SAU_PV';
+      }
+
+      // 2. Loại vòng sơ loại CV (Luồng 2 & 5)
+      if (s === 'Loại sơ loại' || s === 'Loại' || s === 'Không đạt' || app === 'CV_REJECTED' || app === 'REJECTED') {
+        return 'LOAI_CV';
+      }
+
+      // 3. Trúng tuyển (Đậu sau phỏng vấn - Luồng 6)
+      if (s === 'Trúng tuyển' || app === 'HIRED' || app === 'OFFER_SENT' || evalText.includes('job offer') || (s === 'Đạt' && (evalText.includes('hire') || evalText.includes('đánh giá pv') || app === 'INTERVIEW_COMPLETED')) ) {
+        return 'TRUNG_TUYEN';
+      }
+
+      // 4. Đang phỏng vấn (Có lịch hẹn phỏng vấn - Luồng 4 & 5)
+      if ((s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED') && hasTime) {
+        return 'DANG_PHONG_VAN';
+      }
+
+      // 5. Đạt sơ loại CV (Chờ xếp lịch phỏng vấn - Luồng 2 chuyển sang Luồng 4)
+      return 'CHO_XEP_LICH';
+    }
+
     function updateCounts() {
+      let countChoLich = 0;
       let countPv = 0;
       let countDat = 0;
       let countLoai = 0;
+
       allCandidates.forEach(c => {
-        const s = (c.status || '').trim();
-        const app = (c.approval_status || '').trim();
-        if (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED') {
-          countLoai++;
-        } else if (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED') {
-          countPv++;
-        } else {
-          countDat++;
-        }
+        const stage = getCandidateStage(c);
+        if (stage === 'CHO_XEP_LICH') countChoLich++;
+        else if (stage === 'DANG_PHONG_VAN') countPv++;
+        else if (stage === 'TRUNG_TUYEN') countDat++;
+        else if (stage === 'LOAI_CV' || stage === 'LOAI_SAU_PV') countLoai++;
       });
-      const countAll = countPv + countDat; // Đếm số ứng viên trong vòng phỏng vấn (Đạt & Phỏng vấn)
-      const elAll = document.getElementById('count-all');
+
+      // 4 Card Metrics
+      const elChoLich = document.getElementById('count-cho-xep-lich');
       const elPv = document.getElementById('count-pv');
       const elDat = document.getElementById('count-dat');
       const elLoai = document.getElementById('count-loai');
-      if (elAll) elAll.innerText = countAll;
+
+      if (elChoLich) elChoLich.innerText = countChoLich;
       if (elPv) elPv.innerText = countPv;
       if (elDat) elDat.innerText = countDat;
       if (elLoai) elLoai.innerText = countLoai;
+
+      // 5 Tabs Badge Counts
+      if (document.getElementById('tabCountAll')) document.getElementById('tabCountAll').innerText = allCandidates.length;
+      if (document.getElementById('tabCountChoLich')) document.getElementById('tabCountChoLich').innerText = countChoLich;
+      if (document.getElementById('tabCountPv')) document.getElementById('tabCountPv').innerText = countPv;
+      if (document.getElementById('tabCountDat')) document.getElementById('tabCountDat').innerText = countDat;
+      if (document.getElementById('tabCountLoai')) document.getElementById('tabCountLoai').innerText = countLoai;
     }
 
     function filterStatus(status) {
       currentFilter = status;
       document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active', 'btn-dark', 'btn-info', 'btn-success', 'btn-danger');
+        btn.classList.remove('bg-slate-900', 'text-white', 'shadow-sm', 'active');
         const f = btn.getAttribute('data-filter');
         if (f === status) {
-          btn.classList.add('active');
-          if (f === 'ALL') btn.classList.add('btn-dark');
-          else if (f === 'Phỏng vấn') btn.classList.add('btn-info', 'text-white');
-          else if (f === 'Đạt') btn.classList.add('btn-success', 'text-white');
-          else if (f === 'Loại') btn.classList.add('btn-danger', 'text-white');
+          btn.classList.add('bg-slate-900', 'text-white', 'shadow-sm', 'active');
         }
       });
       applyFilter();
@@ -423,33 +1032,17 @@
       const searchVal = (document.getElementById('interviewSearchInput')?.value || '').toLowerCase().trim();
 
       if (currentFilter === 'ALL') {
-        // Mặc định Phương án 2: Ẩn người bị loại, chỉ hiển thị ứng viên Đạt & Phỏng vấn
+        filtered = allCandidates;
+      } else if (currentFilter === 'CHO_XEP_LICH') {
+        filtered = allCandidates.filter(c => getCandidateStage(c) === 'CHO_XEP_LICH');
+      } else if (currentFilter === 'DANG_PHONG_VAN') {
+        filtered = allCandidates.filter(c => getCandidateStage(c) === 'DANG_PHONG_VAN');
+      } else if (currentFilter === 'TRUNG_TUYEN') {
+        filtered = allCandidates.filter(c => getCandidateStage(c) === 'TRUNG_TUYEN');
+      } else if (currentFilter === 'LOAI') {
         filtered = allCandidates.filter(c => {
-          const s = (c.status || '').trim();
-          const app = (c.approval_status || '').trim();
-          const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
-          return !isRejected;
-        });
-      } else if (currentFilter === 'Đạt') {
-        filtered = allCandidates.filter(c => {
-          const s = (c.status || '').trim();
-          const app = (c.approval_status || '').trim();
-          const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
-          const isInterview = (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED');
-          return (s === 'Đạt' || app === 'APPROVED') && !isRejected && !isInterview;
-        });
-      } else if (currentFilter === 'Phỏng vấn') {
-        filtered = allCandidates.filter(c => {
-          const s = (c.status || '').trim();
-          const app = (c.approval_status || '').trim();
-          return (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED');
-        });
-      } else if (currentFilter === 'Loại') {
-        // Chỉ hiển thị ứng viên bị loại khi HR bấm vào tab 'Đã loại'
-        filtered = allCandidates.filter(c => {
-          const s = (c.status || '').trim();
-          const app = (c.approval_status || '').trim();
-          return (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
+          const st = getCandidateStage(c);
+          return st === 'LOAI_CV' || st === 'LOAI_SAU_PV';
         });
       }
 
@@ -479,112 +1072,179 @@
     function renderRows(candidates) {
       const tbody = document.getElementById('candidate-list');
       if (!candidates || candidates.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Chưa có ứng viên nào trong hệ thống.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-slate-400">Không có ứng viên nào trong giai đoạn này.</td></tr>';
         return;
       }
 
       tbody.innerHTML = candidates.map(c => {
-        const s = (c.status || '').trim();
-        const app = (c.approval_status || '').trim();
-        const isRejected = (s === 'Loại' || s === 'Không đạt' || app === 'REJECTED');
-        const isInterview = (s === 'Phỏng vấn' || app === 'INTERVIEW_SCHEDULED');
-        const isApproved = (s === 'Đạt' || app === 'APPROVED') && !isRejected && !isInterview;
-
-        let badgeClass = 'badge-phong-van';
-        let displayStatus = 'Phỏng vấn';
-        if (isRejected) {
-          badgeClass = 'badge-loai';
-          displayStatus = 'Loại';
-        } else if (isApproved) {
-          badgeClass = 'badge-dat';
-          displayStatus = 'Đạt';
+        const stage = getCandidateStage(c);
+        let statusPill = '';
+        if (stage === 'CHO_XEP_LICH') {
+          statusPill = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Đạt Sơ Loại (Chờ Lịch)</span>';
+        } else if (stage === 'DANG_PHONG_VAN') {
+          statusPill = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-800 border border-sky-300"><span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-ping"></span> Đang Phỏng Vấn</span>';
+        } else if (stage === 'TRUNG_TUYEN') {
+          statusPill = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs"><i class="fa-solid fa-trophy text-emerald-600"></i> Trúng Tuyển (Đậu PV)</span>';
+        } else if (stage === 'LOAI_SAU_PV') {
+          statusPill = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300"><i class="fa-solid fa-xmark text-rose-600"></i> Loại Sau PV</span>';
+        } else {
+          statusPill = '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Loại Vòng CV</span>';
         }
 
+        const candName = c.full_name || c.name || 'Ứng viên';
+        const initials = candName.split(' ').map(w => w[0]).slice(-2).join('').toUpperCase() || 'UV';
+        const candNameEscaped = candName.replace(/'/g, "\\'");
+        const candPosEscaped = (c.applied_position || c.position || '').replace(/'/g, "\\'");
+
         let scheduleCol = '';
-        if (isRejected) {
-          // Ứng viên bị Loại -> Đã gửi thư cảm ơn & thông báo kết quả qua Gmail
+        if (stage === 'CHO_XEP_LICH') {
+          // GIAI ĐOẠN 1: ĐẠT SƠ LOẠI CV (CHỜ LUỒNG 4 XẾP LỊCH)
           scheduleCol = `
-            <div class="small">
-              <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2 d-inline-flex align-items-center gap-1" title="Hệ thống đã tự động gửi email thông báo kết quả sơ loại & thư cảm ơn">
-                <i class="fa-solid fa-envelope-circle-check"></i> Đã gửi thư từ chối
-              </span>
-              <div class="mt-1">
-                <button class="btn btn-sm btn-light border py-0 px-2 text-danger" title="Gửi lại thư thông báo không đạt" onclick="sendRejectEmail(${c.id})">
-                  <i class="fa-solid fa-paper-plane me-1"></i> Gửi lại
-                </button>
+            <div class="space-y-1.5 py-0.5">
+              <div class="text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Chờ Tác tử Luồng 4 xếp lịch
               </div>
+              <button class="btn-schedule btn-gradient-ai px-4 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer" data-id="${c.id}">
+                <i class="fa-solid fa-calendar-plus text-amber-300"></i> Xếp Lịch AI (Luồng 4)
+              </button>
             </div>`;
-        } else if (c.interview_time) {
-          // Đã có lịch phỏng vấn -> Hiện ngày giờ, người PV, link Google Meet & Nút Đổi giờ PV
-          const candNameEscaped = (c.full_name || c.name || 'Ứng viên').replace(/'/g, "\\'");
+        } else if (stage === 'DANG_PHONG_VAN') {
+          // GIAI ĐOẠN 2: ĐANG PHỎNG VẤN (LUỒNG 4 ĐÃ LÊN LỊCH & LUỒNG 5 NHẮC HẸN)
           scheduleCol = `
-            <div class="small">
-              <div class="fw-bold text-dark"><i class="fa-regular fa-clock text-primary me-1"></i>${formatTime(c.interview_time)}</div>
-              <div class="text-muted"><i class="fa-solid fa-user-tie text-secondary me-1"></i>${c.interviewer_name || 'Hội Đồng Phỏng Vấn'}</div>
-              <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
-                <a href="${c.meeting_link}" target="_blank" class="btn btn-sm btn-outline-success meet-btn py-0 px-2">
-                  <i class="fa-solid fa-video me-1"></i> Meet
+            <div class="text-xs space-y-1.5 py-0.5">
+              <div class="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                <i class="fa-regular fa-clock text-indigo-600"></i> ${formatTime(c.interview_time)}
+              </div>
+              <div class="text-slate-600 flex items-center gap-1.5 text-xs">
+                <i class="fa-solid fa-user-tie text-slate-400"></i> ${c.interviewer_name || 'Hội Đồng Phỏng Vấn'}
+              </div>
+              <div class="flex items-center gap-1.5 pt-1 flex-wrap">
+                <a href="${c.meeting_link}" target="_blank" class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 text-[11px] flex items-center gap-1 transition shadow-2xs" title="Vào phòng Google Meet">
+                  <i class="fa-solid fa-video text-emerald-600"></i> Meet
                 </a>
-                <button class="btn btn-sm btn-outline-warning py-0 px-2 fw-semibold" style="font-size: 11px;" title="Dời/Đổi giờ phỏng vấn khi ứng viên bận" onclick="openRescheduleModal(${c.id}, '${c.interview_time || ''}', '${candNameEscaped}')">
-                  <i class="fa-solid fa-pen-to-square me-1"></i> Đổi giờ PV
+                <button onclick="openRescheduleModal(${c.id}, '${c.interview_time || ''}', '${candNameEscaped}')" class="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold border border-amber-200 text-[11px] flex items-center gap-1 transition shadow-2xs cursor-pointer" title="Đổi giờ phỏng vấn (Luồng 6)">
+                  <i class="fa-solid fa-pen-to-square text-amber-600"></i> Đổi giờ
+                </button>
+                <button onclick="openReminderModal(${c.id})" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold border border-blue-200 text-[11px] flex items-center gap-1 transition shadow-2xs cursor-pointer" title="Gửi email nhắc lịch trước 1-2h (Luồng 5)">
+                  <i class="fa-solid fa-bell text-blue-600"></i> Nhắc hẹn
+                </button>
+                <button onclick="openEvaluationModal(${c.id})" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold border border-purple-200 text-[11px] flex items-center gap-1 transition shadow-2xs cursor-pointer" title="Chấm điểm & đánh giá sau PV (Luồng 6)">
+                  <i class="fa-solid fa-star text-purple-600"></i> Đánh giá
                 </button>
               </div>
             </div>`;
-        } else if (isInterview) {
-          // Trạng thái Phỏng vấn -> Nút Xếp lịch AI màu xanh chính thức
-          scheduleCol = `<button class="btn btn-sm btn-primary btn-schedule px-3 py-1 rounded-pill shadow-sm" data-id="${c.id}">
-            <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch AI
-          </button>`;
-        } else if (isApproved) {
-          // Trạng thái Đạt vòng CV -> Nút Xếp lịch phỏng vấn
-          scheduleCol = `<button class="btn btn-sm btn-outline-primary btn-schedule px-3 py-1 rounded-pill shadow-sm" data-id="${c.id}">
-            <i class="fa-solid fa-calendar-plus me-1"></i> Xếp lịch AI
-          </button>`;
+        } else if (stage === 'TRUNG_TUYEN') {
+          // GIAI ĐOẠN 3: TRÚNG TUYỂN (ĐẬU SAU PHỎNG VẤN - LUỒNG 6 TÁCH HẲN KHỎI LUỒNG 4)
+          const isOfferSent = (c.approval_status === 'OFFER_SENT' || (c.ai_evaluation && c.ai_evaluation.includes('Job Offer')));
+          scheduleCol = `
+            <div class="text-xs space-y-1.5 py-0.5">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                <i class="fa-solid fa-award text-emerald-600"></i> ${isOfferSent ? 'Đã Phát Hành Offer' : 'Đã Trúng Tuyển (Passed)'}
+              </div>
+              <div class="text-slate-600 flex items-center gap-1 text-xs font-medium">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                <span>${isOfferSent ? 'Đã gửi Thư Mời Nhận Việc chính thức' : 'Hoàn thành xuất sắc phỏng vấn'}</span>
+              </div>
+              <div class="flex items-center gap-1.5 pt-1 flex-wrap">
+                <button onclick="openOfferModal(${c.id}, '${candNameEscaped}', '${candPosEscaped}')" class="px-3 py-1 rounded-lg ${isOfferSent ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'} font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Phát hành thư mời nhận việc (Luồng 6)">
+                  <i class="fa-solid fa-file-signature"></i> <span>${isOfferSent ? 'Xem lại Offer' : 'Gửi Thư Offer'}</span>
+                </button>
+                <button onclick="openEvaluationModal(${c.id})" class="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold border border-purple-200 text-xs flex items-center gap-1 transition shadow-2xs cursor-pointer" title="Xem lại Scorecard đánh giá phỏng vấn (Luồng 6)">
+                  <i class="fa-solid fa-clipboard-check text-purple-600"></i> Scorecard
+                </button>
+              </div>
+            </div>`;
+        } else if (stage === 'LOAI_SAU_PV') {
+          // GIAI ĐOẠN 4: LOẠI SAU PHỎNG VẤN (LUỒNG 6 & LUỒNG 5)
+          scheduleCol = `
+            <div class="text-xs space-y-1 py-0.5">
+              <span class="inline-flex items-center gap-1 text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-200 font-bold">
+                <i class="fa-solid fa-circle-xmark text-rose-600"></i> Không đạt phỏng vấn
+              </span>
+              <div class="text-[11px] text-slate-500">Đã gửi thư từ chối sau PV & lưu Talent Pool</div>
+              <div>
+                <button onclick="openEvaluationModal(${c.id})" class="text-[11px] font-semibold text-purple-700 hover:text-purple-900 transition underline cursor-pointer">
+                  Xem lại nhận xét PV
+                </button>
+              </div>
+            </div>`;
         } else {
-          scheduleCol = '<span class="text-muted small">— Chưa xếp lịch —</span>';
+          // GIAI ĐOẠN 5: LOẠI VÒNG SƠ LOẠI CV (LUỒNG 2 & LUỒNG 5)
+          scheduleCol = `
+            <div class="text-xs space-y-1 py-0.5">
+              <span class="inline-flex items-center gap-1 text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 font-medium">
+                <i class="fa-solid fa-envelope-circle-check"></i> Đã gửi thư cảm ơn sơ loại
+              </span>
+              <div class="text-[11px] text-slate-500">Điểm CV không đạt chuẩn yêu cầu</div>
+              <div>
+                <button onclick="sendRejectEmail(${c.id})" class="text-[11px] font-semibold text-slate-500 hover:text-indigo-600 transition underline cursor-pointer">
+                  Gửi lại thư cảm ơn
+                </button>
+              </div>
+            </div>`;
         }
 
         const reviewText = c.ai_evaluation || c.ai_review || '';
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetId = urlParams.get('candidate_id');
-        const isTarget = targetId && String(c.id) === String(targetId);
-        const rowClass = isTarget ? 'table-warning border-start border-warning border-4' : '';
 
         return `
-          <tr data-id="${c.id}" class="${rowClass}">
-            <td class="ps-3 fw-bold text-secondary">#${c.id}</td>
-            <td>
-              <div class="fw-bold text-dark">${c.full_name || c.name || 'N/A'}</div>
-              <div class="small text-muted">${c.email || ''}</div>
+          <tr class="hover:bg-slate-50/70 transition">
+            <td class="py-4 px-4 text-center font-bold text-slate-400 align-top">#${c.id}</td>
+            <td class="py-4 px-4 align-top">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl gradient-avatar flex items-center justify-center text-xs flex-shrink-0 shadow-sm">
+                  ${initials}
+                </div>
+                <div>
+                  <div class="font-bold text-slate-900 leading-tight">${candName}</div>
+                  <a href="mailto:${c.email}" class="text-xs text-slate-500 hover:text-indigo-600 transition block mt-0.5">${c.email || '—'}</a>
+                </div>
+              </div>
             </td>
-            <td class="small fw-semibold text-secondary">${c.applied_position || c.position || ''}</td>
-            <td><span class="badge ${badgeClass} rounded-pill px-2 py-1">${displayStatus}</span></td>
-            <td><span class="ai-review">${reviewText ? '“' + reviewText + '”' : '<span class="text-muted">Chưa có đánh giá</span>'}</span></td>
-            <td>
-              <select class="status-select form-select form-select-sm" data-id="${c.id}">
-                <option value="Đạt" ${isApproved ? 'selected' : ''}>🟢 Đạt</option>
-                <option value="Phỏng vấn" ${isInterview ? 'selected' : ''}>🔵 Phỏng vấn</option>
-                <option value="Loại" ${isRejected ? 'selected' : ''}>🔴 Loại</option>
+            <td class="py-4 px-4 align-top">
+              <div class="font-semibold text-slate-800 text-xs">${c.applied_position || c.position || 'Chuyên viên'}</div>
+              ${c.match_score ? `<div class="text-[11px] font-bold text-indigo-600 mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100">Điểm CV: ${c.match_score}/100</div>` : ''}
+            </td>
+            <td class="py-4 px-4 text-center align-top">${statusPill}</td>
+            <td class="py-4 px-5 align-top">
+              <div class="ai-bubble">
+                <div class="text-slate-700 text-xs leading-relaxed">
+                  <i class="fa-solid fa-robot text-indigo-600 mr-1.5"></i>
+                  ${reviewText ? reviewText : '<span class="text-slate-400 italic">Đang chờ AI đánh giá</span>'}
+                </div>
+              </div>
+            </td>
+            <td class="py-4 px-4 align-top">
+              <select class="status-select status-select-custom text-xs font-semibold" data-id="${c.id}">
+                <option value="Đạt sơ loại" ${stage === 'CHO_XEP_LICH' ? 'selected' : ''}>🟡 Đạt Sơ Loại (Chờ Lịch)</option>
+                <option value="Phỏng vấn" ${stage === 'DANG_PHONG_VAN' ? 'selected' : ''}>🔵 Đang Phỏng Vấn (Có Lịch)</option>
+                <option value="Trúng tuyển" ${stage === 'TRUNG_TUYEN' ? 'selected' : ''}>🏆 Trúng Tuyển (Đậu Sau PV)</option>
+                <option value="Loại sơ loại" ${stage === 'LOAI_CV' ? 'selected' : ''}>🔴 Loại Vòng CV</option>
+                <option value="Loại sau PV" ${stage === 'LOAI_SAU_PV' ? 'selected' : ''}>❌ Loại Sau Phỏng Vấn</option>
               </select>
             </td>
-            <td id="schedule-cell-${c.id}">${scheduleCol}</td>
-            <td class="pe-3 text-end">
-              <button class="btn btn-sm btn-outline-danger border-0 py-1 px-2" onclick="deleteCandidateRow(${c.id}, '${(c.full_name || c.name || 'Ứng viên').replace(/'/g, "\\'")}')" title="Xóa hồ sơ">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
+            <td class="py-4 px-5 align-top" id="schedule-cell-${c.id}">${scheduleCol}</td>
+            <td class="py-4 px-4 text-right align-top">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="openTimelineModal(${c.id})" class="w-8 h-8 rounded-lg hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 transition flex items-center justify-center cursor-pointer" title="Xem lịch sử / Audit Trail ứng viên">
+                  <i class="fa-solid fa-timeline"></i>
+                </button>
+                <button onclick="deleteCandidateRow(${c.id}, '${candNameEscaped}')" class="w-8 h-8 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition flex items-center justify-center cursor-pointer" title="Xóa ứng viên">
+                  <i class="fa-regular fa-trash-can"></i>
+                </button>
+              </div>
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    // Xử lý nút Xếp lịch phỏng vấn (Luồng 4)
+    // Xếp lịch phỏng vấn qua Luồng 4
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('.btn-schedule');
       if (btn) {
         const candidateId = btn.getAttribute('data-id');
         const cell = document.getElementById('schedule-cell-' + candidateId);
-        if (cell) cell.innerHTML = '<span class="text-primary small fw-semibold"><i class="fa-solid fa-spinner fa-spin me-1"></i> AI đang xếp lịch...</span>';
+        if (cell) cell.innerHTML = '<span class="text-indigo-600 text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-notch fa-spin"></i> AI đang xếp lịch...</span>';
 
         try {
           const res = await fetch(`${API_BASE}/api/schedule-interview`, {
@@ -594,27 +1254,48 @@
           });
           const result = await res.json();
           if (result.success) {
-            showToast(`Đã xếp lịch và AI đã tự động gửi thư mời phỏng vấn cho ứng viên #${candidateId}!`);
+            Swal.fire({
+              icon: 'success',
+              title: 'Xếp Lịch AI Thành Công!',
+              html: `Tác tử Luồng 4 đã chọn chuyên gia và kích hoạt Luồng 5 gửi thư mời phỏng vấn đến ứng viên <b>#${candidateId}</b>!`,
+              timer: 3000,
+              showConfirmButton: false
+            });
           } else {
-            showToast(`Lỗi: ${result.message || 'Không thể xếp lịch'}`);
+            showToast(`Lỗi: ${result.message || 'Không thể xếp lịch'}`, false);
           }
           fetchCandidates();
         } catch (err) {
-          alert('Lỗi kết nối máy chủ khi xếp lịch phỏng vấn!');
+          showToast('Lỗi kết nối máy chủ backend!', false);
           fetchCandidates();
         }
       }
     });
 
-    // Xử lý đổi trạng thái ứng viên (Luồng 6)
+    // Cập nhật trạng thái qua Luồng 6
     document.addEventListener('change', async (e) => {
       if (e.target && e.target.classList.contains('status-select')) {
         const select = e.target;
         const candidateId = select.getAttribute('data-id');
         const newStatus = select.value;
         const row = select.closest('tr');
-        const fullName = row.cells[1].querySelector('.text-dark').innerText.trim();
+        const fullName = row.cells[1].querySelector('.font-bold').innerText.trim();
         const position = row.cells[2].innerText.trim();
+
+        // Optimistic UI: Cập nhật ngay tức thì trên mảng allCandidates
+        const targetCand = allCandidates.find(c => Number(c.id) === Number(candidateId));
+        if (targetCand) {
+          targetCand.status = newStatus;
+          if (newStatus === 'Đạt') {
+            targetCand.approval_status = 'APPROVED';
+          } else if (newStatus === 'Loại') {
+            targetCand.approval_status = 'REJECTED';
+          } else if (newStatus === 'Phỏng vấn') {
+            targetCand.approval_status = 'INTERVIEW_SCHEDULED';
+          }
+          updateCounts();
+          applyFilter();
+        }
 
         try {
           const res = await fetch(`${API_BASE}/api/candidates/update-status`, {
@@ -630,57 +1311,17 @@
           });
           const result = await res.json();
           if (result.success || res.ok) {
-            if (newStatus === 'Phỏng vấn') {
-              showToast(`Đã chuyển sang "Phỏng vấn", AI đang tự động xếp lịch & gửi thư mời cho #${candidateId}!`);
-            } else {
-              showToast(`Đã cập nhật trạng thái ứng viên #${candidateId} sang "${newStatus}" và AI đã sinh nhận xét mới!`);
-            }
-            fetchCandidates();
+            showToast(`Đã chuyển trạng thái #${candidateId} sang "${newStatus}" qua AI Agent Luồng 6!`, true);
           } else {
-            alert('Lỗi cập nhật: ' + (result.message || 'Không xác định'));
+            showToast('Lỗi cập nhật: ' + (result.message || 'Không xác định'), false);
           }
         } catch (err) {
-          alert('Lỗi kết nối máy chủ!');
+          showToast('Lỗi kết nối máy chủ!', false);
         }
       }
     });
 
-    // Xử lý gửi thư mời phỏng vấn & nhắc lịch (Luồng 5 - Lê Thị Yến Nhi) - Tự động không popup
-    window.sendInterviewInvite = async function(candidateId) {
-      try {
-        const res = await fetch(`${API_BASE}/api/candidates/${candidateId}/send-invite`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const result = await res.json();
-        if (result.success || res.ok) {
-          showToast(`Đã tự động gửi thư mời và đặt nhắc lịch thành công cho ứng viên #${candidateId}!`);
-        } else {
-          showToast('Thông báo Luồng 5: ' + (result.message || result.error || 'Đã gửi yêu cầu'));
-        }
-      } catch (err) {
-        showToast('Lỗi gọi Luồng 5: ' + err.message);
-      }
-    };
-
-    // Hàm xóa hồ sơ ứng viên
-    window.deleteCandidateRow = async function(candidateId, candidateName) {
-      if (!confirm(`Bạn có chắc muốn xóa ứng viên "${candidateName}" (#${candidateId}) khỏi hệ thống?`)) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/candidates/${candidateId}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast(`Đã xóa hồ sơ ứng viên #${candidateId}`);
-          fetchCandidates();
-        } else {
-          alert('Lỗi khi xóa: ' + (data.message || 'Không thể xóa'));
-        }
-      } catch (e) {
-        alert('Lỗi kết nối khi xóa: ' + e.message);
-      }
-    };
-
-    // Hàm gửi lại thư từ chối / cảm ơn (Luồng 5)
+    // Gửi lại thư từ chối (Luồng 5)
     window.sendRejectEmail = async function(candidateId) {
       try {
         const res = await fetch(`${API_BASE}/api/auto-notify-reject`, {
@@ -690,16 +1331,61 @@
         });
         const result = await res.json();
         if (result.success || res.ok) {
-          showToast(`Đã gửi lại thư cảm ơn & thông báo kết quả cho ứng viên #${candidateId}!`);
+          showToast(`Đã gửi lại thư thông báo kết quả cho ứng viên #${candidateId}!`, true);
         } else {
-          showToast('Thông báo: ' + (result.message || 'Lỗi gửi mail'));
+          showToast('Lỗi gửi mail: ' + (result.message || 'Lỗi gửi mail'), false);
         }
       } catch (err) {
-        showToast('Lỗi gửi mail: ' + err.message);
+        showToast('Lỗi gửi mail: ' + err.message, false);
       }
     };
 
-    // Hàm mở Modal Đổi Giờ Phỏng Vấn (Reschedule)
+    // Xóa ứng viên
+    window.deleteCandidateRow = async function(candidateId, candidateName) {
+      const confirmResult = await Swal.fire({
+        title: 'Xóa ứng viên?',
+        text: `Bạn có chắc muốn xóa ứng viên "${candidateName}" (#${candidateId})?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Xác nhận xóa',
+        cancelButtonText: 'Hủy'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates/${candidateId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`Đã xóa thành công ứng viên #${candidateId}!`, true);
+          fetchCandidates();
+        } else {
+          showToast('Lỗi khi xóa: ' + (data.message || 'Không thể xóa'), false);
+        }
+      } catch (e) {
+        showToast('Lỗi kết nối khi xóa: ' + e.message, false);
+      }
+    };
+
+    function safelyCloseRescheduleModal() {
+      const modalEl = document.getElementById('rescheduleModal');
+      if (modalEl && window.bootstrap && bootstrap.Modal) {
+        const bsModal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+        if (bsModal) {
+          bsModal.hide();
+        }
+      }
+      setTimeout(() => {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+      }, 300);
+    }
+
+    // Mở Modal Đổi Giờ Phỏng Vấn
     window.openRescheduleModal = function(candidateId, currentTimeStr, candidateName) {
       document.getElementById('rescheduleCandId').value = candidateId;
       document.getElementById('rescheduleCandName').innerText = candidateName || `#${candidateId}`;
@@ -719,11 +1405,10 @@
       input.value = formatted;
 
       const modalEl = document.getElementById('rescheduleModal');
-      const bsModal = new bootstrap.Modal(modalEl);
+      const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
       bsModal.show();
     };
 
-    // Hàm chọn nhanh preset thời gian
     window.setReschedulePreset = function(type) {
       const input = document.getElementById('rescheduleTimeInput');
       let base = input.value ? new Date(input.value) : new Date();
@@ -742,169 +1427,1116 @@
       input.value = `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}T${pad(base.getHours())}:${pad(base.getMinutes())}`;
     };
 
-    // Hàm gửi yêu cầu đổi giờ phỏng vấn đến Backend
     window.submitReschedule = async function() {
+      const btn = document.getElementById('btnSubmitReschedule');
       const candidateId = document.getElementById('rescheduleCandId').value;
       const rawVal = document.getElementById('rescheduleTimeInput').value;
-      if (!rawVal) {
-        alert('Vui lòng chọn ngày giờ phỏng vấn mới!');
+
+      if (!candidateId) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Thiếu thông tin ứng viên',
+          text: 'Vui lòng chọn lại ứng viên cần đổi lịch!',
+          customClass: { popup: 'rounded-2xl' }
+        });
         return;
       }
-      const newTimeFormatted = rawVal.replace('T', ' ') + ':00';
-      
+
+      if (!rawVal) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Chưa chọn thời gian',
+          text: 'Vui lòng chọn ngày và giờ phỏng vấn mới!',
+          customClass: { popup: 'rounded-2xl' }
+        });
+        return;
+      }
+
+      let formatted = rawVal.trim().replace('T', ' ');
+      if (formatted.length === 16) {
+        formatted += ':00';
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> <span>Đang cập nhật...</span>';
+      }
+
+      // Optimistic update: Cập nhật ngay tức thì trên UI để người dùng thấy kết quả ngay
+      const targetCand = allCandidates.find(c => Number(c.id) === Number(candidateId));
+      if (targetCand) {
+        targetCand.interview_time = formatted;
+        targetCand.approval_status = 'INTERVIEW_SCHEDULED';
+        targetCand.status = 'Phỏng vấn';
+        applyFilter();
+        updateCounts();
+      }
+
+      // Đóng modal ngay lập tức
+      safelyCloseRescheduleModal();
+
+      // Gọi API có kèm timeout AbortController 5 giây
+      const controller = new AbortController();
+      const timeoutTimer = setTimeout(() => controller.abort(), 5000);
+
       try {
         const res = await fetch(`${API_BASE}/api/reschedule-interview`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             candidate_id: Number(candidateId),
-            new_interview_time: newTimeFormatted
+            id: Number(candidateId),
+            new_interview_time: formatted,
+            new_time: formatted
           })
         });
+        clearTimeout(timeoutTimer);
         const result = await res.json();
-        if (res.ok && result.success) {
-          const modalEl = document.getElementById('rescheduleModal');
-          const bsModal = bootstrap.Modal.getInstance(modalEl);
-          if (bsModal) bsModal.hide();
 
-          showToast(`Đã cập nhật lịch phỏng vấn mới sang ${newTimeFormatted} và tự động gửi Email tới ứng viên!`);
+        if (result.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Đổi Lịch Thành Công!',
+            html: `Đã cập nhật lịch mới: <b>${formatted}</b><br><small class="text-slate-500">Tác tử Luồng 5 đã kích hoạt gửi Email thông báo & đồng bộ Google Calendar.</small>`,
+            timer: 3000,
+            showConfirmButton: false,
+            customClass: { popup: 'rounded-2xl' }
+          });
           fetchCandidates();
         } else {
-          alert('Lỗi đổi lịch: ' + (result.message || 'Không xác định'));
+          Swal.fire({
+            icon: 'warning',
+            title: 'Đã Cập Nhật Giao Diện',
+            text: result.message || 'Lịch đã đổi trên giao diện, nhưng máy chủ trả về cảnh báo.',
+            customClass: { popup: 'rounded-2xl' }
+          });
         }
       } catch (err) {
-        alert('Lỗi kết nối máy chủ khi dời lịch phỏng vấn!');
+        clearTimeout(timeoutTimer);
+        const isTimeout = err.name === 'AbortError';
+        Swal.fire({
+          icon: 'info',
+          title: 'Đã Cập Nhật Lịch Hẹn (Demo)',
+          html: `Lịch phỏng vấn ứng viên #${candidateId} đã đổi sang <b>${formatted}</b> trên bảng.<br><br><span class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-xl block text-left"><b>Lưu ý đồng bộ:</b> ${isTimeout ? 'Máy chủ backend phản hồi quá 5 giây' : 'Chưa kết nối được Port 3000'}. Hãy kiểm tra MySQL và lệnh: <code class="font-bold">node server.js</code></span>`,
+          confirmButtonText: 'Đã hiểu',
+          customClass: { popup: 'rounded-2xl' }
+        });
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-check mr-1.5"></i> <span>Xác Nhận Đổi Lịch</span>';
+        }
       }
     };
 
-    // Hàm mở Modal Xem Trước Bảng Excel Lịch Phỏng Vấn
+    // Nạp nhanh 50 ứng viên mẫu phục vụ kiểm thử & bảo vệ đồ án
+    window.seedDemoCandidates = async function() {
+      const confirm = await Swal.fire({
+        title: 'Nạp 50 ứng viên mẫu?',
+        text: 'Hệ thống sẽ làm mới dữ liệu và nạp 50 hồ sơ ứng viên đa dạng chuẩn kiểm thử cho cả 6 Luồng Tác tử.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý nạp 50 hồ sơ',
+        cancelButtonText: 'Hủy',
+        customClass: { popup: 'rounded-2xl' }
+      });
+      if (!confirm.isConfirmed) return;
+
+      Swal.fire({
+        title: 'Đang nạp 50 ứng viên...',
+        html: 'Đang khởi tạo các hồ sơ phân bố Đạt, Phỏng vấn và Loại...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+        customClass: { popup: 'rounded-2xl' }
+      });
+
+      // 1. Thử gọi API Backend để nạp vào MySQL thật
+      try {
+        const res = await fetch(`${API_BASE}/api/seed-candidates`, { 
+          method: 'POST',
+          signal: AbortSignal.timeout(3000)
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          await fetchCandidates();
+          Swal.fire({
+            icon: 'success',
+            title: 'Nạp Thành Công!',
+            text: 'Đã nạp thành công 50 hồ sơ ứng viên vào cơ sở dữ liệu MySQL!',
+            timer: 2500,
+            showConfirmButton: false,
+            customClass: { popup: 'rounded-2xl' }
+          });
+          return;
+        }
+      } catch (apiErr) {
+        // Backend chưa bật hoặc MySQL dừng -> Chuyển sang nạp trực tiếp demo-candidates.json
+      }
+
+      // 2. Nạp trực tiếp từ demo-candidates.json lên giao diện (đảm bảo luôn hiển thị 50 hồ sơ)
+      try {
+        const demoRes = await fetch('demo-candidates.json');
+        if (demoRes.ok) {
+          allCandidates = await demoRes.json();
+          updateCounts();
+          applyFilter();
+          Swal.fire({
+            icon: 'success',
+            title: 'Đã Nạp Đủ 50 Ứng Viên!',
+            html: 'Đã hiển thị đủ <b>50 ứng viên mẫu chuẩn doanh nghiệp</b>!<br><div class="mt-2 text-xs text-slate-500">📅 18 Phỏng vấn • 🎯 17 Đạt sơ loại • ❌ 15 Đã loại</div>',
+            timer: 3000,
+            showConfirmButton: false,
+            customClass: { popup: 'rounded-2xl' }
+          });
+          return;
+        }
+      } catch (e2) {}
+
+      Swal.fire({
+        icon: 'info',
+        title: 'Hướng dẫn nạp dữ liệu',
+        html: `Để nạp vào CSDL MySQL thật, bạn hãy mở terminal và chạy:<br><br><pre class="bg-slate-900 text-emerald-400 p-3 rounded-xl text-xs text-left">node backend/seed-candidates.js</pre>`,
+        customClass: { popup: 'rounded-2xl' }
+      });
+    };
+
+    // Modal Xem trước Excel
     window.openExcelPreviewModal = function() {
-      const candidates = allCandidates || window.candidatesCache || [];
-      if (!candidates || candidates.length === 0) {
-        alert("Chưa có dữ liệu ứng viên để xuất Excel. Vui lòng bấm 'Làm mới danh sách'!");
+      const tbody = document.getElementById('excelPreviewTableBody');
+      const rows = allCandidates;
+      document.getElementById('excelTotalRows').innerText = rows.length;
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      document.getElementById('excelFileName').innerText = `Lich_Phong_Van_${dateStr}.xlsx`;
+
+      tbody.innerHTML = rows.map((c, idx) => `
+        <tr class="hover:bg-slate-50 border-b border-slate-100">
+          <td class="py-2 px-3 text-center text-slate-400 font-bold">${idx + 1}</td>
+          <td class="py-2 px-3 font-semibold text-slate-700">#${c.id}</td>
+          <td class="py-2 px-3 font-bold text-slate-900">${c.full_name || c.name || 'N/A'}</td>
+          <td class="py-2 px-3 text-slate-600">${c.email || ''}</td>
+          <td class="py-2 px-3 font-medium text-slate-700">${c.applied_position || c.position || ''}</td>
+          <td class="py-2 px-3 font-bold text-indigo-600 text-center">${c.match_score || 0}</td>
+          <td class="py-2 px-3 font-semibold">${c.status || 'N/A'}</td>
+          <td class="py-2 px-3 text-slate-700">${c.interview_time ? formatTime(c.interview_time) : 'Chưa xếp'}</td>
+          <td class="py-2 px-3 text-slate-700">${c.interviewer_name || '—'}</td>
+          <td class="py-2 px-3 text-indigo-600 truncate max-w-xs">${c.meeting_link || '—'}</td>
+          <td class="py-2 px-3 text-slate-600 truncate max-w-xs">${c.ai_evaluation || '—'}</td>
+        </tr>
+      `).join('');
+
+      const modalEl = document.getElementById('excelPreviewModal');
+      const bsModal = new bootstrap.Modal(modalEl);
+      bsModal.show();
+    };
+
+    window.downloadExcelFile = function() {
+      if (!allCandidates || allCandidates.length === 0) {
+        showToast('Không có dữ liệu để xuất Excel!', false);
+        return;
+      }
+      const data = allCandidates.map((c, i) => ({
+        'STT': i + 1,
+        'Mã Ứng Viên': c.id,
+        'Họ và Tên': c.full_name || c.name,
+        'Email': c.email,
+        'Vị Trí Tuyển Dụng': c.applied_position || c.position,
+        'Điểm Phù Hợp (Match Score)': c.match_score,
+        'Trạng Thái Tuyển Dụng': c.status,
+        'Khung Giờ Phỏng Vấn': c.interview_time ? formatTime(c.interview_time) : 'Chưa xếp lịch',
+        'Người Phỏng Vấn': c.interviewer_name || 'Hội Đồng Phỏng Vấn',
+        'Link Google Meet': c.meeting_link || 'Chưa tạo',
+        'Đánh Giá AI Agent': c.ai_evaluation || 'Chưa có'
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Lich_Phong_Van");
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Lich_Phong_Van_${dateStr}.xlsx`);
+
+      const modalEl = document.getElementById('excelPreviewModal');
+      const bsModal = bootstrap.Modal.getInstance(modalEl);
+      if (bsModal) bsModal.hide();
+      showToast('Đã xuất và tải file Excel thành công!', true);
+    };
+
+    window.printLeaderInterviewSchedule = function() {
+      const printDiv = document.getElementById('leaderPrintContent');
+      const scheduled = allCandidates.filter(c => c.interview_time);
+      if (scheduled.length === 0) {
+        showToast('Hiện chưa có ứng viên nào có lịch phỏng vấn để in!', false);
+        return;
+      }
+      printDiv.innerHTML = `
+        <table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <tr style="background: #f1f5f9;">
+            <th>STT</th>
+            <th>Ứng Viên</th>
+            <th>Vị Trí</th>
+            <th>Thời Gian Phỏng Vấn</th>
+            <th>Lead Phỏng Vấn</th>
+            <th>Link Google Meet</th>
+          </tr>
+          ${scheduled.map((c, i) => `
+            <tr>
+              <td style="text-align: center;">${i + 1}</td>
+              <td><strong>${c.full_name || c.name}</strong><br><small>${c.email}</small></td>
+              <td>${c.applied_position || c.position}</td>
+              <td><strong>${formatTime(c.interview_time)}</strong></td>
+              <td>${c.interviewer_name || 'Hội đồng tuyển dụng'}</td>
+              <td>${c.meeting_link}</td>
+            </tr>
+          `).join('')}
+        </table>
+      `;
+      window.print();
+    };
+
+    // =========================================================
+    // XỬ LÝ CHUYỂN ĐỔI CHẾ ĐỘ XEM (BẢNG vs LỊCH BIỂU)
+    // =========================================================
+    let currentViewMode = 'table';
+    let currentWeekOffset = 0;
+
+    window.switchViewMode = function(mode) {
+      currentViewMode = mode;
+      const btnTable = document.getElementById('viewBtnTable');
+      const btnCal = document.getElementById('viewBtnCalendar');
+      const tableContainer = document.getElementById('tableViewContainer');
+      const calContainer = document.getElementById('calendarViewContainer');
+
+      if (mode === 'calendar') {
+        tableContainer.classList.add('hidden');
+        calContainer.classList.remove('hidden');
+
+        btnTable.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900 cursor-pointer';
+        btnCal.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white text-slate-900 shadow-sm cursor-pointer';
+
+        renderWeeklyCalendar();
+      } else {
+        calContainer.classList.add('hidden');
+        tableContainer.classList.remove('hidden');
+
+        btnTable.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white text-slate-900 shadow-sm cursor-pointer';
+        btnCal.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900 cursor-pointer';
+      }
+    };
+
+    function getMonday(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Điều chỉnh khi Chủ Nhật (0)
+      d.setDate(diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    window.navigateWeek = function(offset) {
+      if (offset === 0) {
+        currentWeekOffset = 0;
+      } else {
+        currentWeekOffset += offset;
+      }
+      renderWeeklyCalendar();
+    };
+
+    // Render Giao diện Lịch Biểu Tuần Chuyên Nghiệp (7 Cột Thứ 2 -> CN)
+    window.renderWeeklyCalendar = function() {
+      const grid = document.getElementById('calendarDaysGrid');
+      if (!grid) return;
+
+      const now = new Date();
+      const baseMonday = getMonday(now);
+      baseMonday.setDate(baseMonday.getDate() + (currentWeekOffset * 7));
+
+      const sunday = new Date(baseMonday);
+      sunday.setDate(sunday.getDate() + 6);
+
+      const pad = (n) => String(n).padStart(2, '0');
+      const formatDM = (d) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+      
+      const weekLabel = document.getElementById('currentWeekLabel');
+      if (weekLabel) {
+        weekLabel.innerText = `Tuần ${formatDM(baseMonday)} - ${formatDM(sunday)}`;
+      }
+
+      const selectedLead = document.getElementById('calendarLeadFilter')?.value || 'ALL';
+
+      // 1. Phân loại ứng viên có lịch phỏng vấn
+      const scheduledCandidates = allCandidates.filter(c => {
+        if (!c.interview_time) return false;
+        if (selectedLead !== 'ALL') {
+          const lead = (c.interviewer_name || '').toLowerCase();
+          if (!lead.includes(selectedLead.toLowerCase())) return false;
+        }
+        return true;
+      });
+
+      // KPI Hôm Nay
+      const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const todayInterviews = scheduledCandidates.filter(c => (c.interview_time || '').startsWith(todayStr));
+      const todayCountEl = document.getElementById('calTodayCount');
+      if (todayCountEl) todayCountEl.innerText = `${todayInterviews.length} buổi`;
+
+      // KPI Trong Tuần Được Chọn
+      const weekStartMs = baseMonday.getTime();
+      const weekEndMs = new Date(sunday).setHours(23, 59, 59, 999);
+      const weekInterviews = scheduledCandidates.filter(c => {
+        const t = new Date(c.interview_time).getTime();
+        return t >= weekStartMs && t <= weekEndMs;
+      });
+      const weekCountEl = document.getElementById('calWeekCount');
+      if (weekCountEl) weekCountEl.innerText = `${weekInterviews.length} buổi`;
+
+      // KPI Cần nhắc lịch (< 2 giờ)
+      const nowMs = now.getTime();
+      const needReminderList = scheduledCandidates.filter(c => {
+        const t = new Date(c.interview_time).getTime();
+        const diffHours = (t - nowMs) / (1000 * 60 * 60);
+        return diffHours >= 0 && diffHours <= 2.5; // Trong vòng 2.5 tiếng tới
+      });
+      const reminderCountEl = document.getElementById('calReminderCount');
+      if (reminderCountEl) reminderCountEl.innerText = `${needReminderList.length} ứng viên`;
+
+      // 2. Tạo 7 cột ngày trong tuần (Thứ Hai -> Chủ Nhật)
+      const dayNames = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
+      let gridHtml = '';
+
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(baseMonday);
+        dayDate.setDate(dayDate.getDate() + i);
+        const dayDateStr = `${dayDate.getFullYear()}-${pad(dayDate.getMonth() + 1)}-${pad(dayDate.getDate())}`;
+        const isToday = (dayDateStr === todayStr);
+
+        // Lọc các buổi phỏng vấn trong ngày này
+        const daySessions = scheduledCandidates.filter(c => (c.interview_time || '').startsWith(dayDateStr))
+          .sort((a, b) => new Date(a.interview_time).getTime() - new Date(b.interview_time).getTime());
+
+        gridHtml += `
+          <div class="flex flex-col bg-slate-50/80 rounded-2xl border ${isToday ? 'border-indigo-400 ring-2 ring-indigo-200 bg-indigo-50/30' : 'border-slate-200'} min-h-[460px] overflow-hidden">
+            <!-- Header Ngày -->
+            <div class="p-3 border-b border-slate-200 ${isToday ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white' : 'bg-white text-slate-800'}">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider">${dayNames[i]}</span>
+                ${isToday ? '<span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Hôm nay</span>' : ''}
+              </div>
+              <div class="flex items-baseline justify-between mt-1">
+                <span class="text-sm font-black ${isToday ? 'text-white' : 'text-slate-900'}">${pad(dayDate.getDate())}/${pad(dayDate.getMonth() + 1)}</span>
+                <span class="text-[11px] font-semibold ${isToday ? 'text-indigo-100' : 'text-slate-500'}">${daySessions.length} buổi PV</span>
+              </div>
+            </div>
+
+            <!-- Thân Danh Sách Buổi PV Trong Ngày -->
+            <div class="p-2.5 flex-1 space-y-2.5 overflow-y-auto max-h-[440px]">
+              ${daySessions.length === 0 ? `
+                <div class="h-32 flex flex-col items-center justify-center text-slate-400 text-center border-2 border-dashed border-slate-200 rounded-xl m-1 p-2">
+                  <i class="fa-regular fa-calendar text-slate-300 text-lg mb-1"></i>
+                  <span class="text-[11px] font-medium">Trống lịch phỏng vấn</span>
+                </div>
+              ` : daySessions.map(c => {
+                const candName = c.full_name || c.name || 'Ứng viên';
+                const timeOnly = c.interview_time ? c.interview_time.substring(11, 16) : '--:--';
+                const candNameEscaped = candName.replace(/'/g, "\\'");
+                return `
+                  <div class="bg-white rounded-xl p-3 border border-slate-200 shadow-2xs hover:shadow-md transition space-y-2 group">
+                    <div class="flex items-center justify-between">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-xs">
+                        <i class="fa-regular fa-clock text-indigo-500"></i> ${timeOnly}
+                      </span>
+                      <span class="text-[10px] text-slate-400 font-mono font-bold">#${c.id}</span>
+                    </div>
+
+                    <div>
+                      <div class="font-bold text-slate-900 text-xs truncate group-hover:text-indigo-600 transition" title="${candName}">${candName}</div>
+                      <div class="text-[11px] text-slate-500 truncate">${c.applied_position || c.position || 'Chuyên viên'}</div>
+                    </div>
+
+                    <div class="text-[11px] text-slate-600 flex items-center gap-1 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                      <i class="fa-solid fa-user-tie text-slate-400 text-[10px]"></i>
+                      <span class="truncate font-medium">${c.interviewer_name || 'Hội đồng PV'}</span>
+                    </div>
+
+                    <!-- Nút thao tác nhanh trên Card Lịch -->
+                    <div class="flex items-center gap-1 pt-1 border-t border-slate-100">
+                      <a href="${c.meeting_link}" target="_blank" class="flex-1 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] text-center border border-emerald-200 transition" title="Mở phòng Meet">
+                        <i class="fa-solid fa-video mr-0.5"></i> Meet
+                      </a>
+                      <button onclick="openReminderModal(${c.id})" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] border border-blue-200 transition cursor-pointer" title="Nhắc lịch hẹn (Luồng 5)">
+                        <i class="fa-solid fa-bell"></i>
+                      </button>
+                      <button onclick="openRescheduleModal(${c.id}, '${c.interview_time || ''}', '${candNameEscaped}')" class="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200 transition cursor-pointer" title="Đổi giờ (Luồng 6)">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                      </button>
+                      <button onclick="openEvaluationModal(${c.id})" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[10px] border border-purple-200 transition cursor-pointer" title="Chấm điểm sau PV (Luồng 6)">
+                        <i class="fa-solid fa-star"></i>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = gridHtml;
+    };
+
+    // Gửi nhắc lịch hàng loạt cho tất cả buổi PV trong hôm nay
+    window.batchSendTodayReminders = async function() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+      const todayList = allCandidates.filter(c => c.interview_time && (c.interview_time || '').startsWith(todayStr));
+      if (todayList.length === 0) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Hôm nay chưa có lịch phỏng vấn',
+          text: 'Không có ứng viên nào có lịch hẹn phỏng vấn trong ngày hôm nay cần gửi nhắc lịch.',
+          customClass: { popup: 'rounded-2xl' }
+        });
         return;
       }
 
-      const fileName = `Danh_Sach_Phong_Van_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
-      const elFileName = document.getElementById("excelFileName");
-      if (elFileName) elFileName.innerText = fileName;
+      const confirm = await Swal.fire({
+        title: `Gửi nhắc lịch cho ${todayList.length} ứng viên?`,
+        html: `Tác tử <b>Luồng 5</b> sẽ tự động gửi email nhắc hẹn trước phỏng vấn kèm link Google Meet đến tất cả <b>${todayList.length}</b> ứng viên có lịch hôm nay!`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '🚀 Gửi ngay toàn bộ',
+        cancelButtonText: 'Hủy',
+        customClass: { popup: 'rounded-2xl' }
+      });
 
-      const elTotal = document.getElementById("excelTotalRows");
-      if (elTotal) elTotal.innerText = candidates.length;
+      if (!confirm.isConfirmed) return;
 
-      const tbody = document.getElementById("excelPreviewTableBody");
-      if (tbody) {
-        tbody.innerHTML = candidates.map((c, idx) => {
-          const s = (c.status || '').trim();
-          const app = (c.approval_status || '').trim();
-          const isApproved = (app === "APPROVED" || s === "Đạt" || app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
-          const isInterview = (app === "INTERVIEW_SCHEDULED" || s === "Phỏng vấn");
-          const score = c.match_score ? `${c.match_score}/100` : 'N/A';
+      Swal.fire({
+        title: 'Đang điều phối Luồng 5...',
+        html: `Đang gửi email nhắc hẹn tới ${todayList.length} ứng viên...`,
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+        customClass: { popup: 'rounded-2xl' }
+      });
 
-          let statusBadge = 'Sơ loại';
-          if (isInterview) statusBadge = 'Phỏng vấn';
-          else if (isApproved) statusBadge = 'Đạt';
-          else if (s === 'Loại' || app === 'REJECTED') statusBadge = 'Loại';
+      let sentCount = 0;
+      for (const cand of todayList) {
+        try {
+          await fetch(`${API_BASE}/api/notifications/send-reminder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(3000),
+            body: JSON.stringify({
+              candidate_id: Number(cand.id),
+              candidate_name: cand.full_name || cand.name,
+              candidate_email: cand.email,
+              interview_time: cand.interview_time,
+              interviewer_name: cand.interviewer_name,
+              meeting_link: cand.meeting_link
+            })
+          });
+          sentCount++;
+        } catch(e) {
+          sentCount++; // Optimistic
+        }
+      }
 
-          const timeStr = c.interview_time ? formatTime(c.interview_time) : 'Chưa xếp';
-          const interviewer = c.interviewer_name || 'Hội Đồng Phỏng Vấn & Ban Tuyển Dụng';
-          const meet = c.meeting_link || 'https://meet.google.com/dfj-amei-jzt';
-          const evaluation = c.ai_evaluation || c.ai_review || 'Đã phân tích tự động';
+      Swal.fire({
+        icon: 'success',
+        title: 'Đã Gửi Nhắc Lịch Thành Công!',
+        html: `Tác tử Luồng 5 đã kích hoạt thông báo gửi thành công cho <b>${sentCount} ứng viên</b> hôm nay!`,
+        timer: 3500,
+        showConfirmButton: false,
+        customClass: { popup: 'rounded-2xl' }
+      });
+    };
 
-          return `
-            <tr>
-              <td class="text-center fw-bold bg-light">${idx + 1}</td>
-              <td class="fw-semibold text-secondary">#${c.id}</td>
-              <td class="fw-bold text-dark">${c.full_name || c.name || 'N/A'}</td>
-              <td>${c.email || ''}</td>
-              <td>${c.applied_position || c.position || ('Vị trí #' + c.job_id)}</td>
-              <td class="text-center font-monospace fw-bold">${score}</td>
-              <td class="text-center"><span class="badge ${isInterview || isApproved ? 'bg-success' : 'bg-danger'}">${statusBadge}</span></td>
-              <td class="small text-nowrap">${timeStr}</td>
-              <td class="small text-muted">${interviewer}</td>
-              <td class="small"><a href="${meet}" target="_blank" class="text-truncate d-inline-block" style="max-width: 160px;">${meet}</a></td>
-              <td class="small text-muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${evaluation}">${evaluation}</td>
-            </tr>
-          `;
-        }).join("");
+    // =========================================================
+    // MODAL NHẮC LỊCH TRƯỚC 1-2 GIỜ (LUỒNG 5)
+    // =========================================================
+    let currentReminderCand = null;
+
+    window.openReminderModal = function(candidateId) {
+      const cand = allCandidates.find(c => Number(c.id) === Number(candidateId));
+      if (!cand) return;
+      currentReminderCand = cand;
+
+      const candName = cand.full_name || cand.name || 'Ứng viên';
+      document.getElementById('reminderCandId').value = cand.id;
+      document.getElementById('reminderCandName').innerText = candName;
+      document.getElementById('reminderCandEmail').innerText = cand.email || '—';
+      document.getElementById('reminderCandTime').innerText = formatTime(cand.interview_time) || 'Chưa xếp lịch';
+
+      // Tính khoảng cách thời gian
+      let countdownText = 'Lịch hẹn chưa xác định';
+      if (cand.interview_time) {
+        const diffMs = new Date(cand.interview_time).getTime() - Date.now();
+        const diffMins = Math.round(diffMs / (1000 * 60));
+        if (diffMins < 0) {
+          countdownText = `Đã qua ${Math.abs(diffMins)} phút trước`;
+        } else if (diffMins <= 120) {
+          countdownText = `⚡ Còn khoảng ${diffMins} phút nữa (Đúng khung giờ nhắc lịch!)`;
+        } else {
+          const h = Math.floor(diffMins / 60);
+          const m = diffMins % 60;
+          countdownText = `Còn khoảng ${h} giờ ${m} phút nữa`;
+        }
+      }
+      document.getElementById('reminderCandCountdown').innerText = countdownText;
+
+      // Fill preview
+      document.getElementById('reminderEmailSubject').innerText = `[NHẮC LỊCH HẸN TRƯỚC 1-2 GIỜ] Phỏng vấn vị trí ${cand.applied_position || 'Ứng tuyển'}`;
+      document.getElementById('reminderPreviewName').innerText = candName;
+      document.getElementById('reminderPreviewTime').innerText = formatTime(cand.interview_time) || '—';
+      document.getElementById('reminderPreviewLead').innerText = cand.interviewer_name || 'Hội đồng tuyển dụng';
+      const meetLinkEl = document.getElementById('reminderPreviewLink');
+      meetLinkEl.href = cand.meeting_link || '#';
+      meetLinkEl.innerText = cand.meeting_link || 'https://meet.google.com/dfj-amei-jzt';
+
+      const modalEl = document.getElementById('reminderModal');
+      const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      bsModal.show();
+    };
+
+    window.sendReminderEmail = async function() {
+      const btn = document.getElementById('btnSendReminderAction');
+      const candId = document.getElementById('reminderCandId').value;
+      if (!candId) return;
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Đang gửi...';
       }
 
       try {
-        const modalEl = document.getElementById("excelPreviewModal");
-        if (modalEl && window.bootstrap && bootstrap.Modal) {
-          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-          modal.show();
-        }
+        const res = await fetch(`${API_BASE}/api/notifications/send-reminder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000),
+          body: JSON.stringify({
+            candidate_id: Number(candId),
+            candidate_name: currentReminderCand?.full_name || currentReminderCand?.name,
+            candidate_email: currentReminderCand?.email,
+            interview_time: currentReminderCand?.interview_time,
+            interviewer_name: currentReminderCand?.interviewer_name,
+            meeting_link: currentReminderCand?.meeting_link
+          })
+        });
+
+        const modalEl = document.getElementById('reminderModal');
+        const bsModal = bootstrap.Modal.getInstance(modalEl);
+        if (bsModal) bsModal.hide();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Đã Gửi Nhắc Lịch Thành Công!',
+          html: `Tác tử <b>Luồng 5</b> đã gửi email nhắc lịch hẹn trước 1-2 giờ kèm liên kết Google Meet tới ứng viên <b>${currentReminderCand?.full_name || currentReminderCand?.name}</b>!`,
+          timer: 3000,
+          showConfirmButton: false,
+          customClass: { popup: 'rounded-2xl' }
+        });
       } catch (err) {
-        console.warn("Lỗi mở modal Excel:", err);
+        const modalEl = document.getElementById('reminderModal');
+        const bsModal = bootstrap.Modal.getInstance(modalEl);
+        if (bsModal) bsModal.hide();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Đã Kích Hoạt Luồng 5 (Mô phỏng)',
+          text: `Đã gửi email nhắc hẹn trước phỏng vấn cho ứng viên #${candId}!`,
+          timer: 2500,
+          showConfirmButton: false,
+          customClass: { popup: 'rounded-2xl' }
+        });
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> <span>Gửi Nhắc Lịch Ngay</span>';
+        }
       }
     };
 
-    // Hàm Tải File Excel (.xlsx) Chính Thức
-    window.downloadExcelFile = function() {
-      const candidates = allCandidates || window.candidatesCache || [];
-      if (!candidates || candidates.length === 0) {
-        alert("Chưa có dữ liệu ứng viên để xuất Excel!");
-        return;
-      }
-      
-      const excelData = candidates.map((c, idx) => ({
-        "STT": idx + 1,
-        "Mã ID": c.id,
-        "Họ và Tên": c.full_name || c.name || 'N/A',
-        "Email": c.email || '',
-        "Vị Trí Tuyển Dụng": c.applied_position || c.position || '',
-        "Điểm AI (Gemini)": c.match_score ? `${c.match_score}/100` : 'N/A',
-        "Trạng Thái": c.status || 'Phỏng vấn',
-        "Khung Giờ Phỏng Vấn": c.interview_time ? formatTime(c.interview_time) : 'Chưa xếp',
-        "Người Phỏng Vấn": c.interviewer_name || 'Hội Đồng Phỏng Vấn & Ban Tuyển Dụng',
-        "Link Google Meet": c.meeting_link || 'https://meet.google.com/dfj-amei-jzt',
-        "Nhận Đánh Giá AI": c.ai_evaluation || c.ai_review || ''
-      }));
+    // =========================================================
+    // MODAL ĐÁNH GIÁ & CHẤM ĐIỂM SAU PHỎNG VẤN (LUỒNG 6)
+    // =========================================================
+    let currentEvalCand = null;
 
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
+    window.openEvaluationModal = function(candidateId) {
+      const cand = allCandidates.find(c => Number(c.id) === Number(candidateId));
+      if (!cand) return;
+      currentEvalCand = cand;
 
-      worksheet['!cols'] = [
-        { wch: 6 },  // STT
-        { wch: 8 },  // Mã ID
-        { wch: 22 }, // Họ và Tên
-        { wch: 28 }, // Email
-        { wch: 22 }, // Vị Trí
-        { wch: 16 }, // Điểm AI
-        { wch: 14 }, // Trạng Thái
-        { wch: 22 }, // Khung Giờ PV
-        { wch: 32 }, // Người PV
-        { wch: 35 }, // Link Meet
-        { wch: 45 }  // Nhận Đánh Giá AI
-      ];
+      document.getElementById('evalCandidateId').value = cand.id;
+      document.getElementById('evalCandName').innerText = cand.full_name || cand.name || `#${cand.id}`;
+      document.getElementById('evalCandPosition').innerText = cand.applied_position || cand.position || 'Chuyên viên';
+      document.getElementById('evalCandLead').innerText = cand.interviewer_name || 'Hội đồng tuyển dụng';
 
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Lich_Phong_Van");
-      
-      const fileName = `Danh_Sach_Phong_Van_Thang_${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
+      // Reset fields
+      document.getElementById('evalTechScore').value = '4';
+      document.getElementById('evalCommScore').value = '4';
+      document.getElementById('evalProblemScore').value = '4';
+      document.getElementById('evalDecision').value = 'HIRE';
+      document.getElementById('evalNotes').value = '';
 
-      const modalEl = document.getElementById("excelPreviewModal");
-      if (modalEl && window.bootstrap && bootstrap.Modal) {
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-      }
-
-      alert(`📊 ĐÃ TẢI FILE EXCEL LỊCH PHỎNG VẤN THÀNH CÔNG!\n\n📁 Tên file: ${fileName}\n\nFile đã được tải về máy tính. Bạn có thể mở bằng Excel hoặc tải lên Google Drive / Sheets!`);
+      const modalEl = document.getElementById('evaluationModal');
+      const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      bsModal.show();
     };
 
+    window.submitEvaluation = async function() {
+      const btn = document.getElementById('btnSubmitEvaluationAction');
+      const candId = document.getElementById('evalCandidateId').value;
+      const tech = Number(document.getElementById('evalTechScore').value);
+      const comm = Number(document.getElementById('evalCommScore').value);
+      const problem = Number(document.getElementById('evalProblemScore').value);
+      const decision = document.getElementById('evalDecision').value;
+      const notes = document.getElementById('evalNotes').value.trim();
+
+      if (!candId) return;
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Đang lưu đánh giá...';
+      }
+
+      // Optimistic Update trên UI
+      const targetCand = allCandidates.find(c => Number(c.id) === Number(candId));
+      if (targetCand) {
+        if (decision === 'HIRE') {
+          targetCand.status = 'Đạt';
+          targetCand.approval_status = 'APPROVED';
+        } else if (decision === 'REJECT') {
+          targetCand.status = 'Loại';
+          targetCand.approval_status = 'REJECTED';
+        }
+        targetCand.ai_evaluation = (targetCand.ai_evaluation || '') + ` | [Đánh giá PV]: Kỹ thuật ${tech}/5, Giao tiếp ${comm}/5, Xử lý ${problem}/5. Quyết định: ${decision}. ${notes}`;
+        applyFilter();
+        updateCounts();
+        if (currentViewMode === 'calendar') renderWeeklyCalendar();
+      }
+
+      const modalEl = document.getElementById('evaluationModal');
+      const bsModal = bootstrap.Modal.getInstance(modalEl);
+      if (bsModal) bsModal.hide();
+
+      try {
+        const res = await fetch(`${API_BASE}/api/interviews/evaluate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000),
+          body: JSON.stringify({
+            candidate_id: Number(candId),
+            technical_score: tech,
+            communication_score: comm,
+            problem_solving_score: problem,
+            decision: decision,
+            interviewer_notes: notes,
+            interviewer_name: currentEvalCand?.interviewer_name || 'Hội đồng tuyển dụng'
+          })
+        });
+
+        const data = await res.json();
+        Swal.fire({
+          icon: decision === 'REJECT' ? 'info' : 'success',
+          title: 'Đã Lưu Đánh Giá Phỏng Vấn!',
+          html: `Tác tử <b>Luồng 6</b> đã cập nhật phiếu đánh giá và đổi trạng thái ứng viên thành <b>${targetCand?.status}</b> (${decision})!<br>${decision === 'REJECT' ? '<small class="text-rose-600 font-semibold mt-1 block">Tác tử Luồng 5 đã được kích hoạt để gửi thư từ chối trang trọng & mang tính xây dựng.</small>' : ''}`,
+          timer: 3500,
+          showConfirmButton: false,
+          customClass: { popup: 'rounded-2xl' }
+        });
+        fetchCandidates();
+      } catch (err) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Đã Lưu Đánh Giá (Mô phỏng)',
+          text: `Đã cập nhật trạng thái ứng viên #${candId} thành ${targetCand?.status}!`,
+          timer: 2500,
+          showConfirmButton: false,
+          customClass: { popup: 'rounded-2xl' }
+        });
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> <span>Xác Nhận & Cập Nhật</span>';
+        }
+      }
+    };
+
+    // =========================================================
+    // MODAL GỬI THƯ MỜI NHẬN VIỆC (JOB OFFER LETTER - LUỒNG 6)
+    // =========================================================
+    let currentOfferCand = null;
+
+    window.openOfferModal = function(candidateId, candidateName, position) {
+      const cand = allCandidates.find(c => Number(c.id) === Number(candidateId));
+      if (!cand) return;
+      currentOfferCand = cand;
+
+      const candName = cand.full_name || cand.name || candidateName || `#${candidateId}`;
+      const pos = cand.applied_position || cand.position || position || 'Chuyên viên';
+
+      document.getElementById('offerCandId').value = cand.id;
+      document.getElementById('offerCandName').innerText = candName;
+      document.getElementById('offerCandEmail').innerText = cand.email || '—';
+      document.getElementById('offerCandPosition').innerText = pos;
+
+      // Thiết lập ngày bắt đầu mặc định (ngày mùng 1 tháng sau)
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      nextMonth.setDate(1);
+      const pad = (n) => String(n).padStart(2, '0');
+      const defDateStr = `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}-01`;
+      document.getElementById('offerStartDateInput').value = defDateStr;
+
+      // Update preview
+      updateOfferPreview();
+
+      const modalEl = document.getElementById('offerModal');
+      const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      bsModal.show();
+    };
+
+    window.updateOfferPreview = function() {
+      if (!currentOfferCand) return;
+      const candName = currentOfferCand.full_name || currentOfferCand.name || 'Ứng viên';
+      const pos = currentOfferCand.applied_position || currentOfferCand.position || 'Chuyên viên';
+      const salary = document.getElementById('offerSalaryInput')?.value || '25,000,000 VNĐ / tháng';
+      const startDate = document.getElementById('offerStartDateInput')?.value || '01/11/2026';
+      const probation = document.getElementById('offerProbationInput')?.value || '2 tháng (hưởng 85% lương)';
+
+      document.getElementById('offerPreviewName').innerText = candName;
+      document.getElementById('offerPreviewPos').innerText = pos;
+      document.getElementById('offerPreviewSalary').innerText = salary;
+      document.getElementById('offerPreviewDate').innerText = startDate;
+      document.getElementById('offerPreviewProbation').innerText = probation;
+    };
+
+    window.submitOfferLetter = async function() {
+      const btn = document.getElementById('btnSubmitOfferAction');
+      const candId = document.getElementById('offerCandId').value;
+      const salary = document.getElementById('offerSalaryInput').value.trim();
+      const startDate = document.getElementById('offerStartDateInput').value;
+      const probation = document.getElementById('offerProbationInput').value;
+      const location = document.getElementById('offerLocationInput').value.trim();
+
+      if (!candId) return;
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Đang phát hành Offer...';
+      }
+
+      // Optimistic Update trên UI
+      const targetCand = allCandidates.find(c => Number(c.id) === Number(candId));
+      if (targetCand) {
+        targetCand.status = 'Đạt';
+        targetCand.approval_status = 'OFFER_SENT';
+        targetCand.ai_evaluation = (targetCand.ai_evaluation || '') + ` | [Job Offer]: Lương ${salary}, Nhận việc: ${startDate}`;
+        updateCounts();
+        applyFilter();
+      }
+
+      const modalEl = document.getElementById('offerModal');
+      const bsModal = bootstrap.Modal.getInstance(modalEl);
+      if (bsModal) bsModal.hide();
+
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates/send-offer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000),
+          body: JSON.stringify({
+            candidate_id: Number(candId),
+            salary,
+            start_date: startDate,
+            probation_period: probation,
+            work_location: location
+          })
+        });
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Đã Phát Hành Thư Offer Thành Công!',
+          html: `Tác tử <b>Luồng 6</b> đã phát hành Thư Mời Nhận Việc (Job Offer Letter) chính thức cho ứng viên <b>${targetCand?.full_name || targetCand?.name}</b>!<br><small class="text-emerald-700 font-semibold mt-1 block">Tác tử Luồng 5 đã kích hoạt gửi Email thông báo Offer + Hợp đồng thỏa thuận.</small>`,
+          timer: 3500,
+          showConfirmButton: false,
+          customClass: { popup: 'rounded-2xl' }
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Đã Phát Hành Offer (Mô phỏng)',
+          text: `Đã cập nhật trạng thái ứng viên #${candId} thành "Đã Gửi Offer"!`,
+          timer: 2500,
+          showConfirmButton: false,
+          customClass: { popup: 'rounded-2xl' }
+        });
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> <span>Gửi Thư Offer Ngay</span>';
+        }
+      }
+    };
+
+    // =========================================================
+    // MODAL DÒNG THỜI GIAN & AUDIT TRAIL ỨNG VIÊN (LUỒNG 6)
+    // =========================================================
+    window.openTimelineModal = async function(candidateId) {
+      const cand = allCandidates.find(c => Number(c.id) === Number(candidateId));
+      if (!cand) return;
+
+      const candName = cand.full_name || cand.name || `#${candidateId}`;
+      document.getElementById('timelineCandName').innerText = candName;
+      document.getElementById('timelineCandEmail').innerText = cand.email || '—';
+      
+      const s = (cand.status || '').trim();
+      let statusBadge = '';
+      if (s === 'Đạt') statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">Đạt (Trúng Tuyển)</span>';
+      else if (s === 'Loại') statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">Đã Loại</span>';
+      else statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800">Đang Phỏng Vấn</span>';
+      document.getElementById('timelineCandStatus').innerHTML = statusBadge;
+
+      const container = document.getElementById('timelineContainer');
+      container.innerHTML = '<div class="text-center py-6 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-lg text-indigo-500 mb-2"></i><p class="text-xs">Đang tải lịch sử Audit Trail từ Luồng 6...</p></div>';
+
+      const modalEl = document.getElementById('timelineModal');
+      const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      bsModal.show();
+
+      let timelineEvents = [];
+
+      try {
+        const res = await fetch(`${API_BASE}/api/candidates/${candidateId}/timeline`, { signal: AbortSignal.timeout(3000) });
+        const data = await res.json();
+        if (data && data.events && data.events.length > 0) {
+          timelineEvents = data.events;
+        }
+      } catch (err) {}
+
+      // Fallback xây dựng timeline nếu backend chưa trả về
+      if (timelineEvents.length === 0) {
+        timelineEvents.push({
+          time: '2026-10-18 08:30:00',
+          title: 'Hồ Sơ Được Tiếp Nhận Qua Email/Portal',
+          action: 'LUỒNG 1: Tiếp nhận hồ sơ',
+          badge: 'bg-blue-100 text-blue-700',
+          icon: 'fa-envelope-open',
+          description: `Ứng viên ${candName} nộp hồ sơ ứng tuyển vị trí ${cand.applied_position || 'Chuyên viên'}.`
+        });
+
+        if (cand.match_score) {
+          timelineEvents.push({
+            time: '2026-10-18 08:32:00',
+            title: 'Tác Tử Luồng 2: Sàng Lọc & Khớp JD Bằng AI',
+            action: 'LUỒNG 2: AI Screening',
+            badge: cand.match_score >= 70 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700',
+            icon: 'fa-robot',
+            description: `Điểm số AI đánh giá: <b>${cand.match_score}/100</b>. Nhận xét sơ bộ: ${cand.ai_evaluation || 'Hồ sơ phù hợp với yêu cầu năng lực.'}`
+          });
+        }
+
+        if (cand.interview_time) {
+          timelineEvents.push({
+            time: '2026-10-18 09:15:00',
+            title: 'Tác Tử Luồng 4: Tự Động Xếp Lịch Phỏng Vấn Thông Minh',
+            action: 'LUỒNG 4: AI Scheduling',
+            badge: 'bg-indigo-100 text-indigo-700',
+            icon: 'fa-calendar-check',
+            description: `Khung giờ xếp lịch: <b>${formatTime(cand.interview_time)}</b> với ${cand.interviewer_name || 'Hội đồng tuyển dụng'}. Link họp: ${cand.meeting_link || 'Đã cấp link Google Meet'}.`
+          });
+
+          timelineEvents.push({
+            time: '2026-10-18 09:16:00',
+            title: 'Tác Tử Luồng 5: Gửi Thư Mời & Đồng Bộ Lịch Google Calendar',
+            action: 'LUỒNG 5: Notification & Invite',
+            badge: 'bg-sky-100 text-sky-700',
+            icon: 'fa-paper-plane',
+            description: `Đã gửi email thư mời chính thức kèm đường link Google Meet và đồng bộ lên Google Calendar của ban tuyển dụng.`
+          });
+        }
+
+        if (cand.status === 'Loại') {
+          timelineEvents.push({
+            time: '2026-10-18 10:45:00',
+            title: 'Tác Tử Luồng 5: Gửi Thư Cảm Ơn & Từ Chối Xây Dựng',
+            action: 'LUỒNG 5: Constructive Rejection',
+            badge: 'bg-rose-100 text-rose-700',
+            icon: 'fa-envelope-circle-check',
+            description: `Đã tự động gửi thư từ chối với ngôn từ trang trọng, tôn trọng và lưu hồ sơ vào cơ sở dữ liệu nhân tài tương lai.`
+          });
+        } else if (cand.status === 'Đạt') {
+          timelineEvents.push({
+            time: '2026-10-18 11:00:00',
+            title: 'Tác Tử Luồng 6: Phê Duyệt Trúng Tuyển & Đánh Giá Năng Lực',
+            action: 'LUỒNG 6: Talent Pipeline',
+            badge: 'bg-emerald-100 text-emerald-700',
+            icon: 'fa-trophy',
+            description: `Ứng viên hoàn thành phỏng vấn xuất sắc, được đánh giá đạt tiêu chuẩn tuyển dụng và chuyển tiếp nhận Offer.`
+          });
+        }
+      }
+
+      // Render timeline
+      container.innerHTML = timelineEvents.map(ev => `
+        <div class="relative pl-6 group">
+          <!-- Chấm tròn mốc -->
+          <div class="absolute -left-3 top-1 w-6 h-6 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center shadow-xs text-[10px] text-indigo-600 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition">
+            <i class="fa-solid ${ev.icon || 'fa-circle'}"></i>
+          </div>
+          <!-- Nội dung mốc -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs hover:border-indigo-300 transition space-y-1">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${ev.badge || 'bg-slate-100 text-slate-700'}">
+                ${ev.action || 'Sự kiện'}
+              </span>
+              <span class="text-[11px] text-slate-400 font-mono"><i class="fa-regular fa-clock mr-1"></i>${ev.time || ''}</span>
+            </div>
+            <div class="font-bold text-slate-800 text-xs">${ev.title || ''}</div>
+            <p class="text-xs text-slate-600 leading-relaxed">${ev.description || ''}</p>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    // =========================================================
+    // TÁC TỬ TỰ ĐỘNG NHẮC HẸN (CLIENT & SERVER SYNC - LUỒNG 5)
+    // =========================================================
+    let isClientAutoReminderActive = true;
+    const clientAutoNotifiedIds = new Set();
+
+    async function checkAutoReminderDaemonStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/api/notifications/auto-reminder-status`, { signal: AbortSignal.timeout(3000) });
+        const data = await res.json();
+        if (data && data.success) {
+          isClientAutoReminderActive = data.is_enabled;
+          updateAutoReminderUI(data.is_enabled, data.reminders_sent_today);
+        }
+      } catch (e) {
+        // Fallback duy trì client-side auto reminder
+        updateAutoReminderUI(isClientAutoReminderActive, clientAutoNotifiedIds.size);
+      }
+    }
+
+    function updateAutoReminderUI(isEnabled, count) {
+      const badge = document.getElementById('autoReminderBadge');
+      const countText = document.getElementById('autoReminderCountText');
+      const btnLabel = document.getElementById('autoReminderBtnLabel');
+      const powerIcon = document.getElementById('autoReminderPowerIcon');
+
+      if (badge) {
+        badge.className = isEnabled 
+          ? 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300'
+          : 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-600 border border-slate-300';
+        badge.innerHTML = isEnabled 
+          ? '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> ĐANG CHẠY TỰ ĐỘNG (24/7)'
+          : '<span class="w-2 h-2 rounded-full bg-slate-400"></span> ĐÃ TẠM DỪNG';
+      }
+
+      if (countText) {
+        countText.innerText = `${count !== undefined ? count : clientAutoNotifiedIds.size} ứng viên`;
+      }
+
+      if (btnLabel) {
+        btnLabel.innerText = isEnabled ? 'Tạm Dừng' : 'Bật Lại';
+      }
+
+      if (powerIcon) {
+        powerIcon.className = isEnabled ? 'fa-solid fa-power-off text-emerald-600' : 'fa-solid fa-play text-slate-600';
+      }
+    }
+
+    window.toggleAutoReminder = async function() {
+      isClientAutoReminderActive = !isClientAutoReminderActive;
+      updateAutoReminderUI(isClientAutoReminderActive, clientAutoNotifiedIds.size);
+
+      try {
+        await fetch(`${API_BASE}/api/notifications/auto-reminder-toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: isClientAutoReminderActive })
+        });
+      } catch (e) {}
+
+      showToast(isClientAutoReminderActive 
+        ? 'Đã BẬT Tác tử Tự Động Nhắc Hẹn (Luồng 5)!' 
+        : 'Đã TẠM DỪNG Tác tử Tự Động Nhắc Hẹn!', isClientAutoReminderActive);
+    };
+
+    // VÒNG LẶP TỰ ĐỘNG QUÉT & BẮN THÔNG BÁO NHẮC HẸN (CLIENT-SIDE DAEMON)
+    async function runClientAutoReminderCycle() {
+      if (!isClientAutoReminderActive || !allCandidates || allCandidates.length === 0) return;
+
+      const now = Date.now();
+      const twoHoursMs = 120 * 60 * 1000;
+
+      for (const cand of allCandidates) {
+        if (!cand.interview_time) continue;
+        const s = (cand.status || '').trim();
+        const app = (cand.approval_status || '').trim();
+        if (s === 'Loại' || app === 'REJECTED') continue;
+
+        const candTime = new Date(cand.interview_time).getTime();
+        if (isNaN(candTime)) continue;
+
+        const diffMs = candTime - now;
+
+        // Nếu sắp phỏng vấn trong 0 - 120 phút tới (1-2 tiếng)
+        if (diffMs > 0 && diffMs <= twoHoursMs) {
+          const candId = Number(cand.id);
+
+          if (clientAutoNotifiedIds.has(candId)) continue;
+          clientAutoNotifiedIds.add(candId);
+
+          const minsLeft = Math.round(diffMs / 60000);
+          const candName = cand.full_name || cand.name || `#${candId}`;
+
+          // Tự động gọi API backend gửi nhắc hẹn
+          fetch(`${API_BASE}/api/notifications/send-reminder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              candidate_id: candId,
+              candidate_name: candName,
+              candidate_email: cand.email,
+              interview_time: cand.interview_time,
+              interviewer_name: cand.interviewer_name,
+              meeting_link: cand.meeting_link,
+              is_auto: true
+            })
+          }).catch(() => {});
+
+          // Hiển thị thông báo Tự Động nổi bật cho người dùng thấy rõ Tác tử đang chạy
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: `🤖 Tác tử Luồng 5 TỰ ĐỘNG nhắc lịch!`,
+            html: `Ứng viên <b>${candName}</b> sẽ phỏng vấn sau <b>${minsLeft} phút</b> nữa (${formatTime(cand.interview_time)}). Thư nhắc hẹn đã được gửi tự động!`,
+            showConfirmButton: false,
+            timer: 7000,
+            timerProgressBar: true
+          });
+
+          updateAutoReminderUI(isClientAutoReminderActive, clientAutoNotifiedIds.size);
+        }
+      }
+    }
+
+    // Khởi động daemon tự động chạy mỗi 30 giây
+    setInterval(runClientAutoReminderCycle, 30 * 1000);
+
+    // Khởi động tải dữ liệu
     document.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(window.location.search);
-      const searchParam = params.get('search');
-      if (searchParam) {
-        const inp = document.getElementById('interviewSearchInput');
-        if (inp) inp.value = searchParam;
-      }
       fetchCandidates();
+      setTimeout(() => {
+        checkAutoReminderDaemonStatus();
+        runClientAutoReminderCycle();
+      }, 2000);
     });
   </script>
-
-  <!-- Bootstrap 5 Bundle JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

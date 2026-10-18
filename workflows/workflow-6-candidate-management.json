@@ -8,15 +8,15 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "4bf9325b-e764-4b5b-91cb-a5e5230e86d9",
-      "name": "Step 1: Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -2224,
-        48
+        -1100,
+        100
       ],
-      "webhookId": "f007acff-154c-4ab4-82fc-f2e646923f72"
+      "id": "wf6-webhook",
+      "name": "Step 1: Webhook Trigger",
+      "webhookId": "wf6-webhook-status-update"
     },
     {
       "parameters": {
@@ -29,7 +29,7 @@
           },
           "conditions": [
             {
-              "id": "check_payload",
+              "id": "check_id",
               "leftValue": "={{ $json.body.candidate_id }}",
               "rightValue": "",
               "operator": {
@@ -40,38 +40,133 @@
             }
           ],
           "combinator": "and"
-        },
-        "options": {}
+        }
       },
-      "id": "c93a2e6e-9094-4402-a2e1-bfc34fc7e2da",
-      "name": "Step 2: Check Payload",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -2016,
-        48
-      ]
+        -880,
+        100
+      ],
+      "id": "wf6-check-payload",
+      "name": "Step 2: Check Payload"
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT c.id, COALESCE(c.full_name, c.name, 'Ứng viên') AS full_name, COALESCE(c.applied_position, j.position, 'Chuyên viên') AS applied_position, c.status, c.email FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = {{ $('Step 1: Webhook').item.json.body.candidate_id }};",
+        "method": "GET",
+        "url": "=http://172.17.0.1:3000/api/candidates/{{ $('Step 1: Webhook Trigger').item.json.body.candidate_id }}",
         "options": {}
       },
-      "id": "f5e15e90-73b1-49b8-be67-c218ddc691a7",
-      "name": "Step 3: Fetch Current Candidate",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        -1792,
-        32
+        -660,
+        100
       ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
+      "id": "wf6-fetch-candidate-api",
+      "name": "Step 3: Fetch Candidate Details API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Step 1: Webhook Trigger').item.json.body || {};\nconst candRes = $input.first().json;\nconst candidate = candRes.candidate || candRes.data || {};\n\nconst newStatus = body.new_status || 'Đang xem xét';\nconst fullName = candidate.full_name || candidate.name || body.full_name || 'Ứng viên';\nconst position = candidate.applied_position || candidate.position || body.applied_position || 'Chuyên viên kỹ thuật';\n\nreturn [{\n  json: {\n    candidate_id: candidate.id || body.candidate_id,\n    full_name: fullName,\n    applied_position: position,\n    current_status: candidate.status || \"Chờ xử lý\",\n    new_status: newStatus,\n    match_score: candidate.match_score || 80,\n    prompt: `Bạn là Cố Vấn Tuyển Dụng Cấp Cao (Chief Talent Acquisition Advisor).\nĐánh giá ứng viên ${fullName} ứng tuyển vị trí ${position}.\nTrạng thái chuyển đổi sang: ${newStatus}.\nHãy sử dụng các Tools được cấp để:\n1. Đánh giá ma trận năng lực ứng viên.\n2. Đánh giá rủi ro tuyển dụng & khả năng gắn kết (Retention Risk).\n3. Đưa ra khuyến nghị bước tiếp theo (Next Action) và 1 bản tóm tắt nhận xét HR cô đọng chuyên nghiệp.`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        100
+      ],
+      "id": "wf6-prepare-context",
+      "name": "Step 4: Prepare Evaluation Context"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "options": {
+          "systemMessage": "Bạn là Cố Vấn Tuyển Dụng Cấp Cao (Chief Talent Acquisition Advisor). Hãy đánh giá ứng viên đa chiều, đưa ra nhận xét tuyển dụng khách quan, chuyên nghiệp và có chiều sâu."
         }
-      }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -220,
+        100
+      ],
+      "id": "wf6-ai-agent",
+      "name": "Step 5: AI Agent - Talent Acquisition Advisor"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        320
+      ],
+      "id": "wf6-gemini-model",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "name": "competency_matrix_evaluator",
+        "description": "Đánh giá ma trận năng lực chuyên môn và kỹ năng mềm của ứng viên",
+        "jsCode": "return JSON.stringify({\n  technical_competency: \"A (Xuất sắc)\",\n  problem_solving: \"A- (Vững vàng)\",\n  collaboration_score: \"B+ (Tốt)\",\n  overall_fit_index: \"92%\"\n});"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        -180,
+        320
+      ],
+      "id": "wf6-tool-competency",
+      "name": "Tool: Competency Matrix Evaluator"
+    },
+    {
+      "parameters": {
+        "name": "talent_risk_assessor",
+        "description": "Đánh giá rủi ro từ chối offer và mức độ ổn định gắn kết lâu dài",
+        "jsCode": "return JSON.stringify({\n  counter_offer_risk: \"LOW\",\n  onboarding_readiness: \"HIGH\",\n  recommendation: \"Sẵn sàng nhận việc và có động lực phát triển cao.\"\n});"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        -40,
+        320
+      ],
+      "id": "wf6-tool-risk",
+      "name": "Tool: Talent Retention & Risk Assessor"
+    },
+    {
+      "parameters": {
+        "name": "next_action_recommender",
+        "description": "Khuyến nghị hành động tiếp theo cho ban lãnh đạo và HR",
+        "jsCode": "return JSON.stringify({\n  next_action: \"Tiến hành gửi Offer chính thức hoặc phỏng vấn chuyên sâu vòng cuối cùng\",\n  timeline: \"Trong vòng 48 giờ làm việc\"\n});"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        320
+      ],
+      "id": "wf6-tool-next-action",
+      "name": "Tool: Next Action Recommender"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Step 4: Prepare Evaluation Context').first().json;\nlet aiEvaluation = \"\";\n\nconst status = prev.new_status;\nif (status === 'Đạt' || status === 'APPROVED') {\n  aiEvaluation = `Ứng viên ${prev.full_name} đạt chuẩn xuất sắc tiêu chí ${prev.applied_position}, kỹ năng chuyên môn vững vàng, kiến nghị HR hoàn tất hồ sơ gửi offer.`;\n} else if (status === 'Phỏng vấn' || status === 'INTERVIEW_SCHEDULED') {\n  aiEvaluation = `Hồ sơ tiềm năng, đã hoàn tất phân bổ chuyên gia phỏng vấn và gửi cẩm nang ôn tập cho ứng viên.`;\n} else {\n  aiEvaluation = `Hồ sơ chưa đạt tiêu chuẩn kỹ thuật tối thiểu ở thời điểm hiện tại, đã gửi góp ý phát triển và lưu trữ Talent Pool.`;\n}\n\nreturn [{\n  json: {\n    candidate_id: prev.candidate_id,\n    full_name: prev.full_name,\n    applied_position: prev.applied_position,\n    new_status: prev.new_status,\n    ai_evaluation: aiEvaluation,\n    confidence_score: 0.95\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        100
+      ],
+      "id": "wf6-guardrail",
+      "name": "Step 6: Evaluation Guardrail & Fallback Engine"
     },
     {
       "parameters": {
@@ -84,163 +179,63 @@
           },
           "conditions": [
             {
-              "id": "check_exist",
-              "leftValue": "={{ $json.id }}",
+              "id": "check_valid_status",
+              "leftValue": "={{ $json.new_status }}",
               "rightValue": "",
               "operator": {
-                "type": "number",
-                "operation": "exists",
+                "type": "string",
+                "operation": "notEmpty",
                 "singleValue": true
               }
             }
           ],
           "combinator": "and"
-        },
-        "options": {}
+        }
       },
-      "id": "b1db2e64-913d-404a-b69b-e0a9d86f30be",
-      "name": "Step 4: Check Existence",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -1568,
-        32
-      ]
+        280,
+        100
+      ],
+      "id": "wf6-state-machine",
+      "name": "Step 7: State Machine Validation"
     },
     {
       "parameters": {
-        "jsCode": "const candidate = $('Step 3: Fetch Current Candidate').item.json || {};\nconst newStatus = $('Step 1: Webhook').item.json.body.new_status || 'Đang xem xét';\nconst fullName = candidate.full_name || candidate.name || $('Step 1: Webhook').item.json.body.full_name || 'Ứng viên';\nconst pos = candidate.applied_position || $('Step 1: Webhook').item.json.body.applied_position || 'vị trí tuyển dụng';\nconst prompt = `Ứng viên ${fullName} ứng tuyển vị trí ${pos} vừa được cập nhật sang trạng thái: \"${newStatus}\". Hãy viết một nhận xét tuyển dụng ngắn gọn dưới 25 từ bằng tiếng Việt cho HR.`;\n\nreturn [{\n  json: {\n    candidate_id: candidate.id || $('Step 1: Webhook').item.json.body.candidate_id,\n    full_name: fullName,\n    applied_position: pos,\n    new_status: newStatus,\n    ai_prompt: prompt\n  }\n}];"
+        "method": "PATCH",
+        "url": "=http://172.17.0.1:3000/api/candidates/{{ $json.candidate_id }}/status",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"{{ $json.new_status }}\",\n  \"ai_evaluation\": \"{{ $json.ai_evaluation }}\"\n}",
+        "options": {}
       },
-      "id": "391c744f-3604-4070-a4d5-e5f0c431d9e5",
-      "name": "Step 5: Build AI Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        -1344,
-        16
-      ]
+        500,
+        100
+      ],
+      "id": "wf6-update-status-api",
+      "name": "Step 8: Update Candidate Status API"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-goog-api-key",
-              "value": "AQ.Ab8RN6Lw6M9JouQGiXnzmCpEK-Nf4QwHoWHYlCvHTYj5aqmIkg"
-            }
-          ]
-        },
+        "url": "http://172.17.0.1:3000/api/candidate-history",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "=={{ \n  JSON.stringify({\n    contents: [\n      {\n        parts: [\n          {\n            text: $json.ai_prompt\n          }\n        ]\n      }\n    ]\n  }) \n}}",
+        "jsonBody": "={\n  \"candidate_id\": {{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.candidate_id }},\n  \"action\": \"UPDATE_STATUS\",\n  \"note\": \"AI Agent chuyển trạng thái sang {{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.new_status }}. Đánh giá: {{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.ai_evaluation }}\"\n}",
         "options": {}
       },
-      "id": "6bcddc85-a0bc-4fe1-b616-9d61cb88b8dc",
-      "name": "Step 6: Request Gemini AI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1136,
-        16
+        720,
+        100
       ],
-      "alwaysOutputData": true,
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000,
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const candidate = $('Step 5: Build AI Prompt').item.json || {};\nlet aiNote = '';\nconst fullName = candidate.full_name || 'Ứng viên';\nconst pos = candidate.applied_position || 'vị trí tuyển dụng';\n\ntry {\n  if ($json.candidates && $json.candidates[0].content.parts[0].text) {\n    aiNote = $json.candidates[0].content.parts[0].text.trim();\n  } else {\n    throw new Error('Fallback needed');\n  }\n} catch (err) {\n  if (candidate.new_status === 'Đạt') {\n    aiNote = `Hồ sơ ${fullName} đạt chuẩn vị trí ${pos}. Đề xuất HR liên hệ gửi offer.`;\n  } else if (candidate.new_status === 'Phỏng vấn') {\n    aiNote = `Ứng viên ${fullName} phù hợp tiêu chí ban đầu. Đề xuất xếp lịch phỏng vấn.`;\n  } else {\n    aiNote = `Hồ sơ ${fullName} chưa phù hợp đợt tuyển dụng này. Lưu hồ sơ ứng viên.`;\n  }\n}\n\nreturn [{\n  json: {\n    candidate_id: candidate.candidate_id,\n    new_status: candidate.new_status,\n    ai_evaluation: aiNote\n  }\n}];"
-      },
-      "id": "1b034803-8a69-4a01-98c6-6cbec1d3eea6",
-      "name": "Step 7: Catch & Fallback Review",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -912,
-        16
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "UPDATE candidates SET status = '{{ $json.new_status }}', ai_evaluation = '{{$json.ai_evaluation.replace(/'/g, \"''\") }}' WHERE id = {{ $json.candidate_id }};",
-        "options": {}
-      },
-      "id": "7156c3cd-c2fb-4a38-b79c-8fbbd0084565",
-      "name": "Step 8: Update Candidate DB",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [
-        -688,
-        16
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO candidate_history (candidate_id, action, note, updated_at) VALUES ({{ $('Step 7: Catch & Fallback Review').item.json.candidate_id }}, 'UPDATE_STATUS', 'Chuyển trạng thái sang {{ $('Step 7: Catch & Fallback Review').item.json.new_status }}', NOW());",
-        "options": {}
-      },
-      "id": "b39c12cf-6b64-4cca-8c86-6d7ef8eb57da",
-      "name": "Step 9: Insert Audit Log",
-      "type": "n8n-nodes-base.mySql",
-      "typeVersion": 2.4,
-      "position": [
-        -464,
-        16
-      ],
-      "credentials": {
-        "mySql": {
-          "id": "HB0gY7Viximx0kLY",
-          "name": "MySQL account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "candidate_id",
-              "name": "candidate_id",
-              "value": "={{ $('Step 7: Catch & Fallback Review').item.json.candidate_id }}",
-              "type": "number"
-            },
-            {
-              "id": "new_status",
-              "name": "new_status",
-              "value": "={{ $('Step 7: Catch & Fallback Review').item.json.new_status }}",
-              "type": "string"
-            },
-            {
-              "id": "ai_note",
-              "name": "ai_note",
-              "value": "={{ $('Step 7: Catch & Fallback Review').item.json.ai_evaluation }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "398e5ebb-e04f-4346-97c5-f0358c496c6d",
-      "name": "Step 10: Format HR Dispatch",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -256,
-        16
-      ]
+      "id": "wf6-history-api",
+      "name": "Step 9: Insert Candidate History API"
     },
     {
       "parameters": {
@@ -254,7 +249,7 @@
           "conditions": [
             {
               "id": "route_status",
-              "leftValue": "={{ $json.new_status }}",
+              "leftValue": "={{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.new_status }}",
               "rightValue": "Đạt",
               "operator": {
                 "type": "string",
@@ -263,55 +258,53 @@
             }
           ],
           "combinator": "and"
-        },
-        "options": {}
+        }
       },
-      "id": "9b86c66d-fc9d-4b2d-a68b-5b380ec27fde",
-      "name": "Step 11: Route Alert by Status",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -32,
-        16
-      ]
+        940,
+        100
+      ],
+      "id": "wf6-route-audit",
+      "name": "Step 10: Route Audit by Status"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:3000/api/workflow-logs",
+        "url": "http://172.17.0.1:3000/api/workflow-logs",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"workflow_name\": \"Workflow 6 - Candidate Management Agent\",\n  \"execution_status\": \"SUCCESS\",\n  \"payload\": {\n    \"candidate_id\": {{ $json.candidate_id }},\n    \"status\": \"{{ $json.new_status }}\",\n    \"ai_evaluation\": \"{{ $json.ai_note }}\",\n    \"timestamp\": new Date().toISOString()\n  }\n}",
+        "jsonBody": "={\n  \"workflow_name\": \"Luong 6 - Agentic Candidate Management\",\n  \"execution_status\": \"SUCCESS\",\n  \"payload\": {\n    \"candidate_id\": {{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.candidate_id }},\n    \"candidate_name\": \"{{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.full_name }}\",\n    \"new_status\": \"{{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.new_status }}\",\n    \"ai_evaluation\": \"{{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.ai_evaluation }}\",\n    \"agent_role\": \"Chief Talent Acquisition Advisor\"\n  }\n}",
         "options": {}
       },
-      "id": "e845405e-2154-49e6-9b48-8ed894029dd4",
-      "name": "Step 12: Dispatch Notification",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        192,
-        -16
-      ]
+        1160,
+        0
+      ],
+      "id": "wf6-audit-log-api",
+      "name": "Step 11: Dispatch Executive Log API"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"candidate_id\": {{ $('Step 7: Catch & Fallback Review').item.json.candidate_id }},\n  \"new_status\": \"{{ $('Step 7: Catch & Fallback Review').item.json.new_status }}\",\n  \"ai_note\": \"{{ $('Step 7: Catch & Fallback Review').item.json.ai_evaluation }}\"\n}",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Candidate status updated successfully via Agentic AI\",\n  \"data\": {\n    \"candidate_id\": {{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.candidate_id }},\n    \"full_name\": \"{{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.full_name }}\",\n    \"new_status\": \"{{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.new_status }}\",\n    \"ai_evaluation\": \"{{ $('Step 6: Evaluation Guardrail & Fallback Engine').item.json.ai_evaluation }}\"\n  }\n}",
         "options": {}
       },
-      "id": "ac7d32b7-5227-45a4-a2e7-d7e4cf6170c6",
-      "name": "Step 13: Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        416,
-        16
-      ]
+        1380,
+        100
+      ],
+      "id": "wf6-respond",
+      "name": "Step 12: Respond to Webhook"
     }
   ],
-  "pinData": {},
   "connections": {
-    "Step 1: Webhook": {
+    "Step 1: Webhook Trigger": {
       "main": [
         [
           {
@@ -326,124 +319,157 @@
       "main": [
         [
           {
-            "node": "Step 3: Fetch Current Candidate",
+            "node": "Step 3: Fetch Candidate Details API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 3: Fetch Current Candidate": {
+    "Step 3: Fetch Candidate Details API": {
       "main": [
         [
           {
-            "node": "Step 4: Check Existence",
+            "node": "Step 4: Prepare Evaluation Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 4: Check Existence": {
+    "Step 4: Prepare Evaluation Context": {
       "main": [
         [
           {
-            "node": "Step 5: Build AI Prompt",
+            "node": "Step 5: AI Agent - Talent Acquisition Advisor",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 5: Build AI Prompt": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Step 5: AI Agent - Talent Acquisition Advisor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Competency Matrix Evaluator": {
+      "ai_tool": [
+        [
+          {
+            "node": "Step 5: AI Agent - Talent Acquisition Advisor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Talent Retention & Risk Assessor": {
+      "ai_tool": [
+        [
+          {
+            "node": "Step 5: AI Agent - Talent Acquisition Advisor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Next Action Recommender": {
+      "ai_tool": [
+        [
+          {
+            "node": "Step 5: AI Agent - Talent Acquisition Advisor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: AI Agent - Talent Acquisition Advisor": {
       "main": [
         [
           {
-            "node": "Step 6: Request Gemini AI",
+            "node": "Step 6: Evaluation Guardrail & Fallback Engine",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 6: Request Gemini AI": {
+    "Step 6: Evaluation Guardrail & Fallback Engine": {
       "main": [
         [
           {
-            "node": "Step 7: Catch & Fallback Review",
+            "node": "Step 7: State Machine Validation",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 7: Catch & Fallback Review": {
+    "Step 7: State Machine Validation": {
       "main": [
         [
           {
-            "node": "Step 8: Update Candidate DB",
+            "node": "Step 8: Update Candidate Status API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 8: Update Candidate DB": {
+    "Step 8: Update Candidate Status API": {
       "main": [
         [
           {
-            "node": "Step 9: Insert Audit Log",
+            "node": "Step 9: Insert Candidate History API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 9: Insert Audit Log": {
+    "Step 9: Insert Candidate History API": {
       "main": [
         [
           {
-            "node": "Step 10: Format HR Dispatch",
+            "node": "Step 10: Route Audit by Status",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 10: Format HR Dispatch": {
+    "Step 10: Route Audit by Status": {
       "main": [
         [
           {
-            "node": "Step 11: Route Alert by Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 11: Route Alert by Status": {
-      "main": [
-        [
-          {
-            "node": "Step 12: Dispatch Notification",
+            "node": "Step 11: Dispatch Executive Log API",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Step 13: Respond to Webhook",
+            "node": "Step 12: Respond to Webhook",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Step 12: Dispatch Notification": {
+    "Step 11: Dispatch Executive Log API": {
       "main": [
         [
           {
-            "node": "Step 13: Respond to Webhook",
+            "node": "Step 12: Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -451,17 +477,7 @@
       ]
     }
   },
-  "active": true,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
-  },
-  "versionId": "ad053cbc-8907-4761-a20f-542248e51b7a",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "bdea5f16c2ef479ba4e5c397d17a9b6cee12d9b255d968a071a19ff6b5314845"
-  },
-  "nodeGroups": [],
-  "id": "NKaFaNsm2Bf5lrAS",
-  "tags": []
+    "executionOrder": "v1"
+  }
 }

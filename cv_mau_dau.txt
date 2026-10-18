@@ -1,0 +1,30 @@
+HỌ VÀ TÊN: LÊ THỊ YẾN NHI
+Vị trí ứng tuyển: Senior Backend Engineer
+Email: nhilty.24it@vku.udn.vn
+Số điện thoại: 0905 123 456
+Địa chỉ: Đà Nẵng, Việt Nam
+
+TÓM TẮT NĂNG LỰC:
+Kỹ sư phần mềm Backend với hơn 4 năm kinh nghiệm chuyên sâu trong việc thiết kế, xây dựng và triển khai các hệ thống dịch vụ quy mô lớn. Thành thạo phát triển Web Service, RESTful API, tối ưu hóa cơ sở dữ liệu quan hệ và tự động hóa quy trình nghiệp vụ doanh nghiệp.
+
+KỸ NĂNG CHUYÊN MÔN:
+- Ngôn ngữ & Nền tảng: Node.js, Express.js, JavaScript ES6+, TypeScript, Python.
+- Cơ sở dữ liệu: MySQL, PostgreSQL, Redis, thiết kế lược đồ quan hệ và tối ưu truy vấn SQL phức tạp.
+- Tự động hóa & Tác tử AI: n8n Workflow Automation, Webhook integration, tích hợp API Google Gemini và LLM.
+- DevOps & Ảo hóa: Docker, Docker Compose, Containerization, CI/CD Pipeline, Git, Linux/Ubuntu server management.
+- Kiến trúc hệ thống: Microservices Architecture, Event-driven Architecture, RESTful API, bảo mật OAuth2.
+
+KINH NGHIỆM LÀM VIỆC:
+1. Senior Backend Developer - Công ty Giải pháp Công nghệ FPT (2023 - Nay):
+- Thiết kế và phát triển hệ thống backend xử lý dữ liệu cho hơn 50.000 người dùng hàng ngày bằng Node.js và Express.
+- Triển khai toàn bộ dịch vụ trên môi trường Docker Container, thiết lập cơ chế giám sát và cân bằng tải.
+- Tích hợp nền tảng n8n để tự động hóa quy trình thông báo đa kênh qua Gmail OAuth2 và Google Calendar.
+- Tối ưu hóa các truy vấn MySQL giúp giảm thời gian phản hồi API từ 450ms xuống dưới 80ms.
+
+2. Backend Engineer - Công ty Phần mềm Enclave (2021 - 2023):
+- Xây dựng hệ thống RESTful API kết nối cơ sở dữ liệu MySQL và quản lý bảo mật phân quyền người dùng.
+- Tham gia chuyển đổi kiến trúc Monolith sang Microservices, giúp tăng tính sẵn sàng (High Availability) cho hệ thống.
+
+HỌC VẤN:
+- Cử nhân Công nghệ Thông tin - Trường Đại học Công nghệ Thông tin & Truyền thông Việt - Hàn (VKU).
+
