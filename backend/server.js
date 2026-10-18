@@ -331,9 +331,9 @@ async function executeAutoNotifyReject({ candidate_id, candidate_name, candidate
     // Cập nhật trạng thái thông báo trong MySQL
     try {
         if (targetId) {
-            await db.query("UPDATE candidates SET notification_status = 'Sent_Rejection' WHERE id = ?", [Number(targetId)]);
+            await db.query("UPDATE candidates SET notification_status = 'Sent_Rejection', approval_status = 'REJECTED', status = 'Loại sơ loại' WHERE id = ?", [Number(targetId)]);
         } else if (candEmail) {
-            await db.query("UPDATE candidates SET notification_status = 'Sent_Rejection' WHERE email = ?", [candEmail]);
+            await db.query("UPDATE candidates SET notification_status = 'Sent_Rejection', approval_status = 'REJECTED', status = 'Loại sơ loại' WHERE email = ?", [candEmail]);
         }
     } catch (dbErr) {
         console.warn("[Auto-Reject] Lỗi sync DB reject status:", dbErr.message);
@@ -418,9 +418,9 @@ app.post("/api/screen-cv", async (req, res) => {
         const appliedPosition = payload.position || resultJson.position || "Vị trí tuyển dụng";
         const cvContent = payload.cv_text || resultJson.cv_text || "";
         const aiEval = resultJson.ai_evaluation || resultJson.evaluation || (resultJson[0] && resultJson[0].ai_evaluation) || "Hồ sơ ứng viên đã được AI phân tích và đánh giá tự động.";
-        const isApproved = (candStatus === 'APPROVED' || candStatus === 'Đạt' || matchScore >= 70);
+        const isApproved = (candStatus === 'APPROVED' || candStatus === 'Đạt' || candStatus === 'Đạt sơ loại' || matchScore >= 70);
         const approvalStatus = isApproved ? 'APPROVED' : 'REJECTED';
-        const initialStatus = isApproved ? 'Đạt' : 'Loại';
+        const initialStatus = isApproved ? 'Đạt sơ loại' : 'Loại sơ loại';
         const jobId = Number(payload.job_id) || Number(resultJson.job_id) || 1;
 
         // Lưu hồ sơ ứng viên vào MySQL qua Tầng Dịch Vụ Backend (Đảm bảo Clean 3-Tier Architecture)
@@ -499,10 +499,11 @@ app.get("/api/candidates", async (req, res) => {
                    c.name, c.email, c.cv_content, c.match_score, 
                    c.approval_status, 
                    CASE 
-                     WHEN c.approval_status = 'REJECTED' OR c.status = 'Loại' OR c.status = 'Không đạt' THEN 'Loại'
+                     WHEN c.approval_status = 'REJECTED' OR c.status = 'Loại' OR c.status = 'Loại sơ loại' OR c.status = 'Không đạt' THEN 'Loại sơ loại'
                      WHEN c.approval_status = 'INTERVIEW_SCHEDULED' OR c.status = 'Phỏng vấn' THEN 'Phỏng vấn'
-                     WHEN c.approval_status = 'APPROVED' OR c.status = 'Đạt' THEN 'Đạt'
-                     ELSE COALESCE(c.status, 'Loại')
+                     WHEN c.approval_status = 'APPROVED' OR c.status = 'Đạt' OR c.status = 'Đạt sơ loại' THEN 'Đạt sơ loại'
+                     WHEN c.status = 'Trúng tuyển' OR c.approval_status = 'HIRED' THEN 'Trúng tuyển'
+                     ELSE COALESCE(c.status, 'Loại sơ loại')
                    END as status,
                    c.ai_evaluation, c.interview_time, c.interviewer_name, c.meeting_link, c.created_at,
                    COALESCE(c.applied_position, j.position, CONCAT('Vị trí #', c.job_id)) as position,
@@ -983,12 +984,21 @@ app.post("/api/candidates/update-status", async (req, res) => {
         });
         const result = await response.json();
 
-        // Đồng bộ cả approval_status và status để Trang 3 và Trang 4 khớp nhau hoàn toàn
+        // Đồng bộ cả approval_status và status để Luồng 2 và Luồng 4 khớp nhau hoàn toàn
         let appStatus = 'APPROVED';
-        if (new_status === 'Loại' || new_status === 'Không đạt' || new_status === 'REJECTED') {
+        const isRejectStatus = (new_status === 'Loại' || new_status === 'Loại sơ loại' || new_status === 'Loại sau PV' || new_status === 'Không đạt' || new_status === 'REJECTED');
+        const isInterviewStatus = (new_status === 'Phỏng vấn' || new_status === 'INTERVIEW_SCHEDULED');
+        const isPassStatus = (new_status === 'Đạt' || new_status === 'Đạt sơ loại' || new_status === 'APPROVED');
+        const isHiredStatus = (new_status === 'Trúng tuyển' || new_status === 'HIRED');
+
+        if (isRejectStatus) {
             appStatus = 'REJECTED';
-        } else if (new_status === 'Phỏng vấn' || new_status === 'INTERVIEW_SCHEDULED') {
+        } else if (isInterviewStatus) {
             appStatus = 'INTERVIEW_SCHEDULED';
+        } else if (isHiredStatus) {
+            appStatus = 'HIRED';
+        } else {
+            appStatus = 'APPROVED';
         }
 
         try {
@@ -1000,37 +1010,38 @@ app.post("/api/candidates/update-status", async (req, res) => {
             console.warn("Lỗi sync DB:", dbErr.message);
         }
 
-        // Nếu chuyển sang Phỏng vấn và chưa có lịch -> Tự động xếp lịch & gửi thư mời luôn
-        if (new_status === 'Phỏng vấn' || new_status === 'INTERVIEW_SCHEDULED') {
+        // 1. NẾU ĐẠT SƠ LOẠI Ở LUỒNG 2 (hoặc chuyển sang Phỏng vấn): Tự động qua Luồng 4 xếp lịch + Luồng 5 gửi thư mời Gmail
+        if (isPassStatus || isInterviewStatus) {
             try {
-                const [checkRows] = await db.query("SELECT interview_time FROM candidates WHERE id = ?", [Number(targetId)]);
-                if (checkRows && checkRows.length > 0 && !checkRows[0].interview_time) {
-                    fetch("http://localhost:3000/api/schedule-interview", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ candidate_id: Number(targetId), requested_by: "Auto_Status_Change" })
-                    }).catch(e => console.warn("Lỗi auto schedule:", e.message));
-                }
-            } catch (errCheck) {
-                console.warn("Lỗi check lịch auto:", errCheck.message);
+                await executeAutoSchedulePass({
+                    candidate_id: Number(targetId),
+                    candidate_name: candName,
+                    position: candPos
+                });
+            } catch (e) {
+                console.warn("Lỗi auto schedule pass:", e.message);
             }
         }
 
-        // Nếu chuyển sang Loại -> Tự động gửi email thông báo từ chối lịch sự
-        if (new_status === 'Loại' || new_status === 'Không đạt' || new_status === 'REJECTED') {
-            fetch("http://localhost:3000/api/auto-notify-reject", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+        // 2. NẾU LOẠI SƠ LOẠI Ở LUỒNG 2: Tự động gửi email thông báo từ chối lịch sự qua Luồng 5
+        if (isRejectStatus) {
+            try {
+                await executeAutoNotifyReject({
                     candidate_id: Number(targetId),
                     candidate_name: candName,
                     position: candPos,
-                    evaluation: "Hồ sơ chưa phù hợp với tiêu chí tuyển dụng theo đánh giá của Hội đồng."
-                })
-            }).catch(e => console.warn("Lỗi auto reject email:", e.message));
+                    evaluation: "Hồ sơ ứng viên chưa đạt tiêu chuẩn chuyên môn của vòng sơ loại CV."
+                });
+            } catch (e) {
+                console.warn("Lỗi auto reject email:", e.message);
+            }
         }
 
-        res.json(result);
+        res.json({
+            success: true,
+            message: `Đã cập nhật trạng thái hồ sơ #${targetId} sang "${new_status}" và xử lý liên hoàn tự động!`,
+            data: { candidate_id: Number(targetId), status: new_status, approval_status: appStatus }
+        });
     } catch (error) {
         console.error("Lỗi gọi Luồng 6 n8n:", error.message);
         res.status(500).json({ success: false, message: "Lỗi kết nối n8n cập nhật trạng thái" });

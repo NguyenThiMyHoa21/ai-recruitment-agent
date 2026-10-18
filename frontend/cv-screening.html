@@ -214,25 +214,25 @@
       <!-- Metric 2: Approved / Passed -->
       <div class="glass-card p-4 metric-card border-l-4 border-l-emerald-500">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Đạt Chuẩn (Approved)</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Đạt Sơ Loại (Luồng 2)</span>
           <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
             <i class="fa-solid fa-circle-check"></i>
           </div>
         </div>
         <div class="mt-2 text-2xl font-black text-emerald-600" id="kpiApproved">0</div>
-        <div class="mt-1 text-[11px] text-emerald-600 font-medium">Sẵn sàng xếp lịch Luồng 4</div>
+        <div class="mt-1 text-[11px] text-emerald-600 font-medium">Tự động chuyển Luồng 4 & gửi thư mời</div>
       </div>
 
       <!-- Metric 3: Rejected -->
       <div class="glass-card p-4 metric-card border-l-4 border-l-rose-500">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Chưa Đạt (Rejected)</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Loại Sơ Loại (Luồng 2)</span>
           <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm">
             <i class="fa-solid fa-circle-xmark"></i>
           </div>
         </div>
         <div class="mt-2 text-2xl font-black text-rose-600" id="kpiRejected">0</div>
-        <div class="mt-1 text-[11px] text-rose-600 font-medium">Có thể kích hoạt email từ chối</div>
+        <div class="mt-1 text-[11px] text-rose-600 font-medium">Tự động gửi email từ chối Luồng 5</div>
       </div>
 
       <!-- Metric 4: Interview Scheduled -->
@@ -244,7 +244,7 @@
           </div>
         </div>
         <div class="mt-2 text-2xl font-black text-blue-600" id="kpiInterview">0</div>
-        <div class="mt-1 text-[11px] text-blue-600 font-medium">Đã đồng bộ Google Meet</div>
+        <div class="mt-1 text-[11px] text-blue-600 font-medium">Đã đồng bộ Google Meet (Luồng 4)</div>
       </div>
 
     </div>
@@ -464,8 +464,13 @@
 
     function updateKPIs(candidates) {
       const total = candidates.length;
-      const approved = candidates.filter(c => c.approval_status === 'APPROVED' || c.status === 'Đạt').length;
-      const rejected = candidates.filter(c => c.approval_status === 'REJECTED' || c.status === 'Loại').length;
+      const approved = candidates.filter(c => {
+        const isExplicitReject = (c.approval_status === 'REJECTED' || c.status === 'Loại' || c.status === 'Loại sơ loại' || c.status === 'Không đạt');
+        const isExplicitPass = (c.approval_status === 'APPROVED' || c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Đạt' || c.status === 'Đạt sơ loại' || c.status === 'Phỏng vấn');
+        const score = c.match_score || 0;
+        return isExplicitPass || (!isExplicitReject && score >= 70);
+      }).length;
+      const rejected = total - approved;
       const interview = candidates.filter(c => c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Phỏng vấn' || c.interview_time).length;
 
       document.getElementById('kpiTotal').innerText = total;
@@ -496,23 +501,14 @@
 
       tbody.innerHTML = candidates.map(c => {
         const score = c.match_score || 0;
-        const isApproved = (c.approval_status === 'APPROVED' || c.status === 'Đạt');
-        const isRejected = (c.approval_status === 'REJECTED' || c.status === 'Loại');
-        const isInterview = (c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Phỏng vấn');
+        const isExplicitReject = (c.approval_status === 'REJECTED' || c.status === 'Loại' || c.status === 'Loại sơ loại' || c.status === 'Không đạt');
+        const isExplicitPass = (c.approval_status === 'APPROVED' || c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Đạt' || c.status === 'Đạt sơ loại' || c.status === 'Phỏng vấn');
+        
+        const isApproved = isExplicitPass || (!isExplicitReject && score >= 70);
+        const isRejected = !isApproved;
+        const hasSchedule = Boolean(c.interview_time || c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Phỏng vấn');
 
-        let scoreBadgeClass = 'badge-soft-warning';
-        let statusBadgeText = 'Chưa duyệt';
-
-        if (isApproved) {
-          scoreBadgeClass = 'badge-soft-success';
-          statusBadgeText = '🟢 APPROVED';
-        } else if (isRejected) {
-          scoreBadgeClass = 'badge-soft-danger';
-          statusBadgeText = '🔴 REJECTED';
-        } else if (isInterview) {
-          scoreBadgeClass = 'badge-soft-info';
-          statusBadgeText = '📅 Phỏng vấn';
-        }
+        const scoreBadgeClass = isApproved ? 'badge-soft-success' : 'badge-soft-danger';
 
         const candName = c.full_name || c.name || 'Ứng viên';
         const candInitial = candName.charAt(0).toUpperCase();
@@ -551,30 +547,26 @@
               </button>
             </td>
             <td class="py-3 px-4">
-              <select class="text-xs font-bold rounded-lg px-2.5 py-1 border transition focus:outline-none focus:ring-1 ${
-                isApproved ? 'border-emerald-300 text-emerald-700 bg-emerald-50' :
-                isRejected ? 'border-rose-300 text-rose-700 bg-rose-50' :
-                isInterview ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                'border-slate-300 text-slate-700 bg-white'
+              <select class="text-xs font-bold rounded-lg px-2.5 py-1.5 border transition focus:outline-none focus:ring-1 ${
+                isApproved ? 'border-emerald-300 text-emerald-700 bg-emerald-50' : 'border-rose-300 text-rose-700 bg-rose-50'
               }" onchange="changeCandidateStatus(${c.id}, this.value)">
-                <option value="APPROVED" ${isApproved ? 'selected' : ''}>🟢 APPROVED (Đạt)</option>
-                <option value="REJECTED" ${isRejected ? 'selected' : ''}>🔴 REJECTED (Loại)</option>
-                <option value="INTERVIEW_SCHEDULED" ${isInterview ? 'selected' : ''}>📅 PHỎNG VẤN</option>
+                <option value="Đạt sơ loại" ${isApproved ? 'selected' : ''}>🟢 Đạt sơ loại</option>
+                <option value="Loại sơ loại" ${isRejected ? 'selected' : ''}>🔴 Loại sơ loại</option>
               </select>
             </td>
             <td class="py-3 px-4 text-right whitespace-nowrap">
-              ${isApproved ? `
-                <a href="interview-management.html?filter=CHO_XEP_LICH&search=${encodeURIComponent(candName)}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-2xs mr-1 transition no-underline" title="Chuyển sang Luồng 4 để xếp lịch phỏng vấn">
+              ${isApproved && hasSchedule ? `
+                <a href="interview-management.html?filter=DANG_PHONG_VAN&search=${encodeURIComponent(candName)}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-sky-500 hover:bg-sky-600 text-white shadow-2xs mr-1 transition no-underline" title="Đã có lịch phỏng vấn - Xem bên Luồng 4">
+                  <i class="fa-solid fa-calendar-check text-[10px]"></i> Lịch PV (L4)
+                </a>
+              ` : ''}
+              ${isApproved && !hasSchedule ? `
+                <a href="interview-management.html?filter=CHO_XEP_LICH&search=${encodeURIComponent(candName)}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-2xs mr-1 transition no-underline" title="Đạt sơ loại - Chuyển sang Luồng 4 để xếp lịch">
                   <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Xếp Lịch (L4)
                 </a>
               ` : ''}
-              ${isInterview ? `
-                <a href="interview-management.html?filter=DANG_PHONG_VAN&search=${encodeURIComponent(candName)}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-sky-500 hover:bg-sky-600 text-white shadow-2xs mr-1 transition no-underline" title="Xem lịch phỏng vấn bên Luồng 4">
-                  <i class="fa-solid fa-calendar-check text-[10px]"></i> Lịch PV
-                </a>
-              ` : ''}
               ${isRejected ? `
-                <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 shadow-2xs mr-1 transition" onclick="sendRejectEmail(${c.id}, '${candName.replace(/'/g, "\\'")}')" title="Kích hoạt Luồng 5 n8n gửi thư từ chối">
+                <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 shadow-2xs mr-1 transition" onclick="sendRejectEmail(${c.id}, '${candName.replace(/'/g, "\\'")}')" title="Kích hoạt Luồng 5 n8n gửi thư từ chối vì rớt vòng sơ loại">
                   <i class="fa-solid fa-paper-plane text-[10px]"></i> Mail Loại
                 </button>
               ` : ''}
@@ -663,11 +655,22 @@
       const c = allCandidatesCache.find(x => Number(x.id) === Number(candId));
       if (!c) return;
 
+      const score = c.match_score || 0;
+      const isExplicitReject = (c.approval_status === 'REJECTED' || c.status === 'Loại' || c.status === 'Loại sơ loại' || c.status === 'Không đạt');
+      const isExplicitPass = (c.approval_status === 'APPROVED' || c.approval_status === 'INTERVIEW_SCHEDULED' || c.status === 'Đạt' || c.status === 'Đạt sơ loại' || c.status === 'Phỏng vấn');
+      const isApproved = isExplicitPass || (!isExplicitReject && score >= 70);
+
       document.getElementById('modalCandName').innerText = c.full_name || c.name || 'Ứng viên';
       document.getElementById('modalCandPos').innerText = c.position || c.applied_position || ('Vị trí #' + (c.job_id || '1'));
       document.getElementById('modalCandEmail').innerText = c.email || 'N/A';
-      document.getElementById('modalCandScoreBadge').innerText = (c.match_score || 0) + ' / 100 Điểm';
-      document.getElementById('modalCandStatusBadge').innerText = c.approval_status || c.status || 'N/A';
+      document.getElementById('modalCandScoreBadge').innerText = score + ' / 100 Điểm';
+      
+      const statusBadge = document.getElementById('modalCandStatusBadge');
+      if (statusBadge) {
+        statusBadge.innerText = isApproved ? '🟢 Đạt sơ loại' : '🔴 Loại sơ loại';
+        statusBadge.className = `px-2.5 py-1 rounded-full text-xs font-bold inline-block ${isApproved ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`;
+      }
+
       document.getElementById('modalCandEvalText').innerText = c.ai_evaluation || 'Chưa có nhận định chi tiết từ AI Gemini.';
       document.getElementById('modalCandCvText').innerText = c.cv_content || c.cv_text || 'Không có văn bản CV đính kèm.';
 
@@ -682,6 +685,16 @@
 
     async function changeCandidateStatus(candId, newStatus) {
       try {
+        Swal.fire({
+          title: 'Đang xử lý liên hoàn...',
+          text: newStatus === 'Đạt sơ loại'
+            ? 'Đang tự động xếp lịch Luồng 4 và gửi thư mời Gmail (Luồng 5)...'
+            : 'Đang tự động gửi thư từ chối vì rớt vòng sơ loại (Luồng 5)...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+          customClass: { popup: 'rounded-2xl' }
+        });
+
         const res = await fetch(`${API_BASE}/api/candidates/update-status`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -690,12 +703,13 @@
         const data = await res.json();
         if (res.ok) {
           Swal.fire({
-            toast: true,
-            position: 'top-end',
             icon: 'success',
-            title: `Cập nhật hồ sơ #${candId} sang ${newStatus}!`,
-            showConfirmButton: false,
-            timer: 2000
+            title: 'Thành Công!',
+            text: newStatus === 'Đạt sơ loại'
+              ? `Hồ sơ #${candId} ĐẠT SƠ LOẠI: Đã tự động xếp lịch bên Luồng 4 và gửi thư mời Google Meet qua Luồng 5!`
+              : `Hồ sơ #${candId} LOẠI SƠ LOẠI: Đã gửi thư từ chối lịch sự qua Luồng 5 vì rớt vòng sơ loại!`,
+            confirmButtonColor: '#4f46e5',
+            customClass: { popup: 'rounded-2xl' }
           });
           loadIncomingCandidates();
         } else {
