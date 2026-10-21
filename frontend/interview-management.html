@@ -893,8 +893,8 @@
         const json = await res.json();
         allCandidates = Array.isArray(json) ? json : (json.data || json.candidates || []);
         
-        // Nếu cơ sở dữ liệu chỉ có 2 hồ sơ cũ chưa cập nhật, nạp ngay bộ 50 hồ sơ chuẩn
-        if (allCandidates.length <= 2) {
+        // Nếu cơ sở dữ liệu trống, nạp bộ hồ sơ mẫu
+        if (allCandidates.length === 0) {
           try {
             const demoRes = await fetch('demo-candidates.json');
             if (demoRes.ok) {

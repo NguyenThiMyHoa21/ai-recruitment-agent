@@ -415,7 +415,7 @@
         if (res.ok && data.success && data.candidates) {
           allCandidatesCache = data.candidates;
 
-          if (allCandidatesCache.length <= 2) {
+          if (allCandidatesCache.length === 0) {
             try {
               const demoRes = await fetch('demo-candidates.json');
               if (demoRes.ok) {
