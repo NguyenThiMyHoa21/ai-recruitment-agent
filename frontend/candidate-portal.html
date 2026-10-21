@@ -529,11 +529,15 @@
         try { data = JSON.parse(rawText); } catch(e) {}
 
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
-          availableJobs = data.jobs.filter(j => 
-            j && j.position && j.position !== 'undefined' && 
-            String(j.position).trim().length > 0 && 
-            !deletedJobIds.includes(String(j.id))
-          );
+          const seen = new Set();
+          availableJobs = data.jobs.filter(j => {
+            if (!j || !j.position || j.position === 'undefined' || String(j.position).trim().length === 0) return false;
+            if (deletedJobIds.includes(String(j.id))) return false;
+            const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
           try { localStorage.setItem('custom_jobs', JSON.stringify(availableJobs)); } catch(e) {}
         } else {
           loadFallbackJobs();

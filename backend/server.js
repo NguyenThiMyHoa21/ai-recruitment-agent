@@ -48,16 +48,33 @@ app.get("/api/jobs", async (req, res) => {
             ORDER BY id DESC
         `);
 
+        // Loại bỏ trùng lặp nếu có nhiều bản ghi cùng vị trí và phòng ban
+        const seen = new Set();
+        const uniqueJobs = jobs.filter(j => {
+            const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
         res.json({
             success: true,
-            jobs: jobs
+            jobs: uniqueJobs
         });
 
     } catch (error) {
         console.warn("[FALLBACK] CSDL không kết nối được, sử dụng MOCK_JOBS:", error.message);
+        const seen = new Set();
+        const uniqueMockJobs = MOCK_JOBS.filter(j => {
+            const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
         res.json({
             success: true,
-            jobs: MOCK_JOBS,
+            jobs: uniqueMockJobs,
             fallback: true
         });
     }
@@ -100,6 +117,31 @@ app.post("/api/jobs", async (req, res) => {
         const salary = n8nJson.salary || jobData.salary || "15 - 20 Triệu";
         const requirements = n8nJson.requirements || jobData.requirements || "";
         const jobDescription = n8nJson.job_description || jobData.job_description || resultText;
+
+        // Tránh tạo trùng lặp nếu vị trí tuyển dụng này đã tồn tại trong bộ nhớ
+        const existingIdx = MOCK_JOBS.findIndex(j => 
+            j.position.toLowerCase().trim() === position.toLowerCase().trim() &&
+            (department ? (j.department || '').toLowerCase().trim() === department.toLowerCase().trim() : true)
+        );
+
+        if (existingIdx !== -1) {
+            console.log(`[JobService] Vị trí "${position}" đã tồn tại (#${MOCK_JOBS[existingIdx].id}), cập nhật thông tin thay vì tạo trùng lặp.`);
+            MOCK_JOBS[existingIdx] = {
+                ...MOCK_JOBS[existingIdx],
+                location,
+                salary,
+                requirements,
+                job_description: jobDescription,
+                status: "published"
+            };
+            return res.json({
+                success: true,
+                message: "Tin tuyển dụng đã tồn tại và được cập nhật thành công!",
+                jobId: MOCK_JOBS[existingIdx].id,
+                job: MOCK_JOBS[existingIdx],
+                n8nResponse: n8nJson
+            });
+        }
 
         let newJobId = (MOCK_JOBS[0]?.id || 30) + 1;
         try {
@@ -166,6 +208,23 @@ app.post("/api/jobs/save", async (req, res) => {
     try {
         const { position, department, location, salary, requirements, job_description, status } = req.body;
         console.log(`[JobService] POST /api/jobs/save - Lưu vị trí: ${position}`);
+
+        // Tránh tạo trùng lặp nếu vị trí đã tồn tại
+        const existingJob = MOCK_JOBS.find(j => 
+            j.position.toLowerCase().trim() === (position || '').toLowerCase().trim() && 
+            (department ? (j.department || '').toLowerCase().trim() === department.toLowerCase().trim() : true)
+        );
+        if (existingJob) {
+            console.log(`[JobService] Vị trí "${position}" đã tồn tại (#${existingJob.id}), đồng bộ thông tin.`);
+            if (job_description) existingJob.job_description = job_description;
+            if (salary) existingJob.salary = salary;
+            return res.json({
+                success: true,
+                message: "Vị trí tuyển dụng đã tồn tại và được đồng bộ thành công!",
+                jobId: existingJob.id
+            });
+        }
+
         const maxId = MOCK_JOBS.reduce((m, j) => Math.max(m, Number(j.id) || 0), 0);
         let newJobId = maxId + 1;
 

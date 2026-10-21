@@ -30,42 +30,23 @@ form.addEventListener("submit", async (event) => {
     if (errorBox) errorBox.style.display = "none";
 
     try {
-        let response;
-        let n8nData = {};
+        // Gửi yêu cầu biên soạn & lưu tin tuyển dụng qua Backend API (xử lý tập trung 1 lần duy nhất)
+        const response = await fetch(`${API_BASE}/api/jobs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(jobData)
+        });
+        const result = await response.json();
 
-        // Nếu đang ở localhost thì thử n8n trước, nếu ở Cloud (Render HTTPS) thì gửi thẳng qua API_BASE
-        if (window.location.protocol === 'http:' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-            try {
-                response = await fetch("http://localhost:5678/webhook/job-posting", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    signal: AbortSignal.timeout(2000),
-                    body: JSON.stringify(jobData)
-                });
-                if (response.ok) {
-                    n8nData = await response.json();
-                }
-            } catch (errDirect) {}
-        }
-
-        // Nếu chưa có response thành công từ n8n thì gửi qua backend Node.js
-        if (!response || !response.ok) {
-            response = await fetch(`${API_BASE}/api/jobs`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(jobData)
-            });
-            const result = await response.json();
+        if (response.ok && result.success) {
+            let n8nData = {};
             try {
                 n8nData = typeof result.n8nResponse === "string" ? JSON.parse(result.n8nResponse) : (result.n8nResponse || {});
             } catch (e) {
                 n8nData = {};
             }
-        }
 
-        if (response && response.ok) {
-
-            const jd = n8nData.job_description || 
+            const jd = result.job?.job_description || n8nData.job_description || 
                 `BẢN MÔ TẢ CÔNG VIỆC CHUYÊN NGHIỆP\n\n1. VỊ TRÍ TUYỂN DỤNG: ${jobData.position}\n2. PHÒNG BAN: ${jobData.department} | ĐỊA ĐIỂM: ${jobData.location}\n3. MỨC LƯƠNG: ${jobData.salary}\n4. TIÊU CHUẨN ỨNG VIÊN: ${jobData.requirements}\n5. QUYỀN LỢI ĐÃI NGỘ: Môi trường làm việc năng động, lộ trình phát triển rõ ràng, bảo hiểm đầy đủ, thưởng theo hiệu suất.`;
 
             const jdEl = document.getElementById("aiJdContent");
@@ -83,57 +64,22 @@ form.addEventListener("submit", async (event) => {
 
             form.reset();
 
-            // Tự động lưu tin tuyển dụng & JD vào MySQL thông qua Tầng Backend Service
-            try {
-                await fetch(`${API_BASE}/api/jobs/save`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        position: n8nData.position || jobData.position,
-                        department: n8nData.department || jobData.department,
-                        location: n8nData.location || jobData.location,
-                        salary: n8nData.salary || jobData.salary,
-                        requirements: n8nData.requirements || jobData.requirements,
-                        job_description: jd,
-                        status: 'published'
-                    })
-                });
-            } catch(saveErr) {
-                console.warn("[BackendService] Lỗi lưu job qua API Backend:", saveErr);
-            }
-
-            // Tự động chèn ngay vị trí mới tạo lên đầu bảng danh sách
-            const newJobId = (defaultJobsFallback[0]?.id || 16) + 1;
-            const newJobItem = {
-                id: newJobId,
-                position: jobData.position,
-                department: jobData.department,
-                salary: jobData.salary
-            };
-            defaultJobsFallback.unshift(newJobItem);
-            try {
-                const customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
-                customJobs.unshift(newJobItem);
-                localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
-            } catch(e) {}
-            renderJobsTable(defaultJobsFallback);
-
-            // Đồng bộ lại với backend MySQL nếu có
-            loadActiveJobs();
+            // Đồng bộ nạp lại danh sách công việc chính xác từ máy chủ (chỉ tạo đúng 1 vị trí)
+            await loadActiveJobs();
         } else {
-            throw new Error("Gửi yêu cầu tuyển dụng thất bại. Vui lòng kiểm tra n8n đã được kích hoạt.");
+            throw new Error(result.message || "Gửi yêu cầu tuyển dụng thất bại. Vui lòng kiểm tra lại.");
         }
 
     } catch (error) {
         console.error("Lỗi:", error);
         if (errorBox) {
-            errorBox.innerHTML = `<strong>❌ Lỗi kết nối:</strong> ${error.message}. Vui lòng kiểm tra Backend (port 3000) và n8n đã được kích hoạt.`;
+            errorBox.innerHTML = `<strong>❌ Lỗi kết nối:</strong> ${error.message}. Vui lòng kiểm tra Backend (port 3000) hoặc kết nối mạng.`;
             errorBox.style.display = "block";
         }
     } finally {
         if (btnSubmit) {
             btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> GỬI YÊU CẦU ĐĂNG TIN';
+            btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> GỬI YÊU CẦU ĐĂNG TIN VÀ TẠO JD TỰ ĐỘNG';
         }
     }
 });
@@ -170,14 +116,21 @@ const defaultJobsFallback = [
     { id: 6,  position: "Backend Developer", department: "Engineering", salary: "15 - 20 Triệu", requirements: "Thành thạo PHP, MySQL, RESTful API", status: "published" }
 ];
 
-// Tự động dọn sạch các bản ghi lỗi trong localStorage ngay khi tải trang
+// Tự động dọn sạch các bản ghi lỗi và trùng lặp trong localStorage ngay khi tải trang
 (function cleanCorruptedLocalStorage() {
     try {
         const raw = localStorage.getItem('custom_jobs');
         if (raw) {
             const list = JSON.parse(raw);
             if (Array.isArray(list)) {
-                const cleaned = list.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
+                const seenKeys = new Set();
+                const cleaned = list.filter(j => {
+                    if (!j || !j.position || j.position === 'undefined' || String(j.position).trim().length === 0) return false;
+                    const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
+                    if (seenKeys.has(key)) return false;
+                    seenKeys.add(key);
+                    return true;
+                });
                 localStorage.setItem('custom_jobs', JSON.stringify(cleaned));
             }
         }
@@ -202,12 +155,21 @@ async function loadActiveJobs() {
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
             // Lọc bỏ triệt để các bản ghi không hợp lệ hoặc đã bị xóa
-            const validJobs = data.jobs.filter(j => 
+            let validJobs = data.jobs.filter(j => 
                 j && j.position && j.position !== 'undefined' && 
                 String(j.position).trim().length > 0 && 
                 !deletedJobIds.includes(String(j.id))
             );
             
+            // Tự động gộp / khử trùng lặp nếu có các vị trí cùng tên và phòng ban
+            const seenKeys = new Set();
+            validJobs = validJobs.filter(j => {
+                const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
+                if (seenKeys.has(key)) return false;
+                seenKeys.add(key);
+                return true;
+            });
+
             // Chuẩn hóa trạng thái từ MySQL
             validJobs.forEach(j => {
                 if (!j.status || j.status === 'undefined') {
@@ -238,7 +200,17 @@ async function loadActiveJobs() {
                 }
             });
         } catch(err) {}
-        renderJobsTable(combined.filter(j => j && j.position && j.position !== 'undefined'));
+
+        const seenFallback = new Set();
+        const uniqueCombined = combined.filter(j => {
+            if (!j || !j.position || j.position === 'undefined') return false;
+            const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
+            if (seenFallback.has(key)) return false;
+            seenFallback.add(key);
+            return true;
+        });
+
+        renderJobsTable(uniqueCombined);
     }
 }
 
