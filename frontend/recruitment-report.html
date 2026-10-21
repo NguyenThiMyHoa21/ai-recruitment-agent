@@ -1090,18 +1090,9 @@ async function loadRecentCandidates() {
       if (bRej) bRej.innerText = rejectedCount;
 
       filterCandidates(window.currentFilter || 'ALL');
-      return;
     }
   } catch (err) {
     console.error("Lỗi nạp danh sách ứng viên:", err);
-  }
-}
-    throw new Error("Không có dữ liệu ứng viên");
-  } catch(e) {
-    console.warn("Dùng danh sách ứng viên mặc định:", e.message);
-    if (countBadge) {
-      countBadge.innerHTML = `<i class="fa-solid fa-circle-info me-1"></i> 4 hồ sơ mẫu`;
-    }
   }
 }
 
