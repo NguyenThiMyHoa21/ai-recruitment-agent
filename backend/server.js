@@ -17,7 +17,7 @@ const db = mysql.createPool({
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://robin-misc-scheme-soul.trycloudflare.com" : "http://localhost:5678");
+const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://enzyme-fired-weapon-insights.trycloudflare.com" : "http://localhost:5678");
 
 const path = require("path");
 
@@ -468,6 +468,8 @@ app.post("/api/screen-cv", async (req, res) => {
                 email: candidateEmail,
                 applied_position: appliedPosition,
                 position: appliedPosition,
+                cv_content: cvContent,
+                cv_text: cvContent,
                 match_score: matchScore,
                 approval_status: approvalStatus,
                 status: initialStatus,
@@ -478,7 +480,22 @@ app.post("/api/screen-cv", async (req, res) => {
 
         // Xử lý vòng Sơ loại CV (Luồng 2):
         if (isApproved) {
-            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT VÒNG SƠ LOẠI (${matchScore}đ) ➜ Lưu trạng thái 'Đạt' (Chờ HR xếp lịch phỏng vấn ở Luồng 4).`);
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT VÒNG SƠ LOẠI (${matchScore}đ) ➜ Gửi thông báo đạt qua Luồng 5 và lưu trạng thái 'Đạt'...`);
+            fetch(`${N8N_URL}/webhook/send-interview-invite`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    candidate_id: newCandidateId,
+                    candidate_name: candidateName,
+                    candidate_email: candidateEmail,
+                    email: candidateEmail,
+                    position: appliedPosition,
+                    notification_type: "screening_pass",
+                    type: "screening_pass",
+                    evaluation: aiEval,
+                    match_score: matchScore
+                })
+            }).catch(e => console.warn("[Auto-Screening] Lỗi gửi email thông báo đạt sơ loại:", e.message));
         } else {
             console.log(`[Auto-Screening] Ứng viên ${candidateName} CHƯA PHÙ HỢP (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
             executeAutoNotifyReject({
