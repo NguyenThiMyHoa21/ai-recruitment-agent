@@ -188,6 +188,11 @@ async function loadActiveJobs() {
     const tbody = document.getElementById("jobsTableBody");
     if (!tbody) return;
 
+    let deletedJobIds = [];
+    try {
+        deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
+    } catch(e) {}
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -196,8 +201,12 @@ async function loadActiveJobs() {
 
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
-            // Lọc bỏ triệt để các bản ghi không hợp lệ hoặc undefined
-            const validJobs = data.jobs.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
+            // Lọc bỏ triệt để các bản ghi không hợp lệ hoặc đã bị xóa
+            const validJobs = data.jobs.filter(j => 
+                j && j.position && j.position !== 'undefined' && 
+                String(j.position).trim().length > 0 && 
+                !deletedJobIds.includes(String(j.id))
+            );
             
             // Chuẩn hóa trạng thái từ MySQL
             validJobs.forEach(j => {
@@ -215,10 +224,10 @@ async function loadActiveJobs() {
         let customJobs = [];
         try { 
             customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
-            customJobs = customJobs.filter(j => j && j.position && j.position !== 'undefined');
+            customJobs = customJobs.filter(j => j && j.position && j.position !== 'undefined' && !deletedJobIds.includes(String(j.id)));
         } catch(err) {}
 
-        let combined = [...defaultJobsFallback];
+        let combined = defaultJobsFallback.filter(j => !deletedJobIds.includes(String(j.id)));
         try {
             customJobs.forEach(cj => {
                 const existing = combined.find(j => String(j.id) === String(cj.id));
@@ -378,7 +387,7 @@ window.viewJobDetail = function(jobId) {
 
 // Hàm xóa vị trí tuyển dụng
 async function deleteJob(jobId, jobPosition) {
-    if (!confirm(`Bạn có chắc chắn muốn xóa vị trí "${jobPosition}" (ID #${jobId}) không?\n\nLưu ý: Tất cả hồ sơ ứng viên nộp vào vị trí này cũng sẽ được tự động xóa khỏi MySQL.`)) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa vị trí "${jobPosition}" (ID #${jobId}) không?\n\nLưu ý: Tất cả hồ sơ ứng viên nộp vào vị trí này cũng sẽ được tự động xóa khỏi hệ thống.`)) {
         return;
     }
 
@@ -388,14 +397,29 @@ async function deleteJob(jobId, jobPosition) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            // Xóa khỏi localStorage nếu có
+            // 1. Cập nhật localStorage
             try {
                 let customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
                 customJobs = customJobs.filter(j => String(j.id) !== String(jobId));
                 localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
+
+                let deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
+                if (!deletedJobIds.includes(String(jobId))) {
+                    deletedJobIds.push(String(jobId));
+                    localStorage.setItem('deleted_job_ids', JSON.stringify(deletedJobIds));
+                }
             } catch(e) {}
 
-            // Tải lại danh sách việc làm
+            // 2. Cập nhật cache bộ nhớ ngay lập tức
+            if (window.jobsCache) {
+                window.jobsCache = window.jobsCache.filter(j => String(j.id) !== String(jobId));
+            }
+            const fallbackIdx = defaultJobsFallback.findIndex(j => String(j.id) === String(jobId));
+            if (fallbackIdx !== -1) {
+                defaultJobsFallback.splice(fallbackIdx, 1);
+            }
+
+            // 3. Tải lại bảng hiển thị
             await loadActiveJobs();
         } else {
             alert("Không thể xóa: " + (data.message || "Lỗi máy chủ"));

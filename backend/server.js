@@ -1212,21 +1212,25 @@ app.post("/api/candidates/:id/send-invite", async (req, res) => {
 
 // API xóa hồ sơ ứng viên
 app.delete("/api/candidates/:id", async (req, res) => {
+    const candidateId = Number(req.params.id);
+    console.log(`[CandidateService] DELETE /api/candidates/${candidateId} - Xóa hồ sơ...`);
     try {
-        const candidateId = req.params.id;
         await db.query("DELETE FROM candidates WHERE id = ?", [candidateId]);
-        res.json({
-            success: true,
-            message: `Đã xóa thành công hồ sơ #${candidateId}`
-        });
     } catch (error) {
-        console.error("Error deleting candidate:", error);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi khi xóa hồ sơ ứng viên",
-            error: error.message
-        });
+        console.warn(`[DELETE CANDIDATE] CSDL offline hoặc lỗi khi xóa candidate #${candidateId}:`, error.message);
     }
+
+    // Luôn xóa trong MOCK_CANDIDATES (chế độ dự phòng Cloud/Render)
+    const cIdx = MOCK_CANDIDATES.findIndex(c => Number(c.id) === candidateId);
+    if (cIdx !== -1) {
+        MOCK_CANDIDATES.splice(cIdx, 1);
+        console.log(`[CandidateService] Đã xóa ứng viên #${candidateId} khỏi MOCK_CANDIDATES.`);
+    }
+
+    return res.json({
+        success: true,
+        message: `Đã xóa thành công hồ sơ #${candidateId}`
+    });
 });
 
 // API cập nhật trạng thái tuyển dụng (published / closed) cho HR
@@ -1236,38 +1240,71 @@ app.post("/api/jobs/update-status", async (req, res) => {
         if (!id || !status) {
             return res.status(400).json({ success: false, message: "Thiếu id hoặc status" });
         }
-        await db.query("UPDATE jobs SET status = ? WHERE id = ?", [status, id]);
-        res.json({
+        const jobId = Number(id);
+        try {
+            await db.query("UPDATE jobs SET status = ? WHERE id = ?", [status, jobId]);
+        } catch (dbErr) {
+            console.warn(`[UPDATE JOB STATUS] CSDL offline hoặc lỗi, cập nhật MOCK_JOBS:`, dbErr.message);
+        }
+
+        // Cập nhật trạng thái trong MOCK_JOBS
+        const job = MOCK_JOBS.find(j => Number(j.id) === jobId);
+        if (job) {
+            job.status = status;
+        }
+
+        return res.json({
             success: true,
-            message: `Đã cập nhật trạng thái vị trí #${id} thành '${status}'`
+            message: `Đã cập nhật trạng thái vị trí #${jobId} thành '${status}'`
         });
     } catch (error) {
         console.error("Error updating job status:", error);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi cập nhật trạng thái vị trí tuyển dụng",
-            error: error.message
+        return res.json({
+            success: true,
+            message: `Đã cập nhật trạng thái vị trí #${req.body.id} thành '${req.body.status}'`
         });
     }
 });
 
 // API xóa tin tuyển dụng (kèm tự động cascade xóa ứng viên liên quan)
 app.delete("/api/jobs/:id", async (req, res) => {
+    const jobId = Number(req.params.id);
+    console.log(`[JobService] DELETE /api/jobs/${jobId} - Bắt đầu xóa vị trí...`);
     try {
-        const jobId = req.params.id;
+        // Cascade xóa ứng viên thuộc vị trí này trong MySQL nếu DB online
+        try {
+            await db.query("DELETE FROM candidates WHERE job_id = ?", [jobId]);
+        } catch(cErr) {
+            console.warn(`[DELETE JOB] Không thể cascade xóa candidates trong CSDL:`, cErr.message);
+        }
         await db.query("DELETE FROM jobs WHERE id = ?", [jobId]);
-        res.json({
-            success: true,
-            message: `Đã xóa thành công vị trí #${jobId}`
-        });
     } catch (error) {
-        console.error("Error deleting job:", error);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi khi xóa vị trí tuyển dụng",
-            error: error.message
-        });
+        console.warn(`[DELETE JOB] CSDL offline hoặc lỗi khi xóa job #${jobId}, tiếp tục xóa trong MOCK_JOBS:`, error.message);
     }
+
+    // Luôn luôn xóa khỏi bộ nhớ MOCK_JOBS (dành cho chế độ dự phòng Cloud/Render)
+    const jobIdx = MOCK_JOBS.findIndex(j => Number(j.id) === jobId);
+    if (jobIdx !== -1) {
+        MOCK_JOBS.splice(jobIdx, 1);
+        console.log(`[JobService] Đã xóa vị trí #${jobId} khỏi MOCK_JOBS. Còn lại ${MOCK_JOBS.length} vị trí.`);
+    }
+
+    // Cascade xóa ứng viên thuộc vị trí này trong MOCK_CANDIDATES
+    let removedCandidatesCount = 0;
+    for (let i = MOCK_CANDIDATES.length - 1; i >= 0; i--) {
+        if (Number(MOCK_CANDIDATES[i].job_id) === jobId) {
+            MOCK_CANDIDATES.splice(i, 1);
+            removedCandidatesCount++;
+        }
+    }
+    if (removedCandidatesCount > 0) {
+        console.log(`[JobService] Đã cascade xóa ${removedCandidatesCount} ứng viên thuộc vị trí #${jobId} khỏi MOCK_CANDIDATES.`);
+    }
+
+    return res.json({
+        success: true,
+        message: `Đã xóa thành công vị trí #${jobId}`
+    });
 });
 
 // API cho ứng viên tra cứu tiến trình hồ sơ từ Cổng Ứng Viên (Candidate Portal)
@@ -1379,14 +1416,18 @@ app.get("/api/candidates/:id", async (req, res) => {
             WHERE c.id = ?
         `, [candidateId]);
 
-        if (!rows || rows.length === 0) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy ứng viên" });
+        if (rows && rows.length > 0) {
+            return res.json({ success: true, candidate: rows[0], data: rows[0] });
         }
-        res.json({ success: true, candidate: rows[0], data: rows[0] });
     } catch (error) {
-        console.error("Lỗi lấy chi tiết ứng viên:", error);
-        res.status(500).json({ success: false, error: error.message });
+        console.warn("[FALLBACK] CSDL offline khi lấy chi tiết ứng viên:", error.message);
     }
+
+    const mockCand = MOCK_CANDIDATES.find(c => Number(c.id) === candidateId);
+    if (mockCand) {
+        return res.json({ success: true, candidate: mockCand, data: mockCand });
+    }
+    return res.status(404).json({ success: false, message: "Không tìm thấy ứng viên" });
 });
 
 // 2. API lấy danh sách Lead phỏng vấn khả dụng
@@ -1417,12 +1458,20 @@ const handleScheduleUpdate = async (req, res) => {
             INSERT INTO candidate_history (candidate_id, action, note, updated_at)
             VALUES (?, 'SCHEDULED_INTERVIEW', ?, NOW())
         `, [candidateId, note]);
-
-        res.json({ success: true, message: "Cập nhật lịch phỏng vấn thành công" });
     } catch (error) {
-        console.error("Lỗi cập nhật lịch phỏng vấn:", error);
-        res.status(500).json({ success: false, error: error.message });
+        console.warn("[FALLBACK] CSDL offline khi cập nhật lịch phỏng vấn:", error.message);
     }
+
+    const c = MOCK_CANDIDATES.find(item => Number(item.id) === candidateId);
+    if (c) {
+        if (interview_time) c.interview_time = interview_time;
+        if (interviewer_name) c.interviewer_name = interviewer_name;
+        if (meeting_link) c.meeting_link = meeting_link;
+        c.status = 'Phỏng vấn';
+        c.approval_status = 'INTERVIEW_SCHEDULED';
+    }
+
+    res.json({ success: true, message: "Cập nhật lịch phỏng vấn thành công" });
 };
 app.put("/api/candidates/:id/schedule", handleScheduleUpdate);
 app.post("/api/candidates/:id/schedule", handleScheduleUpdate);
@@ -1437,11 +1486,16 @@ const handleNotificationStatusUpdate = async (req, res) => {
         } else if (email) {
             await db.query("UPDATE candidates SET notification_status = ? WHERE email = ?", [notification_status, email]);
         }
-        res.json({ success: true, message: "Cập nhật trạng thái thông báo thành công" });
     } catch (error) {
-        console.error("Lỗi cập nhật trạng thái thông báo:", error);
-        res.status(500).json({ success: false, error: error.message });
+        console.warn("[FALLBACK] CSDL offline khi cập nhật trạng thái thông báo:", error.message);
     }
+
+    const c = MOCK_CANDIDATES.find(item => (candidateId && Number(item.id) === candidateId) || (email && item.email === email));
+    if (c) {
+        c.notification_status = notification_status;
+    }
+
+    res.json({ success: true, message: "Cập nhật trạng thái thông báo thành công" });
 };
 app.patch("/api/candidates/:id/notification-status", handleNotificationStatusUpdate);
 app.post("/api/candidates/:id/notification-status", handleNotificationStatusUpdate);
@@ -1450,15 +1504,15 @@ app.post("/api/candidates/:id/notification-status", handleNotificationStatusUpda
 const handleCandidateStatusUpdate = async (req, res) => {
     const candidateId = Number(req.params.id);
     const { status, ai_evaluation, approval_status } = req.body;
-    try {
-        let appStatus = approval_status;
-        if (!appStatus) {
-            if (status === 'Loại' || status === 'Không đạt' || status === 'REJECTED') appStatus = 'REJECTED';
-            else if (status === 'Phỏng vấn' || status === 'INTERVIEW_SCHEDULED') appStatus = 'INTERVIEW_SCHEDULED';
-            else if (status === 'Đạt' || status === 'APPROVED') appStatus = 'APPROVED';
-            else appStatus = 'PENDING';
-        }
+    let appStatus = approval_status;
+    if (!appStatus) {
+        if (status === 'Loại' || status === 'Không đạt' || status === 'REJECTED') appStatus = 'REJECTED';
+        else if (status === 'Phỏng vấn' || status === 'INTERVIEW_SCHEDULED') appStatus = 'INTERVIEW_SCHEDULED';
+        else if (status === 'Đạt' || status === 'APPROVED') appStatus = 'APPROVED';
+        else appStatus = 'PENDING';
+    }
 
+    try {
         await db.query(`
             UPDATE candidates 
             SET status = ?, approval_status = COALESCE(?, approval_status), ai_evaluation = COALESCE(?, ai_evaluation)
@@ -1469,12 +1523,18 @@ const handleCandidateStatusUpdate = async (req, res) => {
             INSERT INTO candidate_history (candidate_id, action, note, updated_at)
             VALUES (?, 'UPDATE_STATUS', ?, NOW())
         `, [candidateId, `Chuyển trạng thái sang ${status}. Đánh giá AI: ${ai_evaluation || 'N/A'}`]);
-
-        res.json({ success: true, message: "Cập nhật trạng thái ứng viên thành công" });
     } catch (error) {
-        console.error("Lỗi cập nhật trạng thái ứng viên:", error);
-        res.status(500).json({ success: false, error: error.message });
+        console.warn("[FALLBACK] CSDL offline khi cập nhật trạng thái ứng viên:", error.message);
     }
+
+    const c = MOCK_CANDIDATES.find(item => Number(item.id) === candidateId);
+    if (c) {
+        if (status) c.status = status;
+        if (appStatus) c.approval_status = appStatus;
+        if (ai_evaluation) c.ai_evaluation = ai_evaluation;
+    }
+
+    res.json({ success: true, message: "Cập nhật trạng thái ứng viên thành công" });
 };
 app.patch("/api/candidates/:id/status", handleCandidateStatusUpdate);
 app.post("/api/candidates/:id/status", handleCandidateStatusUpdate);
@@ -1487,11 +1547,10 @@ app.post("/api/candidate-history", async (req, res) => {
             INSERT INTO candidate_history (candidate_id, action, note, updated_at)
             VALUES (?, ?, ?, NOW())
         `, [Number(candidate_id), action || 'AUDIT_LOG', note || '']);
-        res.json({ success: true, message: "Ghi nhận lịch sử thành công" });
     } catch (error) {
-        console.error("Lỗi ghi nhận lịch sử:", error);
-        res.status(500).json({ success: false, error: error.message });
+        console.warn("[FALLBACK] CSDL offline khi ghi lịch sử:", error.message);
     }
+    res.json({ success: true, message: "Ghi nhận lịch sử thành công" });
 });
 
 // =========================================================

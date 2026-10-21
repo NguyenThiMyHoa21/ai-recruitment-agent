@@ -517,6 +517,11 @@
     let currentFilter = 'all';
 
     async function loadJobs() {
+      let deletedJobIds = [];
+      try {
+        deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
+      } catch(e) {}
+
       try {
         const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now());
         const rawText = await res.text();
@@ -524,7 +529,11 @@
         try { data = JSON.parse(rawText); } catch(e) {}
 
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
-          availableJobs = data.jobs.filter(j => j && j.position && j.position !== 'undefined' && String(j.position).trim().length > 0);
+          availableJobs = data.jobs.filter(j => 
+            j && j.position && j.position !== 'undefined' && 
+            String(j.position).trim().length > 0 && 
+            !deletedJobIds.includes(String(j.id))
+          );
           try { localStorage.setItem('custom_jobs', JSON.stringify(availableJobs)); } catch(e) {}
         } else {
           loadFallbackJobs();
@@ -539,12 +548,20 @@
     }
 
     function loadFallbackJobs() {
+      let deletedJobIds = [];
+      try {
+        deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
+      } catch(e) {}
+
       try {
         const raw = localStorage.getItem('custom_jobs');
         if (raw) {
           const list = JSON.parse(raw);
           if (Array.isArray(list) && list.length > 0) {
-            availableJobs = list.filter(j => j && j.position && j.position !== 'undefined');
+            availableJobs = list.filter(j => 
+              j && j.position && j.position !== 'undefined' && 
+              !deletedJobIds.includes(String(j.id))
+            );
             if (availableJobs.length > 0) return;
           }
         }
