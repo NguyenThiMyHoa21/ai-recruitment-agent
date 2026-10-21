@@ -111,7 +111,7 @@ const MOCK_CANDIDATES = [
         cv_content: "HỌ VÀ TÊN: Nguyễn Văn An\nEMAIL: nguyenvanan.dev@gmail.com\nVỊ TRÍ: DevOps Engineer\nKỸ NĂNG: Docker, Kubernetes, CI/CD Pipeline (GitHub Actions, GitLab CI), Linux Administration, Cloud Infrastructure (AWS, GCP), Terraform, Prometheus & Grafana.\nKINH NGHIỆM: 3+ năm làm việc tại môi trường Microservices, tối ưu thời gian deploy tự động và duy trì hệ thống uptime 99.9%.",
         cv_text: "HỌ VÀ TÊN: Nguyễn Văn An\nEMAIL: nguyenvanan.dev@gmail.com\nVỊ TRÍ: DevOps Engineer\nKỸ NĂNG: Docker, Kubernetes, CI/CD Pipeline (GitHub Actions, GitLab CI), Linux Administration, Cloud Infrastructure (AWS, GCP), Terraform, Prometheus & Grafana.\nKINH NGHIỆM: 3+ năm làm việc tại môi trường Microservices, tối ưu thời gian deploy tự động và duy trì hệ thống uptime 99.9%.",
         ai_evaluation: "Kinh nghiệm thực chiến Docker, Kubernetes vững vàng. Kỹ năng giao tiếp và tự động hóa CI/CD phù hợp tiêu chuẩn.",
-        interview_time: "2026-10-21 09:30:00",
+        interview_time: "2026-10-22 09:30:00",
         interviewer_name: "Hội đồng Kỹ thuật DevOps",
         meeting_link: "https://meet.google.com/dfj-amei-jzt",
         created_at: "2026-10-18 08:30:00"

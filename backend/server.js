@@ -339,7 +339,7 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
     );
     const cand = (candRows && candRows.length > 0) ? candRows[0] : {};
 
-    const interviewTime = cand.interview_time || (l4Result.data && l4Result.data.interview_time) || "09:30 12/10/2026";
+    const interviewTime = cand.interview_time || (l4Result.data && l4Result.data.interview_time) || calculateSmartNextInterviewTime();
     const interviewer = cand.interviewer_name || (l4Result.data && l4Result.data.interviewer) || "Trần Văn Tech";
     const meetLink = cand.meeting_link || (l4Result.data && l4Result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt";
 
@@ -797,38 +797,103 @@ app.get("/api/generate-recruitment-report", handleGenerateReport);
 app.post("/api/recruitment-report", handleGenerateReport);
 app.get("/api/recruitment-report", handleGenerateReport);
 
+// Helper tính ngày giờ phỏng vấn thông minh (luôn ở tương lai, bắt đầu từ ngày làm việc tiếp theo lúc 09:30)
+function calculateSmartNextInterviewTime() {
+    const pad = (n) => String(n).padStart(2, '0');
+    let target = new Date();
+    target.setDate(target.getDate() + 1); // Bắt đầu từ ngày mai
+    if (target.getDay() === 0) { // Nếu rơi vào Chủ Nhật -> chuyển sang Thứ Hai
+        target.setDate(target.getDate() + 1);
+    }
+    target.setHours(9, 30, 0, 0);
+
+    // Kiểm tra danh sách ứng viên trong bộ nhớ (MOCK_CANDIDATES) để tự động giãn cách 45 phút nếu trùng
+    const futureTimes = [];
+    if (Array.isArray(MOCK_CANDIDATES)) {
+        for (const c of MOCK_CANDIDATES) {
+            if (c.interview_time) {
+                const d = new Date(c.interview_time);
+                if (!isNaN(d.getTime()) && d > new Date()) {
+                    futureTimes.push(d);
+                }
+            }
+        }
+    }
+
+    if (futureTimes.length > 0) {
+        futureTimes.sort((a, b) => b.getTime() - a.getTime());
+        const latest = new Date(futureTimes[0].getTime());
+        latest.setMinutes(latest.getMinutes() + 45);
+        if (latest.getHours() >= 17) {
+            latest.setDate(latest.getDate() + 1);
+            if (latest.getDay() === 0) latest.setDate(latest.getDate() + 1);
+            latest.setHours(9, 30, 0, 0);
+        }
+        if (latest > target) {
+            target = latest;
+        }
+    }
+
+    return `${target.getFullYear()}-${pad(target.getMonth()+1)}-${pad(target.getDate())} ${pad(target.getHours())}:${pad(target.getMinutes())}:00`;
+}
+
 // Helper: Tự động tính toán thời gian phỏng vấn giãn cách 45 phút cho các ứng viên trong cùng ngày
 async function getSmartStaggeredInterviewTime(candidateId) {
     try {
         if (candidateId) {
-            const [cRows] = await db.query("SELECT interview_time FROM candidates WHERE id = ?", [candidateId]);
-            if (cRows && cRows.length > 0 && cRows[0].interview_time) {
-                return cRows[0].interview_time;
+            let existingTime = null;
+            try {
+                const [cRows] = await db.query("SELECT interview_time FROM candidates WHERE id = ?", [candidateId]);
+                if (cRows && cRows.length > 0 && cRows[0].interview_time) {
+                    existingTime = cRows[0].interview_time;
+                }
+            } catch (e) {
+                const mockCand = MOCK_CANDIDATES.find(c => c.id === candidateId);
+                if (mockCand && mockCand.interview_time) existingTime = mockCand.interview_time;
+            }
+
+            // Chỉ dùng lại nếu existingTime là một ngày hợp lệ VÀ ở tương lai!
+            if (existingTime) {
+                const parsedExisting = new Date(existingTime);
+                if (!isNaN(parsedExisting.getTime()) && parsedExisting > new Date()) {
+                    return existingTime;
+                }
             }
         }
-        const [maxRows] = await db.query(
-            "SELECT MAX(interview_time) as max_time FROM candidates WHERE interview_time IS NOT NULL AND status IN ('Phỏng vấn', 'Đạt')"
-        );
+
+        let maxTime = null;
+        try {
+            const [maxRows] = await db.query(
+                "SELECT MAX(interview_time) as max_time FROM candidates WHERE interview_time IS NOT NULL AND status IN ('Phỏng vấn', 'Đạt')"
+            );
+            if (maxRows && maxRows[0] && maxRows[0].max_time) {
+                const parsed = new Date(maxRows[0].max_time);
+                if (!isNaN(parsed.getTime()) && parsed > new Date()) {
+                    maxTime = parsed;
+                }
+            }
+        } catch (e) {}
+
+        const pad = (n) => String(n).padStart(2, '0');
         let baseDate = new Date();
         baseDate.setDate(baseDate.getDate() + 1);
-        baseDate.setHours(9, 0, 0, 0);
+        if (baseDate.getDay() === 0) baseDate.setDate(baseDate.getDate() + 1);
+        baseDate.setHours(9, 30, 0, 0);
 
-        if (maxRows && maxRows[0] && maxRows[0].max_time) {
-            const maxTime = new Date(maxRows[0].max_time);
-            if (!isNaN(maxTime.getTime()) && maxTime > new Date()) {
-                maxTime.setMinutes(maxTime.getMinutes() + 45);
-                if (maxTime.getHours() >= 17) {
-                    maxTime.setDate(maxTime.getDate() + 1);
-                    maxTime.setHours(9, 0, 0, 0);
-                }
-                baseDate = maxTime;
+        if (maxTime && maxTime > baseDate) {
+            maxTime.setMinutes(maxTime.getMinutes() + 45);
+            if (maxTime.getHours() >= 17) {
+                maxTime.setDate(maxTime.getDate() + 1);
+                if (maxTime.getDay() === 0) maxTime.setDate(maxTime.getDate() + 1);
+                maxTime.setHours(9, 30, 0, 0);
             }
+            baseDate = maxTime;
         }
-        const pad = (n) => String(n).padStart(2, '0');
+
         return `${baseDate.getFullYear()}-${pad(baseDate.getMonth()+1)}-${pad(baseDate.getDate())} ${pad(baseDate.getHours())}:${pad(baseDate.getMinutes())}:00`;
     } catch (e) {
         console.warn("Lỗi tính smart interview time:", e.message);
-        return "2026-10-05 09:30:00";
+        return calculateSmartNextInterviewTime();
     }
 }
 
@@ -1105,7 +1170,7 @@ app.post("/api/auto-schedule-pass", async (req, res) => {
         );
         const cand = (candRows && candRows.length > 0) ? candRows[0] : {};
 
-        const interviewTime = cand.interview_time || (l4Result.data && l4Result.data.interview_time) || "2026-10-04 09:30:00";
+        const interviewTime = cand.interview_time || (l4Result.data && l4Result.data.interview_time) || calculateSmartNextInterviewTime();
         const interviewer = cand.interviewer_name || (l4Result.data && l4Result.data.interviewer) || "Nguyễn HR";
         const meetLink = cand.meeting_link || (l4Result.data && l4Result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt";
 
@@ -1353,6 +1418,7 @@ app.post("/api/candidates/:id/send-invite", async (req, res) => {
         ).catch(() => [[]]);
 
         let candidate = (rows && rows.length > 0) ? rows[0] : MOCK_CANDIDATES.find(c => c.id === Number(candidateId));
+        const defaultSmartTime = calculateSmartNextInterviewTime();
         if (!candidate) {
             candidate = {
                 id: candidateId,
@@ -1360,7 +1426,7 @@ app.post("/api/candidates/:id/send-invite", async (req, res) => {
                 full_name: "Ứng viên #" + candidateId,
                 email: "ungvien@vku.udn.vn",
                 job_title: "Chuyên viên Tuyển dụng",
-                interview_time: "09:30 22/10/2026",
+                interview_time: defaultSmartTime,
                 interviewer_name: "Hội Đồng Phỏng Vấn VKU",
                 meeting_link: "https://meet.google.com/dfj-amei-jzt"
             };
@@ -1378,7 +1444,7 @@ app.post("/api/candidates/:id/send-invite", async (req, res) => {
                     candidate_name: candidate.full_name || candidate.name,
                     candidate_email: candidate.email,
                     position: candidate.job_title || candidate.position || candidate.applied_position,
-                    interview_time: candidate.interview_time || "09:30 22/10/2026",
+                    interview_time: candidate.interview_time || defaultSmartTime,
                     interviewer: candidate.interviewer_name || "Hội Đồng Phỏng Vấn VKU",
                     meet_link: candidate.meeting_link || "https://meet.google.com/dfj-amei-jzt"
                 })

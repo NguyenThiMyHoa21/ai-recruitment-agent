@@ -1371,9 +1371,16 @@
       let initDate = new Date();
       if (currentTimeStr) {
         const parsed = new Date(currentTimeStr);
-        if (!isNaN(parsed.getTime())) initDate = parsed;
+        if (!isNaN(parsed.getTime()) && parsed > new Date()) {
+          initDate = parsed;
+        } else {
+          initDate.setDate(initDate.getDate() + 1);
+          if (initDate.getDay() === 0) initDate.setDate(initDate.getDate() + 1);
+          initDate.setHours(9, 30, 0, 0);
+        }
       } else {
         initDate.setDate(initDate.getDate() + 1);
+        if (initDate.getDay() === 0) initDate.setDate(initDate.getDate() + 1);
         initDate.setHours(9, 30, 0, 0);
       }
       
@@ -1389,15 +1396,19 @@
     window.setReschedulePreset = function(type) {
       const input = document.getElementById('rescheduleTimeInput');
       let base = input.value ? new Date(input.value) : new Date();
-      if (isNaN(base.getTime())) base = new Date();
+      if (isNaN(base.getTime()) || base < new Date()) base = new Date();
 
       if (typeof type === 'number') {
         base.setHours(base.getHours() + type);
       } else if (type === 'tomorrow_am') {
+        base = new Date();
         base.setDate(base.getDate() + 1);
+        if (base.getDay() === 0) base.setDate(base.getDate() + 1);
         base.setHours(9, 30, 0, 0);
       } else if (type === 'tomorrow_pm') {
+        base = new Date();
         base.setDate(base.getDate() + 1);
+        if (base.getDay() === 0) base.setDate(base.getDate() + 1);
         base.setHours(14, 0, 0, 0);
       }
       const pad = (n) => String(n).padStart(2, '0');
