@@ -92,7 +92,7 @@ app.post("/api/jobs", async (req, res) => {
             const response = await fetch(`${N8N_URL}/webhook/job-posting`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                signal: AbortSignal.timeout(3500),
+                signal: AbortSignal.timeout(15000),
                 body: JSON.stringify(jobData)
             });
             resultText = await response.text();
@@ -463,7 +463,7 @@ app.post("/api/screen-cv", async (req, res) => {
             const response = await fetch(`${N8N_URL}/webhook/cv-screening-clean`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                signal: AbortSignal.timeout(3500),
+                signal: AbortSignal.timeout(15000),
                 body: JSON.stringify(payload)
             });
 
@@ -499,7 +499,7 @@ app.post("/api/screen-cv", async (req, res) => {
         try {
             const [insertCandResult] = await db.query(
                 `INSERT INTO candidates (job_id, name, full_name, email, applied_position, cv_content, match_score, approval_status, status, ai_evaluation)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                 VALUES (COALESCE((SELECT id FROM jobs WHERE id = ? LIMIT 1), (SELECT id FROM jobs ORDER BY id ASC LIMIT 1), 1), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     jobId,
                     candidateName,
@@ -744,7 +744,7 @@ const handleGenerateReport = async (req, res) => {
             const n8nResp = await fetch(`${N8N_URL}/webhook/generate-recruitment-report`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                signal: AbortSignal.timeout(3500),
+                signal: AbortSignal.timeout(15000),
                 body: JSON.stringify({
                     total_jobs: totalJobs,
                     total_candidates: totalCandidates,
@@ -1008,7 +1008,7 @@ app.post("/api/reschedule-interview", async (req, res) => {
             fetch(`${N8N_URL}/webhook/send-interview-invite`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                signal: AbortSignal.timeout(3000),
+                signal: AbortSignal.timeout(15000),
                 body: JSON.stringify({
                     candidate_id: Number(cand.id),
                     candidate_name: cand.full_name || cand.name,
@@ -1271,7 +1271,7 @@ app.post("/api/candidates/update-status", async (req, res) => {
         const response = await fetch(`${N8N_URL}/webhook/update-candidate-status`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(3500),
+            signal: AbortSignal.timeout(15000),
             body: JSON.stringify({
                 candidate_id: Number(targetId),
                 full_name: candName,
@@ -1372,7 +1372,7 @@ app.post("/api/candidates/:id/send-invite", async (req, res) => {
             const response = await fetch(n8nWebhookUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                signal: AbortSignal.timeout(3500),
+                signal: AbortSignal.timeout(15000),
                 body: JSON.stringify({
                     candidate_id: Number(candidate.id),
                     candidate_name: candidate.full_name || candidate.name,
@@ -1785,7 +1785,7 @@ app.post("/api/notifications/send-reminder", async (req, res) => {
         fetch(`${N8N_URL}/webhook/send-interview-invite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(4000),
+            signal: AbortSignal.timeout(15000),
             body: JSON.stringify({
                 candidate_id: Number(candidate_id),
                 candidate_name: cand.name,
@@ -1873,7 +1873,7 @@ async function scanAndAutoSendReminders() {
                 fetch(`${N8N_URL}/webhook/send-interview-invite`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    signal: AbortSignal.timeout(4000),
+                    signal: AbortSignal.timeout(15000),
                     body: JSON.stringify({
                         candidate_id: candId,
                         candidate_name: candName,
@@ -1983,7 +1983,7 @@ app.post("/api/candidates/send-offer", async (req, res) => {
         fetch(`${N8N_URL}/webhook/send-interview-invite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(4000),
+            signal: AbortSignal.timeout(15000),
             body: JSON.stringify({
                 candidate_id: Number(candidate_id),
                 candidate_name: candName,
@@ -2062,7 +2062,7 @@ app.post("/api/interviews/evaluate", async (req, res) => {
                 fetch(`${N8N_URL}/webhook/send-interview-invite`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    signal: AbortSignal.timeout(4000),
+                    signal: AbortSignal.timeout(15000),
                     body: JSON.stringify({
                         candidate_id: Number(cand.id),
                         candidate_name: cand.full_name || cand.name,

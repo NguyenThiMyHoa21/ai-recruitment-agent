@@ -72,7 +72,7 @@
     },
     {
       "parameters": {
-        "modelName": "models/gemini-3.5-flash",
+        "modelName": "models/gemini-3.5-flash-lite",
         "options": {
           "temperature": 0.3
         }
@@ -238,7 +238,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO candidates (job_id, name, full_name, applied_position, email, cv_content, match_score, approval_status, status, ai_evaluation)\nVALUES (\n  {{ Number($json.job_id) || 1 }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.position || 'Chuyên viên Marketing') }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ $json.status === 'APPROVED' ? \"'Đạt'\" : \"'Loại'\" }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);",
+        "query": "INSERT INTO candidates (job_id, name, full_name, applied_position, email, cv_content, match_score, approval_status, status, ai_evaluation)\nVALUES (\n  COALESCE((SELECT id FROM jobs WHERE id = {{ Number($json.job_id) || 1 }} LIMIT 1), (SELECT id FROM jobs ORDER BY id ASC LIMIT 1), 1),\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.candidate_name) }},\n  {{ JSON.stringify($json.position || 'Chuyên viên Marketing') }},\n  {{ JSON.stringify($json.candidate_email) }},\n  {{ JSON.stringify($json.cv_text) }},\n  {{ Number($json.match_score) || 0 }},\n  {{ JSON.stringify($json.status) }},\n  {{ $json.status === 'APPROVED' ? \"'Đạt'\" : \"'Loại'\" }},\n  {{ JSON.stringify($json.ai_evaluation) }}\n);",
         "options": {}
       },
       "id": "wf2-node-9-api-save",
@@ -254,7 +254,8 @@
           "id": "HB0gY7Viximx0kLY",
           "name": "MySQL account"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -275,11 +276,12 @@
           "id": "HB0gY7Viximx0kLY",
           "name": "MySQL account"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "const cand = $('Step 7: Candidate Profile Structuring').first().json;\nconst dbResult = $('Step 9: Persistence - Save Candidate Record to Database').first().json;\n\nreturn [{\n  json: {\n    ...cand,\n    candidate_id: dbResult.insertId || 0,\n    hr_notification_status: 'DISPATCHED',\n    action_dispatch: cand.status === 'APPROVED' ? 'SCHEDULE_INTERVIEW' : 'ARCHIVE_RECORD',\n    automated_email_status: 'QUEUED_IN_BACKEND_SERVICE'\n  }\n}];"
+        "jsCode": "const cand = $('Step 7: Candidate Profile Structuring').first().json;\nlet dbResult = {};\ntry {\n  dbResult = $('Step 9: Persistence - Save Candidate Record to Database').first().json || {};\n} catch(e) {\n  dbResult = {};\n}\n\nreturn [{\n  json: {\n    ...cand,\n    candidate_id: dbResult.insertId || 0,\n    hr_notification_status: 'DISPATCHED',\n    action_dispatch: cand.status === 'APPROVED' ? 'SCHEDULE_INTERVIEW' : 'ARCHIVE_RECORD',\n    automated_email_status: 'QUEUED_IN_BACKEND_SERVICE'\n  }\n}];"
       },
       "id": "wf2-node-11-notify",
       "name": "Step 11: HR Dispatch & Notification Formatter",
