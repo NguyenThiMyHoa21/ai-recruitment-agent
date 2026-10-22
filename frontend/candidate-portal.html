@@ -954,22 +954,23 @@
         if (modal) modal.hide();
 
         const score = Number(data.data?.match_score || 0);
-        const isPassed = (data.data?.status === 'APPROVED' || score >= 70);
+        const isPassed = (data.data?.status === 'APPROVED' || data.data?.status === 'Đạt') && score >= 70;
 
         Swal.fire({
-          icon: 'success',
-          title: '🎉 Nộp Hồ Sơ Thành Công!',
+          icon: isPassed ? 'success' : 'info',
+          title: isPassed ? '🎉 Chúc Mừng! Đạt Vòng Sơ Loại' : '📋 Đã Tiếp Nhận Hồ Sơ Ứng Tuyển',
           html: `
             <div class="text-left text-xs space-y-2 mt-2">
-              <p>Cảm ơn <b>${payload.candidate_name}</b> đã ứng tuyển vị trí <b>${payload.position}</b>!</p>
-              <div class="p-3 rounded-xl ${isPassed ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-50 text-slate-700 border border-slate-200'}">
-                <strong>Kết quả sơ loại AI:</strong> ${isPassed ? '🟢 Đạt Vòng Sơ Loại CV' : 'Đang xử lý phân tích'}<br>
-                <span>Điểm tương thích: <b>${score > 0 ? score + '/100' : 'Đang chấm'}</b></span>
+              <p>Ứng viên: <b>${payload.candidate_name}</b> | Vị trí: <b>${payload.position}</b></p>
+              <div class="p-3 rounded-xl ${isPassed ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}">
+                <strong>Kết quả sàng lọc AI:</strong> ${isPassed ? '🟢 ĐẠT VÒNG SƠ LOẠI CV' : '🔴 CHƯA PHÙ HỢP CHUYÊN MÔN'}<br>
+                <span>Điểm tương thích năng lực: <b class="text-sm ${isPassed ? 'text-emerald-700' : 'text-rose-700'}">${score}/100</b></span><br>
+                <span class="text-xs ${isPassed ? 'text-emerald-700' : 'text-rose-700'} mt-1 block"><b>Đánh giá AI:</b> ${data.data?.ai_evaluation || ''}</span>
               </div>
-              <p class="text-slate-500">Hội đồng tuyển dụng sẽ tiến hành xếp lịch phỏng vấn và gửi thông báo chính thức về email: <b>${payload.candidate_email}</b>.</p>
+              <p class="text-slate-500">${isPassed ? 'Hội đồng tuyển dụng sẽ tiến hành xếp lịch phỏng vấn và gửi thông báo chính thức về email: <b>' + payload.candidate_email + '</b>.' : 'Hồ sơ đã được lưu trữ trong kho dữ liệu ứng viên tiềm năng. Hệ thống đã tự động gửi email phản hồi tới: <b>' + payload.candidate_email + '</b>.'}</p>
             </div>
           `,
-          confirmButtonColor: '#4f46e5'
+          confirmButtonColor: isPassed ? '#10b981' : '#64748b'
         });
 
         document.getElementById('candidateApplyForm').reset();

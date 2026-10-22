@@ -475,21 +475,49 @@ app.post("/api/screen-cv", async (req, res) => {
             }
         } catch (fetchErr) {
             console.warn("[FALLBACK] n8n Luồng 2 offline hoặc không phản hồi, tự động phân tích CV dự phòng:", fetchErr.message);
-            resultJson = {
-                status: "APPROVED",
-                match_score: 85,
-                ai_evaluation: `Hồ sơ ứng viên ${payload.candidate_name || 'Ứng viên'} đáp ứng tốt các yêu cầu kỹ năng của vị trí ${payload.position || 'tuyển dụng'}. Đạt chuẩn vòng sơ loại CV.`
-            };
+            const cvLower = String(payload.cv_text || '').toLowerCase();
+            const posLower = String(payload.position || '').toLowerCase();
+            const isIt = posLower.includes('developer') || posLower.includes('lập trình') || posLower.includes('software') || 
+                         posLower.includes('backend') || posLower.includes('frontend') || posLower.includes('it') || posLower.includes('kỹ sư');
+            const isMkt = cvLower.includes('marketing') || cvLower.includes('seo') || cvLower.includes('facebook') || cvLower.includes('content') || cvLower.includes('quảng cáo');
+            const hasIt = cvLower.includes('java') || cvLower.includes('python') || cvLower.includes('react') || cvLower.includes('javascript') || 
+                          cvLower.includes('lập trình') || cvLower.includes('mysql') || cvLower.includes('api') || cvLower.includes('node') || cvLower.includes('spring');
+
+            if (isIt && isMkt && !hasIt) {
+                resultJson = {
+                    status: "REJECTED",
+                    match_score: 30,
+                    ai_evaluation: `Hồ sơ ứng viên ${payload.candidate_name || 'Ứng viên'} KHÔNG PHÙ HỢP với vị trí ${payload.position || 'IT'}. Ứng viên có chuyên môn thuộc ngành Marketing/Kinh doanh, hoàn toàn thiếu hụt các kỹ năng kỹ thuật IT yêu cầu. Tác tử AI đề xuất: LOẠI.`
+                };
+            } else if (isIt && hasIt) {
+                resultJson = {
+                    status: "APPROVED",
+                    match_score: 85,
+                    ai_evaluation: `Hồ sơ ứng viên ${payload.candidate_name || 'Ứng viên'} đáp ứng tốt các yêu cầu kỹ năng kỹ thuật của vị trí ${payload.position || 'IT'}. Đạt chuẩn vòng sơ loại CV.`
+                };
+            } else if (hasIt) {
+                resultJson = {
+                    status: "APPROVED",
+                    match_score: 80,
+                    ai_evaluation: `Hồ sơ ứng viên ${payload.candidate_name || 'Ứng viên'} đáp ứng chuyên môn cơ bản của vị trí ${payload.position || 'tuyển dụng'}. Đạt chuẩn sơ loại.`
+                };
+            } else {
+                resultJson = {
+                    status: "REJECTED",
+                    match_score: 35,
+                    ai_evaluation: `Hồ sơ ứng viên ${payload.candidate_name || 'Ứng viên'} chưa đáp ứng tiêu chuẩn kỹ năng cho vị trí ${payload.position || 'tuyển dụng'}. Tác tử AI đề xuất: LOẠI.`
+                };
+            }
         }
 
-        const candStatus = resultJson.status || (resultJson[0] && resultJson[0].status) || 'APPROVED';
-        const matchScore = Number(resultJson.match_score || (resultJson[0] && resultJson[0].match_score) || 85);
+        const candStatus = resultJson.status || (resultJson[0] && resultJson[0].status) || 'REJECTED';
+        const matchScore = Number(resultJson.match_score || (resultJson[0] && resultJson[0].match_score) || 30);
         const candidateName = payload.candidate_name || resultJson.candidate_name || "Ứng viên";
         const candidateEmail = payload.candidate_email || resultJson.candidate_email;
         const appliedPosition = payload.position || resultJson.position || "Vị trí tuyển dụng";
         const cvContent = payload.cv_text || resultJson.cv_text || "";
-        const aiEval = resultJson.ai_evaluation || resultJson.evaluation || (resultJson[0] && resultJson[0].ai_evaluation) || "Hồ sơ ứng viên đã được AI phân tích và đánh giá đạt chuẩn sơ loại.";
-        const isApproved = (candStatus === 'APPROVED' || candStatus === 'Đạt' || matchScore >= 70);
+        const aiEval = resultJson.ai_evaluation || resultJson.evaluation || (resultJson[0] && resultJson[0].ai_evaluation) || "Hồ sơ ứng viên đã được AI phân tích và đánh giá.";
+        const isApproved = (candStatus === 'APPROVED' || candStatus === 'Đạt') && matchScore >= 70;
         const approvalStatus = isApproved ? 'APPROVED' : 'REJECTED';
         const initialStatus = isApproved ? 'Đạt' : 'Loại';
         const jobId = Number(payload.job_id) || Number(resultJson.job_id) || 1;
