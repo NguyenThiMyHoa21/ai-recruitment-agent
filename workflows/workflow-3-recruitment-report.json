@@ -148,12 +148,24 @@
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.approval_status }}",
-              "value2": "APPROVED"
+              "id": "exec_signoff_gate",
+              "leftValue": "={{ $json.approval_status }}",
+              "rightValue": "APPROVED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "wf3-node-7-hitl",

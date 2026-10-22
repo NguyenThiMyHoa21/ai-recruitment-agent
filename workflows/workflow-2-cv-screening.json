@@ -22,12 +22,25 @@
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
             {
-              "value1": "={{ ($input.first().json.body || $input.first().json).candidate_name || '' }}",
-              "operation": "isNotEmpty"
+              "id": "val_cand_name",
+              "leftValue": "={{ ($input.first().json.body || $input.first().json).candidate_name || \"\" }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "wf2-node-2-validator",
@@ -142,13 +155,24 @@
     {
       "parameters": {
         "conditions": {
-          "number": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.match_score }}",
-              "operation": "largerEqual",
-              "value2": 75
+              "id": "threshold_classifier",
+              "leftValue": "={{ $json.match_score }}",
+              "rightValue": 75,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "wf2-node-6-threshold",
@@ -218,12 +242,24 @@
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.status }}",
-              "value2": "APPROVED"
+              "id": "hitl_recruiter_review",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "APPROVED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "wf2-node-8-hitl",

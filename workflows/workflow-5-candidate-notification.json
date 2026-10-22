@@ -184,12 +184,25 @@
     {
       "parameters": {
         "conditions": {
-          "boolean": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
             {
-              "value1": "={{ Boolean($('6. Parse Invite Content').first().json.is_rejection || $('6. Parse Invite Content').first().json.is_offer || $('6. Parse Invite Content').first().json.is_screening_pass) }}",
-              "value2": true
+              "id": "check_rejection_or_offer",
+              "leftValue": "={{ Boolean($('6. Parse Invite Content').first().json.is_rejection || $('6. Parse Invite Content').first().json.is_offer || $('6. Parse Invite Content').first().json.is_screening_pass) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "type": "n8n-nodes-base.if",
