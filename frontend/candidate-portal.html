@@ -523,7 +523,7 @@
       } catch(e) {}
 
       try {
-        const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now());
+        const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now(), { signal: AbortSignal.timeout(4000) });
         const rawText = await res.text();
         let data = {};
         try { data = JSON.parse(rawText); } catch(e) {}
