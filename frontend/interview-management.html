@@ -106,19 +106,6 @@
       color: #ffffff;
       box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
       transform: translateY(-1px);
-    }
-    @media print {
-      body * { visibility: hidden !important; }
-      #leaderPrintArea, #leaderPrintArea * { visibility: visible !important; }
-      #leaderPrintArea {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        padding: 20px !important;
-        background: #ffffff !important;
-      }
-    }
   </style>
 </head>
 <body class="antialiased">
@@ -188,9 +175,6 @@
       <div class="flex items-center gap-2.5 flex-wrap">
         <button onclick="openExcelPreviewModal()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition flex items-center gap-2">
           <i class="fa-solid fa-file-excel text-base"></i> Xuất Excel Lịch PV (.xlsx)
-        </button>
-        <button onclick="printLeaderInterviewSchedule()" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition flex items-center gap-2">
-          <i class="fa-solid fa-print"></i> In Cho Leader
         </button>
         <button onclick="fetchCandidates(true)" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 shadow-sm transition flex items-center gap-1.5">
           <i class="fa-solid fa-rotate text-indigo-600"></i> Làm mới
@@ -870,15 +854,6 @@
     </div>
   </div>
 
-  <!-- IN LỊCH CHO LEADER (ẨN TRÊN MÀN HÌNH, HIỆN KHI BẤM IN) -->
-  <div id="leaderPrintArea" class="hidden">
-    <div style="text-align: center; margin-bottom: 20px;">
-      <h2 style="margin: 0; color: #1e293b;">LỊCH PHỎNG VẤN ỨNG VIÊN - HỘI ĐỒNG TUYỂN DỤNG</h2>
-      <p style="margin: 5px 0 0 0; color: #64748b;">Hệ thống AI Recruitment Multi-Agent System • ĐH CNTT & TT Việt - Hàn (VKU)</p>
-    </div>
-    <div id="leaderPrintContent"></div>
-  </div>
-
   <!-- FOOTER -->
   <footer class="mt-12 py-6 border-t border-slate-200 text-center text-xs text-slate-500">
     <div class="max-w-[97%] 2xl:max-w-[1780px] mx-auto px-4">
@@ -892,7 +867,9 @@
 
   <!-- JAVASCRIPT LOGIC NGHIỆP VỤ -->
   <script>
-    const API_BASE = (window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
+    const API_BASE = (window.location.protocol === 'file:' || window.location.port === '5500') 
+      ? 'http://localhost:3000' 
+      : (window.location.origin || 'http://localhost:3000');
 
     function showToast(msg, isSuccess = true) {
       Swal.fire({
@@ -916,8 +893,8 @@
         const json = await res.json();
         allCandidates = Array.isArray(json) ? json : (json.data || json.candidates || []);
         
-        // Nếu cơ sở dữ liệu chỉ có 2 hồ sơ cũ chưa cập nhật, nạp ngay bộ 50 hồ sơ chuẩn
-        if (allCandidates.length <= 2) {
+        // Nếu cơ sở dữ liệu trống, nạp bộ hồ sơ mẫu
+        if (allCandidates.length === 0) {
           try {
             const demoRes = await fetch('demo-candidates.json');
             if (demoRes.ok) {
@@ -1408,9 +1385,16 @@
       let initDate = new Date();
       if (currentTimeStr) {
         const parsed = new Date(currentTimeStr);
-        if (!isNaN(parsed.getTime())) initDate = parsed;
+        if (!isNaN(parsed.getTime()) && parsed > new Date()) {
+          initDate = parsed;
+        } else {
+          initDate.setDate(initDate.getDate() + 1);
+          if (initDate.getDay() === 0) initDate.setDate(initDate.getDate() + 1);
+          initDate.setHours(9, 30, 0, 0);
+        }
       } else {
         initDate.setDate(initDate.getDate() + 1);
+        if (initDate.getDay() === 0) initDate.setDate(initDate.getDate() + 1);
         initDate.setHours(9, 30, 0, 0);
       }
       
@@ -1426,15 +1410,19 @@
     window.setReschedulePreset = function(type) {
       const input = document.getElementById('rescheduleTimeInput');
       let base = input.value ? new Date(input.value) : new Date();
-      if (isNaN(base.getTime())) base = new Date();
+      if (isNaN(base.getTime()) || base < new Date()) base = new Date();
 
       if (typeof type === 'number') {
         base.setHours(base.getHours() + type);
       } else if (type === 'tomorrow_am') {
+        base = new Date();
         base.setDate(base.getDate() + 1);
+        if (base.getDay() === 0) base.setDate(base.getDate() + 1);
         base.setHours(9, 30, 0, 0);
       } else if (type === 'tomorrow_pm') {
+        base = new Date();
         base.setDate(base.getDate() + 1);
+        if (base.getDay() === 0) base.setDate(base.getDate() + 1);
         base.setHours(14, 0, 0, 0);
       }
       const pad = (n) => String(n).padStart(2, '0');
@@ -1676,37 +1664,6 @@
       showToast('Đã xuất và tải file Excel thành công!', true);
     };
 
-    window.printLeaderInterviewSchedule = function() {
-      const printDiv = document.getElementById('leaderPrintContent');
-      const scheduled = allCandidates.filter(c => c.interview_time);
-      if (scheduled.length === 0) {
-        showToast('Hiện chưa có ứng viên nào có lịch phỏng vấn để in!', false);
-        return;
-      }
-      printDiv.innerHTML = `
-        <table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <tr style="background: #f1f5f9;">
-            <th>STT</th>
-            <th>Ứng Viên</th>
-            <th>Vị Trí</th>
-            <th>Thời Gian Phỏng Vấn</th>
-            <th>Lead Phỏng Vấn</th>
-            <th>Link Google Meet</th>
-          </tr>
-          ${scheduled.map((c, i) => `
-            <tr>
-              <td style="text-align: center;">${i + 1}</td>
-              <td><strong>${c.full_name || c.name}</strong><br><small>${c.email}</small></td>
-              <td>${c.applied_position || c.position}</td>
-              <td><strong>${formatTime(c.interview_time)}</strong></td>
-              <td>${c.interviewer_name || 'Hội đồng tuyển dụng'}</td>
-              <td>${c.meeting_link}</td>
-            </tr>
-          `).join('')}
-        </table>
-      `;
-      window.print();
-    };
 
     // =========================================================
     // XỬ LÝ CHUYỂN ĐỔI CHẾ ĐỘ XEM (BẢNG vs LỊCH BIỂU)
