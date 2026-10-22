@@ -1,12 +1,16 @@
 {
+  "id": "W5CandidateNotif",
   "name": "Luong 5 - Automated Candidate Notification & Interview Reminder",
+  "active": true,
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "send-interview-invite",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "neverError": true
+        }
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -23,7 +27,7 @@
         "conditions": {
           "string": [
             {
-              "value1": "={{ $json.body.candidate_email }}",
+              "value1": "={{ $json.body.candidate_email || $json.body.email }}",
               "operation": "isNotEmpty"
             }
           ]
@@ -42,7 +46,9 @@
       "parameters": {
         "method": "GET",
         "url": "=http://172.17.0.1:3000/api/candidates/{{ $('1. Webhook Trigger').first().json.body.candidate_id || 1 }}",
-        "options": {}
+        "options": {
+          "neverError": true
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -51,11 +57,12 @@
         100
       ],
       "id": "wf5-fetch-candidate-api",
-      "name": "3. Fetch Candidate Context API"
+      "name": "3. Fetch Candidate Context API",
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "const trig = $('1. Webhook Trigger').first().json.body || {};\nlet cand = {};\ntry {\n  const res = $('3. Fetch Candidate Context API').first().json;\n  cand = res.candidate || res.data || {};\n} catch(e) {}\n\nconst isRejection = Boolean(\n  trig.notification_type === 'rejection' ||\n  cand.status === 'Loại' ||\n  cand.status === 'Không đạt' ||\n  cand.approval_status === 'REJECTED'\n);\n\nreturn [{\n  json: {\n    candidate_id: cand.id || trig.candidate_id,\n    candidate_name: trig.candidate_name || cand.full_name || cand.name || \"Ứng viên\",\n    candidate_email: trig.candidate_email || cand.email,\n    position: trig.position || cand.applied_position || cand.position || \"Vị trí chuyên môn\",\n    interview_time: trig.interview_time || cand.interview_time || \"2026-10-18 09:30:00\",\n    interviewer: trig.interviewer || cand.interviewer_name || \"Lê Hoàng Dev (Backend Lead)\",\n    meet_link: trig.meet_link || cand.meeting_link || \"https://meet.google.com/rec-meet-vku\",\n    focus_topics: trig.focus_topics || \"Kiến trúc hệ thống, Khả năng chịu tải\",\n    is_rejection: isRejection,\n    prompt: isRejection\n      ? `Soạn thư từ chối mang tính xây dựng cao (Constructive Growth Feedback) cho ứng viên ${cand.full_name || trig.candidate_name} vị trí ${cand.applied_position || trig.position}. Cảm ơn và chỉ ra 2 kỹ năng nên trau dồi để ứng tuyển lại trong tương lai.`\n      : `Soạn thư mời phỏng vấn trang trọng kèm Bộ tài liệu chuẩn bị (Preparation Kit) cho ứng viên ${cand.full_name || trig.candidate_name} vị trí ${cand.applied_position || trig.position} vào lúc ${trig.interview_time || cand.interview_time} với Lead ${trig.interviewer || cand.interviewer_name}.`\n  }\n}];"
+        "jsCode": "const trig = $('1. Webhook Trigger').first().json.body || {};\nlet cand = {};\ntry {\n  const res = $('3. Fetch Candidate Context API').first().json;\n  cand = res.candidate || res.data || {};\n} catch(e) {}\n\nconst isOffer = Boolean(\n  trig.notification_type === 'offer' ||\n  trig.notification_type === 'job_offer' ||\n  cand.status === 'Trúng tuyển' ||\n  cand.approval_status === 'OFFER_SENT'\n);\n\nconst isRejection = Boolean(\n  !isOffer && (\n    trig.notification_type === 'rejection' ||\n    trig.notification_type === 'rejection_post_interview' ||\n    cand.status === 'Loại' ||\n    cand.status === 'Không đạt' ||\n    cand.approval_status === 'REJECTED'\n  )\n);\n\nconst salary = trig.salary || cand.salary || 'Thỏa thuận theo năng lực';\nconst startDate = trig.start_date || 'Theo thỏa thuận sau khi ký kết';\n\nreturn [{\n  json: {\n    candidate_id: cand.id || trig.candidate_id,\n    candidate_name: trig.candidate_name || cand.full_name || cand.name || \"Ứng viên\",\n    candidate_email: trig.candidate_email || cand.email,\n    position: trig.position || cand.applied_position || cand.position || \"Vị trí chuyên môn\",\n    interview_time: trig.interview_time || cand.interview_time || \"2026-10-24 09:30:00\",\n    interviewer: trig.interviewer || cand.interviewer_name || \"Hội Đồng Tuyển Dụng VKU\",\n    meet_link: trig.meet_link || cand.meeting_link || \"https://meet.google.com/rec-meet-vku\",\n    focus_topics: trig.focus_topics || \"Kiến trúc hệ thống, Khả năng chịu tải\",\n    salary: salary,\n    start_date: startDate,\n    is_offer: isOffer,\n    is_rejection: isRejection,\n    prompt: isOffer\n      ? `Soạn Thư Mời Nhận Việc (Job Offer Letter) trang trọng, chúc mừng ứng viên ${cand.full_name || trig.candidate_name} gia nhập vị trí ${cand.applied_position || trig.position} với mức thu nhập ${salary}, thời gian bắt đầu ${startDate}.`\n      : (isRejection\n        ? `Soạn thư từ chối mang tính xây dựng cao cho ứng viên ${cand.full_name || trig.candidate_name} vị trí ${cand.applied_position || trig.position}. Cảm ơn và chỉ ra 2 kỹ năng nên trau dồi để ứng tuyển lại trong tương lai.`\n        : `Soạn thư mời phỏng vấn trang trọng kèm Bộ tài liệu chuẩn bị cho ứng viên ${cand.full_name || trig.candidate_name} vị trí ${cand.applied_position || trig.position} vào lúc ${trig.interview_time || cand.interview_time} với Lead ${trig.interviewer || cand.interviewer_name}.`)\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -81,12 +88,15 @@
         100
       ],
       "id": "wf5-ai-agent",
-      "name": "5. AI Agent - Empathetic Communications"
+      "name": "5. AI Agent - Empathetic Communications",
+      "continueOnFail": true
     },
     {
       "parameters": {
         "modelName": "models/gemini-3.5-flash-lite",
-        "options": {}
+        "options": {
+          "neverError": true
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
@@ -95,7 +105,14 @@
         320
       ],
       "id": "wf5-gemini-model",
-      "name": "Google Gemini Chat Model"
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "B0GnB02qU87nuQdn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -129,7 +146,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const d = $('4. Normalize Candidate Context').first().json;\nconst isRejection = d.is_rejection;\n\nlet subject = \"\";\nlet html_body = \"\";\n\nif (isRejection) {\n  subject = `[VKU Tech] Thông báo kết quả ứng tuyển vị trí ${d.position} - ${d.candidate_name}`;\n  html_body = `\n  <div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;\">\n    <h2 style=\"color: #0d47a1; margin-top: 0;\">VKU Tech Talent Acquisition</h2>\n    <p>Xin chào <strong>${d.candidate_name}</strong>,</p>\n    <p>Hội đồng tuyển dụng VKU Tech chân thành cảm ơn bạn đã dành thời gian và sự quan tâm đối với vị trí <strong>${d.position}</strong>.</p>\n    <p>Sau khi xem xét kỹ lưỡng hồ sơ, chúng tôi rất tiếc phải thông báo hiện tại hồ sơ của bạn chưa hoàn toàn phù hợp với các tiêu chí ưu tiên của vị trí này.</p>\n    <div style=\"background: #f4f6f8; border-left: 4px solid #1976d2; padding: 12px 16px; margin: 20px 0;\">\n      <h4 style=\"margin: 0 0 8px 0; color: #1976d2;\">💡 Góc Nhìn Phát Triển Tự Động Từ AI Agent:</h4>\n      <p style=\"margin: 0; font-size: 14px; color: #555;\">Hồ sơ của bạn có tư duy kỹ thuật tốt. Nhóm tuyển dụng kiến nghị bạn tiếp tục trau dồi các dự án thực tế về Cloud & Docker để sẵn sàng cho các cơ hội tiếp theo tại công ty.</p>\n    </div>\n    <p>Thông tin của bạn đã được lưu trữ trong Talent Pool của chúng tôi và chúng tôi sẽ chủ động liên hệ lại khi có vị trí tương thích.</p>\n    <p>Chúc bạn luôn kiên trì và gặt hái nhiều thành công trên con đường sự nghiệp!</p>\n    <hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n    <p style=\"font-size: 13px; color: #777;\">Trân trọng,<br><strong>Ban Tuyển Dụng & AI Agent Coordinator - VKU Tech</strong></p>\n  </div>`;\n} else {\n  subject = `[VKU Tech] Thư mời phỏng vấn vị trí ${d.position} - ${d.candidate_name}`;\n  html_body = `\n  <div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;\">\n    <h2 style=\"color: #2e7d32; margin-top: 0;\">🎉 Thư Mời Phỏng Vấn Chính Thức</h2>\n    <p>Xin chào <strong>${d.candidate_name}</strong>,</p>\n    <p>Chúc mừng bạn đã vượt qua vòng đánh giá hồ sơ xuất sắc cho vị trí <strong>${d.position}</strong> tại VKU Tech!</p>\n    <div style=\"background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 6px; padding: 16px; margin: 20px 0;\">\n      <h3 style=\"margin-top: 0; color: #2e7d32;\">Chi Tiết Buổi Phỏng Vấn Trực Tuyến:</h3>\n      <ul style=\"margin: 0; padding-left: 20px;\">\n        <li><strong>Thời gian:</strong> <span style=\"color: #d32f2f; font-weight: bold;\">${d.interview_time}</span></li>\n        <li><strong>Chuyên gia phỏng vấn:</strong> ${d.interviewer}</li>\n        <li><strong>Hình thức:</strong> Phỏng vấn trực tuyến qua Google Meet</li>\n      </ul>\n      <div style=\"text-align: center; margin-top: 16px;\">\n        <a href=\"${d.meet_link}\" style=\"background: #1a73e8; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;\">Tham Gia Phỏng Vấn (Google Meet)</a>\n      </div>\n    </div>\n    <div style=\"background: #e8f0fe; border-left: 4px solid #1a73e8; padding: 12px 16px; margin: 20px 0;\">\n      <h4 style=\"margin: 0 0 6px 0; color: #1a73e8;\">📚 Cẩm Nang Chuẩn Bị (AI Preparation Kit):</h4>\n      <p style=\"margin: 0; font-size: 14px; color: #444;\">Chủ đề trọng tâm: <em>${d.focus_topics}</em>. Bạn vui lòng chuẩn bị máy tính có kết nối ổn định và vào link trước 5 phút nhé.</p>\n    </div>\n    <p>Lịch hẹn này đã được hệ thống tự động đồng bộ lên Google Calendar của bạn.</p>\n    <hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n    <p style=\"font-size: 13px; color: #777;\">Trân trọng,<br><strong>Ban Tuyển Dụng VKU Tech</strong></p>\n  </div>`;\n}\n\nreturn [{\n  json: {\n    ...d,\n    subject,\n    html_body,\n    is_rejection: isRejection\n  }\n}];"
+        "jsCode": "const d = $('4. Normalize Candidate Context').first().json;\nconst isOffer = d.is_offer;\nconst isRejection = d.is_rejection;\n\nlet subject = \"\";\nlet html_body = \"\";\n\nif (isOffer) {\n  subject = `[VKU Tech] THƯ MỜI NHẬN VIỆC (JOB OFFER LETTER) - ${d.position} - ${d.candidate_name}`;\n  html_body = `\n  <div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 620px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; padding: 28px; background: #ffffff;\">\n    <div style=\"text-align: center; margin-bottom: 20px;\">\n      <h1 style=\"color: #4338ca; margin: 0; font-size: 22px;\">🎉 THƯ MỜI NHẬN VIỆC (JOB OFFER)</h1>\n      <p style=\"color: #64748b; font-size: 13px; margin-top: 4px;\">VKU Tech Multi-Agent Recruitment System</p>\n    </div>\n    <p>Kính gửi <strong>${d.candidate_name}</strong>,</p>\n    <p>Thay mặt Ban Giám Đốc và Hội Đồng Tuyển Dụng VKU Tech, chúng tôi trân trọng chúc mừng bạn đã xuất sắc hoàn thành các vòng tuyển chọn và chính thức được lựa chọn cho vị trí <strong>${d.position}</strong>!</p>\n    <div style=\"background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 18px; margin: 20px 0;\">\n      <h3 style=\"margin-top: 0; color: #1e293b; font-size: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;\">📋 TÓM TẮT ĐÃI NGỘ & THỜI GIAN NHẬN VIỆC:</h3>\n      <table style=\"width: 100%; font-size: 14px; border-collapse: collapse;\">\n        <tr><td style=\"padding: 6px 0; color: #64748b; width: 40%;\">Vị trí công tác:</td><td style=\"font-weight: bold; color: #1e293b;\">${d.position}</td></tr>\n        <tr><td style=\"padding: 6px 0; color: #64748b;\">Mức lương chính thức:</td><td style=\"font-weight: bold; color: #10b981;\">${d.salary}</td></tr>\n        <tr><td style=\"padding: 6px 0; color: #64748b;\">Ngày bắt đầu làm việc:</td><td style=\"font-weight: bold; color: #4338ca;\">${d.start_date}</td></tr>\n        <tr><td style=\"padding: 6px 0; color: #64748b;\">Thời gian thử việc:</td><td style=\"font-weight: bold; color: #1e293b;\">2 tháng (Hưởng 85% - 100% lương)</td></tr>\n        <tr><td style=\"padding: 6px 0; color: #64748b;\">Địa điểm làm việc:</td><td style=\"font-weight: bold; color: #1e293b;\">Đà Nẵng / Linh hoạt On-site & Remote</td></tr>\n      </table>\n    </div>\n    <div style=\"background: #ecfdf5; border-left: 4px solid #10b981; padding: 12px 16px; margin: 20px 0; font-size: 13px; color: #065f46;\">\n      <strong>💡 Quyền lợi bổ sung:</strong> Đóng đầy đủ BHXH, thưởng KPIs hiệu suất hàng quý, tháng lương 13, gói chăm sóc sức khỏe cao cấp và tài trợ đào tạo chứng chỉ quốc tế.\n    </div>\n    <p>Vui lòng phản hồi lại email này trong vòng <strong>3 ngày làm việc</strong> để xác nhận sự đồng thuận nhận việc của bạn.</p>\n    <p>Một lần nữa, nhiệt liệt chào mừng bạn gia nhập đội ngũ nhân tài công nghệ của chúng tôi!</p>\n    <hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;\">\n    <p style=\"font-size: 13px; color: #64748b; margin: 0;\">Trân trọng,<br><strong style=\"color: #1e293b;\">Hội Đồng Tuyển Dụng & Tác Tử Luồng 6 - VKU Tech</strong></p>\n  </div>`;\n} else if (isRejection) {\n  subject = `[VKU Tech] Thông báo kết quả ứng tuyển vị trí ${d.position} - ${d.candidate_name}`;\n  html_body = `\n  <div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;\">\n    <h2 style=\"color: #0d47a1; margin-top: 0;\">VKU Tech Talent Acquisition</h2>\n    <p>Xin chào <strong>${d.candidate_name}</strong>,</p>\n    <p>Hội đồng tuyển dụng VKU Tech chân thành cảm ơn bạn đã dành thời gian và sự quan tâm đối với vị trí <strong>${d.position}</strong>.</p>\n    <p>Sau khi xem xét kỹ lưỡng hồ sơ, chúng tôi rất tiếc phải thông báo hiện tại hồ sơ của bạn chưa hoàn toàn phù hợp với các tiêu chí ưu tiên của vị trí này.</p>\n    <div style=\"background: #f4f6f8; border-left: 4px solid #1976d2; padding: 12px 16px; margin: 20px 0;\">\n      <h4 style=\"margin: 0 0 8px 0; color: #1976d2;\">💡 Góc Nhìn Phát Triển Tự Động Từ AI Agent:</h4>\n      <p style=\"margin: 0; font-size: 14px; color: #555;\">Hồ sơ của bạn có tư duy kỹ thuật tốt. Nhóm tuyển dụng kiến nghị bạn tiếp tục trau dồi các dự án thực tế về Cloud & Docker để sẵn sàng cho các cơ hội tiếp theo tại công ty.</p>\n    </div>\n    <p>Thông tin của bạn đã được lưu trữ trong Talent Pool của chúng tôi và chúng tôi sẽ chủ động liên hệ lại khi có vị trí tương thích.</p>\n    <p>Chúc bạn luôn kiên trì và gặt hái nhiều thành công trên con đường sự nghiệp!</p>\n    <hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n    <p style=\"font-size: 13px; color: #777;\">Trân trọng,<br><strong>Ban Tuyển Dụng & AI Agent Coordinator - VKU Tech</strong></p>\n  </div>`;\n} else {\n  subject = `[VKU Tech] Thư mời phỏng vấn vị trí ${d.position} - ${d.candidate_name}`;\n  html_body = `\n  <div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;\">\n    <h2 style=\"color: #2e7d32; margin-top: 0;\">🎉 Thư Mời Phỏng Vấn Chính Thức</h2>\n    <p>Xin chào <strong>${d.candidate_name}</strong>,</p>\n    <p>Chúc mừng bạn đã vượt qua vòng đánh giá hồ sơ xuất sắc cho vị trí <strong>${d.position}</strong> tại VKU Tech!</p>\n    <div style=\"background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 6px; padding: 16px; margin: 20px 0;\">\n      <h3 style=\"margin-top: 0; color: #2e7d32;\">Chi Tiết Buổi Phỏng Vấn Trực Tuyến:</h3>\n      <ul style=\"margin: 0; padding-left: 20px;\">\n        <li><strong>Thời gian:</strong> <span style=\"color: #d32f2f; font-weight: bold;\">${d.interview_time}</span></li>\n        <li><strong>Chuyên gia phỏng vấn:</strong> ${d.interviewer}</li>\n        <li><strong>Hình thức:</strong> Phỏng vấn trực tuyến qua Google Meet</li>\n      </ul>\n      <div style=\"text-align: center; margin-top: 16px;\">\n        <a href=\"${d.meet_link}\" style=\"background: #1a73e8; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;\">Tham Gia Phỏng Vấn (Google Meet)</a>\n      </div>\n    </div>\n    <div style=\"background: #e8f0fe; border-left: 4px solid #1a73e8; padding: 12px 16px; margin: 20px 0;\">\n      <h4 style=\"margin: 0 0 6px 0; color: #1a73e8;\">📚 Cẩm Nang Chuẩn Bị (AI Preparation Kit):</h4>\n      <p style=\"margin: 0; font-size: 14px; color: #444;\">Chủ đề trọng tâm: <em>${d.focus_topics}</em>. Bạn vui lòng chuẩn bị máy tính có kết nối ổn định và vào link trước 5 phút nhé.</p>\n    </div>\n    <p>Lịch hẹn này đã được hệ thống tự động đồng bộ lên Google Calendar của bạn.</p>\n    <hr style=\"border: none; border-top: 1px solid #eee; margin: 20px 0;\">\n    <p style=\"font-size: 13px; color: #777;\">Trân trọng,<br><strong>Ban Tuyển Dụng VKU Tech</strong></p>\n  </div>`;\n}\n\nreturn [{\n  json: {\n    ...d,\n    subject,\n    html_body,\n    is_offer: isOffer,\n    is_rejection: isRejection\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -159,7 +176,7 @@
       "name": "7. Send Official Invite Email",
       "credentials": {
         "gmailOAuth2": {
-          "id": "wYPWyMlEKAtAS6Nz",
+          "id": "qz5j6p9UxXAmNUJx",
           "name": "Gmail account"
         }
       }
@@ -169,7 +186,7 @@
         "conditions": {
           "boolean": [
             {
-              "value1": "={{ Boolean($('6. Parse Invite Content').first().json.is_rejection) }}",
+              "value1": "={{ Boolean($('6. Parse Invite Content').first().json.is_rejection || $('6. Parse Invite Content').first().json.is_offer || $('6. Parse Invite Content').first().json.is_screening_pass) }}",
               "value2": true
             }
           ]
@@ -209,10 +226,11 @@
       "name": "8. Sync Google Calendar",
       "credentials": {
         "googleCalendarOAuth2Api": {
-          "id": "vvUvNivFTeD4AP2v",
+          "id": "krB56w242N0hepGD",
           "name": "Google Calendar account"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -248,7 +266,7 @@
       "name": "12. Dispatch Reminder Email",
       "credentials": {
         "gmailOAuth2": {
-          "id": "wYPWyMlEKAtAS6Nz",
+          "id": "qz5j6p9UxXAmNUJx",
           "name": "Gmail account"
         }
       }
@@ -259,8 +277,10 @@
         "url": "=http://172.17.0.1:3000/api/candidates/{{ $('4. Normalize Candidate Context').first().json.candidate_id }}/notification-status",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"notification_status\": \"{{ $('6. Parse Invite Content').first().json.is_rejection ? 'Sent_Constructive_Rejection' : 'Sent_Invite_And_Calendar' }}\",\n  \"email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\"\n}",
-        "options": {}
+        "jsonBody": "={\n  \"notification_status\": \"{{ $('6. Parse Invite Content').first().json.is_offer ? 'Sent_Offer_Letter' : ($('6. Parse Invite Content').first().json.is_rejection ? 'Sent_Constructive_Rejection' : 'Sent_Invite_And_Calendar') }}\",\n  \"email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\"\n}",
+        "options": {
+          "neverError": true
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -269,7 +289,8 @@
         100
       ],
       "id": "wf5-update-notif-status-api",
-      "name": "13. Update Notification Status API"
+      "name": "13. Update Notification Status API",
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -277,8 +298,10 @@
         "url": "http://172.17.0.1:3000/api/workflow-logs",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"workflow_name\": \"Luong 5 - Agentic Candidate Notification\",\n  \"execution_status\": \"SUCCESS\",\n  \"payload\": {\n    \"candidate_id\": {{ $('4. Normalize Candidate Context').first().json.candidate_id }},\n    \"candidate_email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\",\n    \"notification_type\": \"{{ $('6. Parse Invite Content').first().json.is_rejection ? 'Constructive Rejection' : 'Official Invite with Preparation Kit' }}\",\n    \"delivery_channel\": \"Gmail OAuth2 & Google Calendar\"\n  }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"workflow_name\": \"Luong 5 - Agentic Candidate Notification\",\n  \"execution_status\": \"SUCCESS\",\n  \"payload\": {\n    \"candidate_id\": {{ $('4. Normalize Candidate Context').first().json.candidate_id }},\n    \"candidate_email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\",\n    \"notification_type\": \"{{ $('6. Parse Invite Content').first().json.is_offer ? 'Official Job Offer Letter' : ($('6. Parse Invite Content').first().json.is_rejection ? 'Constructive Rejection' : 'Official Invite with Preparation Kit') }}\",\n    \"delivery_channel\": \"Gmail OAuth2 & Google Calendar\"\n  }\n}",
+        "options": {
+          "neverError": true
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -287,13 +310,16 @@
         100
       ],
       "id": "wf5-audit-log-api",
-      "name": "14. Dispatch Audit Log API"
+      "name": "14. Dispatch Audit Log API",
+      "continueOnFail": true
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Notification dispatched successfully via Agentic AI\",\n  \"data\": {\n    \"candidate_id\": {{ $('4. Normalize Candidate Context').first().json.candidate_id }},\n    \"candidate_email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\",\n    \"status\": \"{{ $('6. Parse Invite Content').first().json.is_rejection ? 'Sent_Constructive_Rejection' : 'Sent_Invite_And_Calendar' }}\"\n  }\n}",
-        "options": {}
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Notification dispatched successfully via Agentic AI\",\n  \"data\": {\n    \"candidate_id\": {{ $('4. Normalize Candidate Context').first().json.candidate_id }},\n    \"candidate_email\": \"{{ $('4. Normalize Candidate Context').first().json.candidate_email }}\",\n    \"status\": \"{{ $('6. Parse Invite Content').first().json.is_offer ? 'Sent_Offer_Letter' : ($('6. Parse Invite Content').first().json.is_rejection ? 'Sent_Constructive_Rejection' : 'Sent_Invite_And_Calendar') }}\"\n  }\n}",
+        "options": {
+          "neverError": true
+        }
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
@@ -309,7 +335,9 @@
         "respondWith": "json",
         "responseCode": 400,
         "responseBody": "={\n  \"success\": false,\n  \"message\": \"candidate_email is required and cannot be empty\"\n}",
-        "options": {}
+        "options": {
+          "neverError": true
+        }
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,

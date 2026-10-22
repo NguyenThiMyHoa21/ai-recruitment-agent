@@ -35,3 +35,4 @@ echo "👉 Xếp Lịch Phỏng Vấn:   http://localhost:3000/interview-managem
 echo "👉 Báo Cáo Tuyển Dụng:   http://localhost:3000/recruitment-report.html"
 echo "👉 Trình Soạn Thảo n8n:  http://localhost:5678"
 echo "=========================================================="
+
