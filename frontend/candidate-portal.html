@@ -994,21 +994,15 @@
               </div>
               <p class="text-xs text-slate-500">
                 ${isApproved 
-                  ? 'Hồ sơ đã được nạp vào <b>Trang Sàng Lọc CV (Luồng 2)</b> với trạng thái <b>Đạt sơ loại</b>, đồng thời tự động kích hoạt xếp lịch Luồng 4 và gửi thư mời Gmail (Luồng 5).' 
-                  : 'Hồ sơ đã được lưu trữ an toàn trong kho nhân tài. Tác tử Luồng 5 sẽ tự động gửi thư phản hồi mang tính xây dựng qua Gmail.'}
+                  ? 'Hồ sơ đã được tiếp nhận với kết quả <b>Đạt sơ loại</b>. Tác tử AI (Luồng 5) đang tự động gửi thư mời phỏng vấn chính thức đến hòm thư: <b>' + payload.candidate_email + '</b>.' 
+                  : 'Hồ sơ đã được lưu trữ an toàn trong kho nhân tài. Tác tử AI (Luồng 5) đã tự động gửi email phản hồi mang tính xây dựng tới: <b>' + payload.candidate_email + '</b>.'}
               </p>
             </div>
           `,
-          showCancelButton: true,
-          confirmButtonColor: '#4f46e5',
-          cancelButtonColor: '#64748b',
-          confirmButtonText: '<i class="fa-solid fa-users-viewfinder mr-1.5"></i> Chuyển Sang Trang Sàng Lọc CV (Luồng 2)',
-          cancelButtonText: 'Ở lại Cổng ứng viên',
+          showCancelButton: false,
+          confirmButtonColor: isApproved ? '#10b981' : '#4f46e5',
+          confirmButtonText: 'Đã Hiểu',
           customClass: { popup: 'rounded-2xl' }
-        }).then((result) => {
-          if (result.isConfirmed) {
-            window.location.href = `cv-screening.html?search=${encodeURIComponent(payload.candidate_name)}`;
-          }
         });
 
         document.getElementById('candidateApplyForm').reset();
