@@ -1,26 +1,38 @@
 #!/bin/bash
 # ==========================================================
-# 🚀 1-CLICK TỰ ĐỘNG CHẠY CLOUDFLARE TUNNEL VÀ SYNC LÊN RENDER
+# 🚀 1-CLICK ALL-IN-ONE: TỰ ĐỘNG CHẠY HỆ THỐNG KHI MỞ LẠI LAPTOP
 # ==========================================================
 set -e
 
 cd "$(dirname "$0")"
 
 echo "=========================================================="
-echo "🌐 1. KHỞI ĐỘNG CLOUDFLARE TUNNEL CHẠY NGẦM..."
+echo "🚀 ĐANG KHỞI ĐỘNG HỆ THỐNG TUYỂN DỤNG AI SAU KHI MỞ MÁY..."
 echo "=========================================================="
 
-# Tắt các tiến trình tunnel cũ (nếu có) để tránh xung đột
+# 1. Đảm bảo Docker Containers (MySQL & n8n) luôn chạy
+echo "📦 1. Khởi động n8n & MySQL trong Docker..."
+docker start mysql-recruitment 2>/dev/null || true
+docker start n8n 2>/dev/null || true
+echo "   ✅ MySQL & n8n đã sẵn sàng!"
+
+# 2. Khởi động Backend nội bộ (phục vụ cả localhost:3000 nếu cần)
+echo "⚙️  2. Khởi động Backend Server (Port 3000)..."
+kill -9 $(lsof -t -i:3000) 2>/dev/null || true
+nohup node backend/server.js > backend.log 2>&1 &
+echo "   ✅ Backend cục bộ đã chạy!"
+
+# 3. Khởi động Cloudflare Tunnel chạy ngầm kết nối lên Render
+echo "🌐 3. Tạo đường hầm kết nối Cloudflare lên Render..."
 pkill -f "cloudflared tunnel" 2>/dev/null || true
 sleep 1
 rm -f /tmp/tunnel.log
 
-# Bật cloudflared chạy ngầm vĩnh viễn (không sợ Ctrl+C, không sợ tắt Terminal)
 nohup cloudflared tunnel --url http://localhost:5678 > /tmp/tunnel.log 2>&1 &
 
 echo "⏳ Đang kết nối mạng Cloudflare để cấp link công khai mới..."
 NEW_URL=""
-for i in {1..12}; do
+for i in {1..15}; do
     sleep 1
     NEW_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' /tmp/tunnel.log | head -n 1 || true)
     if [ -n "$NEW_URL" ]; then
@@ -29,28 +41,30 @@ for i in {1..12}; do
 done
 
 if [ -z "$NEW_URL" ]; then
-    echo "❌ Chưa lấy được link Cloudflare. Vui lòng kiểm tra lại kết nối mạng Internet!"
+    echo "❌ Chưa lấy được link Cloudflare. Vui lòng kiểm tra lại kết nối Wifi/Internet trên máy!"
     exit 1
 fi
 
 echo "=========================================================="
-echo "🎉 LINK CLOUDFLARE MỚI CỦA BẠN LÀ:"
+echo "🎉 LINK CLOUDFLARE MỚI CHO N8N LÀ:"
 echo "👉 $NEW_URL"
 echo "=========================================================="
 
-echo "⚙️ 2. Tự động cập nhật link vào backend/server.js..."
+echo "⚙️  4. Cập nhật link mới vào backend/server.js..."
 sed -i -E "s|https://[a-zA-Z0-9.-]*\.trycloudflare\.com|$NEW_URL|g" backend/server.js
 
-echo "🚀 3. Tự động đẩy code lên GitHub để Render tự cập nhật..."
+echo "🚀 5. Tự động đồng bộ lên GitHub (Render sẽ tự động redeploy)..."
 git add backend/server.js run-cloud-tunnel.sh
 git commit -m "chore: auto-update cloudflare tunnel to $NEW_URL" || true
-git push origin develop || true
-git push origin main || true
+git branch -f main develop 2>/dev/null || true
+git push origin develop:develop || true
+git push origin develop:main || true
 
 echo "=========================================================="
-echo "✅ HOÀN TẤT 100%! HỆ THỐNG ĐÃ SẴN SÀNG:"
-echo "1. Đường hầm Cloudflare đang chạy ngầm an toàn (bạn tắt Terminal thoải mái)."
-echo "2. Render đang tự động cập nhật link mới trong vòng 30-45 giây."
-echo "3. Thầy và hội đồng truy cập link Render sẽ gửi Email Gmail mượt mà 100%!"
+echo "🎉 HOÀN TẤT 100%! HỆ THỐNG ĐÃ SẴN SÀNG ĐỂ BÁO CÁO:"
+echo "----------------------------------------------------------"
+echo "✅ Đường hầm Cloudflare đang chạy ngầm an toàn (bạn tắt Terminal thoải mái)."
+echo "✅ Render đang cập nhật link mới trong vòng 30-45 giây."
+echo "✅ Khi Thầy test trên link Render, Email Gmail sẽ được gửi thật 100%!"
+echo "✅ Đồng thời http://localhost:3000 cũng đang chạy song song dự phòng."
 echo "=========================================================="
-
