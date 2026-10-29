@@ -1,7 +1,15 @@
 const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql2/promise");
-const { MOCK_JOBS, MOCK_CANDIDATES, MOCK_HISTORY, MOCK_REPORT } = require("./mock-data");
+const { 
+    MOCK_JOBS, 
+    MOCK_CANDIDATES, 
+    MOCK_HISTORY, 
+    MOCK_REPORT,
+    saveJobsToFile,
+    saveCandidatesToFile,
+    saveHistoryToFile
+} = require("./data-store");
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || "127.0.0.1",
@@ -17,7 +25,7 @@ const db = mysql.createPool({
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://papers-cod-genetics-achieved.trycloudflare.com" : "http://localhost:5678");
+const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://money-years-opportunities-uniprotkb.trycloudflare.com" : "http://localhost:5678");
 
 const path = require("path");
 
@@ -170,6 +178,7 @@ app.post("/api/jobs", async (req, res) => {
         };
         // Luôn cho phép tạo thêm tin tuyển dụng mới lên đầu danh sách
         MOCK_JOBS.unshift(newJob);
+        saveJobsToFile();
 
         res.json({
             success: true,
@@ -193,6 +202,7 @@ app.post("/api/jobs", async (req, res) => {
             status: "published"
         };
         MOCK_JOBS.unshift(newJob);
+        saveJobsToFile();
 
         res.json({
             success: true,
@@ -266,6 +276,7 @@ app.post("/api/jobs/save", async (req, res) => {
         } else {
             MOCK_JOBS.unshift(savedJob);
         }
+        saveJobsToFile();
 
         res.json({
             success: true,
@@ -366,6 +377,7 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
         mockCand.interview_time = interviewTime;
         mockCand.interviewer_name = interviewer;
         mockCand.meeting_link = meetLink;
+        saveCandidatesToFile();
     }
 
     // Kích hoạt Luồng 5 (gửi thư mời Gmail kèm giờ PV và link Meet)
@@ -466,6 +478,7 @@ async function executeAutoNotifyReject({ candidate_id, candidate_name, candidate
         mockCand.notification_status = 'Sent_Rejection';
         mockCand.approval_status = 'REJECTED';
         mockCand.status = 'Loại sơ loại';
+        saveCandidatesToFile();
     }
 
     // Gọi Luồng 5 n8n để gửi email thông báo từ chối qua Gmail
@@ -595,23 +608,32 @@ app.post("/api/screen-cv", async (req, res) => {
             console.log(`[CandidateService] Đã lưu ứng viên mới #${newCandidateId} (${candidateName}) vào MySQL thành công! Trạng thái: ${initialStatus}`);
         } catch (dbSaveErr) {
             console.warn("[CandidateService] CSDL offline, ghi nhận vào MOCK_CANDIDATES:", dbSaveErr.message);
-            MOCK_CANDIDATES.unshift({
-                id: newCandidateId,
-                job_id: jobId,
-                name: candidateName,
-                full_name: candidateName,
-                email: candidateEmail,
-                applied_position: appliedPosition,
-                position: appliedPosition,
-                cv_content: cvContent,
-                cv_text: cvContent,
-                match_score: matchScore,
-                approval_status: approvalStatus,
-                status: initialStatus,
-                ai_evaluation: aiEval,
-                created_at: new Date().toISOString()
-            });
         }
+
+        // Luôn luôn lưu hồ sơ vào bộ nhớ đệm và file persistent để không bao giờ bị mất khi tắt máy
+        const existingCandIdx = MOCK_CANDIDATES.findIndex(c => Number(c.id) === Number(newCandidateId));
+        const candRecord = {
+            id: newCandidateId,
+            job_id: jobId,
+            name: candidateName,
+            full_name: candidateName,
+            email: candidateEmail,
+            applied_position: appliedPosition,
+            position: appliedPosition,
+            cv_content: cvContent,
+            cv_text: cvContent,
+            match_score: matchScore,
+            approval_status: approvalStatus,
+            status: initialStatus,
+            ai_evaluation: aiEval,
+            created_at: new Date().toISOString()
+        };
+        if (existingCandIdx !== -1) {
+            MOCK_CANDIDATES[existingCandIdx] = candRecord;
+        } else {
+            MOCK_CANDIDATES.unshift(candRecord);
+        }
+        saveCandidatesToFile();
 
         // TỰ ĐỘNG LIÊN HOÀN THEO KẾT QUẢ AI SÀNG LỌC (LUỒNG 2 -> LUỒNG 4 -> LUỒNG 5):
         if (isApproved) {
@@ -1452,11 +1474,12 @@ app.post("/api/candidates/update-status", async (req, res) => {
         );
     } catch (dbErr) {
         console.warn("Lỗi sync DB:", dbErr.message);
-        const mockCand = MOCK_CANDIDATES.find(c => c.id === Number(targetId));
-        if (mockCand) {
-            mockCand.status = new_status;
-            mockCand.approval_status = appStatus;
-        }
+    }
+    const mockCand = MOCK_CANDIDATES.find(c => c.id === Number(targetId));
+    if (mockCand) {
+        mockCand.status = new_status;
+        mockCand.approval_status = appStatus;
+        saveCandidatesToFile();
     }
 
     // Nếu chuyển sang Phỏng vấn và chưa có lịch -> Tự động xếp lịch & gửi thư mời luôn
@@ -1572,6 +1595,7 @@ app.delete("/api/candidates/:id", async (req, res) => {
     const cIdx = MOCK_CANDIDATES.findIndex(c => Number(c.id) === candidateId);
     if (cIdx !== -1) {
         MOCK_CANDIDATES.splice(cIdx, 1);
+        saveCandidatesToFile();
         console.log(`[CandidateService] Đã xóa ứng viên #${candidateId} khỏi MOCK_CANDIDATES.`);
     }
 
@@ -1599,6 +1623,7 @@ app.post("/api/jobs/update-status", async (req, res) => {
         const job = MOCK_JOBS.find(j => Number(j.id) === jobId);
         if (job) {
             job.status = status;
+            saveJobsToFile();
         }
 
         return res.json({
@@ -1634,6 +1659,7 @@ app.delete("/api/jobs/:id", async (req, res) => {
     const jobIdx = MOCK_JOBS.findIndex(j => Number(j.id) === jobId);
     if (jobIdx !== -1) {
         MOCK_JOBS.splice(jobIdx, 1);
+        saveJobsToFile();
         console.log(`[JobService] Đã xóa vị trí #${jobId} khỏi MOCK_JOBS. Còn lại ${MOCK_JOBS.length} vị trí.`);
     }
 
@@ -1644,6 +1670,9 @@ app.delete("/api/jobs/:id", async (req, res) => {
             MOCK_CANDIDATES.splice(i, 1);
             removedCandidatesCount++;
         }
+    }
+    if (removedCandidatesCount > 0) {
+        saveCandidatesToFile();
     }
     if (removedCandidatesCount > 0) {
         console.log(`[JobService] Đã cascade xóa ${removedCandidatesCount} ứng viên thuộc vị trí #${jobId} khỏi MOCK_CANDIDATES.`);

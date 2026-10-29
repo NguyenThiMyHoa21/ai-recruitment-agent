@@ -1,0 +1,23 @@
+[
+  {
+    "candidate_id": 4,
+    "candidate_name": "Nguyễn Văn An",
+    "action": "INTERVIEW_SCHEDULED",
+    "note": "Tác tử Luồng 4: Đã xếp lịch phỏng vấn lúc 2026-10-21 09:30:00",
+    "created_at": "2026-10-18 10:15:00"
+  },
+  {
+    "candidate_id": 23,
+    "candidate_name": "Lê Nhi",
+    "action": "INTERVIEW_INVITE_SENT",
+    "note": "Tác tử Luồng 5: Đã gửi thư mời phỏng vấn & tạo sự kiện Google Calendar",
+    "created_at": "2026-10-18 10:20:00"
+  },
+  {
+    "candidate_id": 6,
+    "candidate_name": "Nguyễn Thị Mỹ Hoa",
+    "action": "CV_SCREENING_PASSED",
+    "note": "Tác tử Luồng 2: Sơ loại hồ sơ ĐẠT (Điểm: 85/100)",
+    "created_at": "2026-10-18 10:25:00"
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "id": 14,
+    "position": "Senior Backend Engineer",
+    "department": "Engineering",
+    "location": "TP. Hồ Chí Minh / Hybrid",
+    "salary": "35 - 50 Triệu VND",
+    "requirements": "3+ năm kinh nghiệm Node.js, Express, Docker, Microservices, RESTful API, n8n Automation.",
+    "job_description": "Phát triển hệ thống microservices và tích hợp các pipeline Agentic AI tự động hóa quy trình tuyển dụng.",
+    "status": "published"
+  },
+  {
+    "id": 8,
+    "position": "Frontend Developer",
+    "department": "Engineering",
+    "location": "Đà Nẵng / On-site",
+    "salary": "15 - 20 Triệu VND",
+    "requirements": "ReactJS, Tailwind CSS, TypeScript, RESTful API, thiết kế giao diện UI/UX hiện đại.",
+    "job_description": "Xây dựng cổng ứng viên và dashboard quản trị tuyển dụng thông minh cho bộ phận Nhân sự.",
+    "status": "published"
+  },
+  {
+    "id": 7,
+    "position": "DevOps Engineer",
+    "department": "Infrastructure",
+    "location": "Đà Nẵng / Remote",
+    "salary": "20 - 25 Triệu VND",
+    "requirements": "Docker, Kubernetes, CI/CD, Linux, AWS / Cloud Hosting, Giám sát hệ thống.",
+    "job_description": "Triển khai hạ tầng container hóa và tự động hóa quy trình CI/CD cho các tác tử AI.",
+    "status": "published"
+  },
+  {
+    "id": 12,
+    "position": "Kỹ sư Công nghệ thông tin",
+    "department": "IT",
+    "location": "Đà Nẵng",
+    "salary": "10 - 20 Triệu VND",
+    "requirements": "Phát triển phần mềm, quản trị mạng, hỗ trợ kỹ thuật và an toàn thông tin doanh nghiệp.",
+    "job_description": "Vận hành và phát triển các hệ thống phần mềm quản lý nội bộ trường VKU và đối tác.",
+    "status": "published"
+  },
+  {
+    "id": 28,
+    "position": "Chuyên viên Digital Marketing",
+    "department": "Truyền thông",
+    "location": "Đà Nẵng",
+    "salary": "15 - 22 Triệu VND",
+    "requirements": "Tối ưu chiến dịch Facebook Ads, Google Ads, sáng tạo Content Marketing, phân tích ROI.",
+    "job_description": "Quản lý các kênh truyền thông số và xây dựng chiến lược thương hiệu tuyển dụng trên đa nền tảng.",
+    "status": "published"
+  },
+  {
+    "id": 17,
+    "position": "Product Manager",
+    "department": "Product",
+    "location": "Hà Nội",
+    "salary": "25 - 35 Triệu VND",
+    "requirements": "Agile, Scrum, Product Roadmapping, Data Analysis, kỹ năng giao tiếp và lãnh đạo nhóm.",
+    "job_description": "Định hình tầm nhìn sản phẩm Agentic AI và phối hợp với các đội ngũ kỹ thuật để hiện thực hóa tính năng.",
+    "status": "published"
+  },
+  {
+    "id": 11,
+    "position": "Nhân viên kinh doanh",
+    "department": "Kinh doanh",
+    "location": "Đà Nẵng",
+    "salary": "8 - 12 Triệu VND",
+    "requirements": "Đàm phán thương lượng, tìm kiếm khách hàng, tư vấn dịch vụ và ký kết hợp đồng.",
+    "job_description": "Mở rộng mạng lưới đối tác doanh nghiệp và tư vấn các giải pháp chuyển đổi số thông minh.",
+    "status": "published"
+  },
+  {
+    "id": 13,
+    "position": "Nhân viên chăm sóc khách hàng",
+    "department": "CSKH",
+    "location": "Đà Nẵng",
+    "salary": "15 - 25 Triệu VND",
+    "requirements": "Giao tiếp tốt, xử lý tình huống linh hoạt, giọng nói truyền cảm và khả năng lắng nghe.",
+    "job_description": "Tiếp nhận và giải đáp các thắc mắc của ứng viên và khách hàng qua tổng đài và hệ thống đa kênh.",
+    "status": "published"
+  },
+  {
+    "id": 6,
+    "position": "Backend Developer",
+    "department": "Engineering",
+    "location": "Đà Nẵng",
+    "salary": "15 - 20 Triệu VND",
+    "requirements": "Node.js, Express, MySQL, RESTful API, Docker, kinh nghiệm làm việc theo mô hình MVC.",
+    "job_description": "Xây dựng các API backend phục vụ các tác tử AI và đồng bộ dữ liệu phỏng vấn.",
+    "status": "published"
+  }
+]
