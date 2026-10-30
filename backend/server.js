@@ -680,6 +680,9 @@ app.post("/api/screen-cv", async (req, res) => {
             approval_status: approvalStatus,
             status: initialStatus,
             ai_evaluation: aiEval,
+            interview_time: null,
+            interviewer_name: null,
+            meeting_link: null,
             created_at: new Date().toISOString()
         };
         if (existingCandIdx !== -1) {
@@ -689,16 +692,10 @@ app.post("/api/screen-cv", async (req, res) => {
         }
         saveCandidatesToFile();
 
-        // TỰ ĐỘNG LIÊN HOÀN THEO KẾT QUẢ AI SÀNG LỌC (LUỒNG 2 -> LUỒNG 4 -> LUỒNG 5):
+        // ĐẠT SƠ LOẠI (LUỒNG 2): Lưu hồ sơ vào danh sách CHỜ XẾP LỊCH (Phương án A - Chuẩn Human-in-the-Loop)
         if (isApproved) {
-            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT SƠ LOẠI (${matchScore}đ) ➜ Tự động xếp lịch AI (Luồng 4) & gửi thư mời Gmail (Luồng 5)...`);
-            executeAutoSchedulePass({
-                candidate_id: newCandidateId,
-                candidate_name: candidateName,
-                candidate_email: candidateEmail,
-                position: appliedPosition,
-                job_id: jobId
-            }).catch(e => console.warn("Lỗi auto schedule pass:", e.message));
+            console.log(`[Auto-Screening] Ứng viên ${candidateName} ĐẠT SƠ LOẠI (${matchScore}đ) ➜ Lưu trạng thái CHỜ XẾP LỊCH (Đợi HR xem xét và bấm "Xếp Lịch AI" trên giao diện)...`);
+            // Phương án A: Không tự động gửi thư mời ngay, để HR chủ động bấm "Xếp Lịch AI (Luồng 4)"
         } else {
             console.log(`[Auto-Screening] Ứng viên ${candidateName} BỊ LOẠI SƠ LOẠI (${matchScore}đ) ➜ Tự động gửi thư từ chối Gmail (Luồng 5)...`);
             executeAutoNotifyReject({

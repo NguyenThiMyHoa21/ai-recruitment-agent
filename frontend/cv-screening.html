@@ -691,9 +691,9 @@
     async function changeCandidateStatus(candId, newStatus) {
       try {
         Swal.fire({
-          title: 'Đang xử lý liên hoàn...',
+          title: 'Đang xử lý...',
           text: newStatus === 'Đạt sơ loại'
-            ? 'Đang tự động xếp lịch Luồng 4 và gửi thư mời Gmail (Luồng 5)...'
+            ? 'Đang cập nhật trạng thái Đạt sơ loại (chuyển sang Chờ xếp lịch)...'
             : 'Đang tự động gửi thư từ chối vì rớt vòng sơ loại (Luồng 5)...',
           allowOutsideClick: false,
           didOpen: () => Swal.showLoading(),
@@ -711,7 +711,7 @@
             icon: 'success',
             title: 'Thành Công!',
             text: newStatus === 'Đạt sơ loại'
-              ? `Hồ sơ #${candId} ĐẠT SƠ LOẠI: Đã tự động xếp lịch bên Luồng 4 và gửi thư mời Google Meet qua Luồng 5!`
+              ? `Hồ sơ #${candId} ĐẠT SƠ LOẠI: Đã chuyển sang danh sách Chờ xếp lịch! Bạn có thể bấm "Xếp Lịch (L4)" để kích hoạt AI phân bổ lịch phỏng vấn.`
               : `Hồ sơ #${candId} LOẠI SƠ LOẠI: Đã gửi thư từ chối lịch sự qua Luồng 5 vì rớt vòng sơ loại!`,
             confirmButtonColor: '#4f46e5',
             customClass: { popup: 'rounded-2xl' }

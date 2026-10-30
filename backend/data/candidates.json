@@ -1,5 +1,43 @@
 [
   {
+    "id": 106,
+    "job_id": 1,
+    "name": "Nguyễn Thị Mỹ Hoa",
+    "full_name": "Nguyễn Thị Mỹ Hoa",
+    "email": "hoami2113@gmail.com",
+    "applied_position": "Senior Backend Engineer",
+    "position": "Senior Backend Engineer",
+    "cv_content": "Kỹ sư Backend 4 năm kinh nghiệm Node.js, Express, MySQL, Docker, RESTful API.",
+    "cv_text": "Kỹ sư Backend 4 năm kinh nghiệm Node.js, Express, MySQL, Docker, RESTful API.",
+    "match_score": 98,
+    "approval_status": "APPROVED",
+    "status": "Đạt sơ loại",
+    "ai_evaluation": "Ứng viên Nguyễn Thị Mỹ Hoa đáp ứng tốt yêu cầu chuyên môn vị trí Senior Backend Engineer. Điểm đánh giá năng lực: 98/100. Kỹ năng nổi bật ghi nhận: mysql, api, docker, node, sql. Tác tử AI đề xuất: ĐẠT (Mời phỏng vấn).",
+    "interview_time": null,
+    "interviewer_name": null,
+    "meeting_link": null,
+    "created_at": "2026-10-30T08:40:41.826Z"
+  },
+  {
+    "id": 104,
+    "job_id": 1,
+    "name": "Nguyễn Thị Mỹ Hoa",
+    "full_name": "Nguyễn Thị Mỹ Hoa",
+    "email": "hoami2113@gmail.com",
+    "applied_position": "Senior Backend Engineer",
+    "position": "Senior Backend Engineer",
+    "cv_content": "Kỹ sư Backend 4 năm kinh nghiệm Node.js, Express, MySQL, Docker, RESTful API.",
+    "cv_text": "Kỹ sư Backend 4 năm kinh nghiệm Node.js, Express, MySQL, Docker, RESTful API.",
+    "match_score": 98,
+    "approval_status": "INTERVIEW_SCHEDULED",
+    "status": "Phỏng vấn",
+    "ai_evaluation": "Ứng viên Nguyễn Thị Mỹ Hoa đáp ứng tốt yêu cầu chuyên môn vị trí Senior Backend Engineer. Điểm đánh giá năng lực: 98/100. Kỹ năng nổi bật ghi nhận: mysql, api, docker, node, sql. Tác tử AI đề xuất: ĐẠT (Mời phỏng vấn).",
+    "created_at": "2026-10-30T08:38:30.569Z",
+    "interview_time": "2026-10-31 10:15:00",
+    "interviewer_name": "Trần Văn Tech",
+    "meeting_link": "https://meet.google.com/ydc-2ruw-idj"
+  },
+  {
     "id": 101,
     "job_id": 15,
     "name": "Nguyễn Thị Mỹ Hoa",
@@ -16,7 +54,8 @@
     "created_at": "2026-10-30T08:16:09.229Z",
     "interview_time": "2026-10-31 09:30:00",
     "interviewer_name": "Trần Văn Tech",
-    "meeting_link": "https://meet.google.com/t4e-wobl-ish"
+    "meeting_link": "https://meet.google.com/t4e-wobl-ish",
+    "notification_status": "Sent_Invite_And_Calendar"
   },
   {
     "id": 1,
