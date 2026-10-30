@@ -48,6 +48,9 @@ app.get("/api/health", (req, res) => {
 
 // API lấy danh sách Job (bao gồm cả published và closed) để HR quản lý và Cổng ứng viên hiển thị đúng trạng thái
 app.get("/api/jobs", async (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
     try {
         const [jobs] = await db.query(`
             SELECT id, position, department, location, salary, requirements, job_description, COALESCE(status, 'published') AS status

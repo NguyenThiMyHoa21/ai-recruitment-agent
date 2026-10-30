@@ -545,27 +545,32 @@
 
       // BƯỚC 2: Đồng bộ thêm với Backend API
       try {
-        const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now(), { signal: AbortSignal.timeout(4000) });
+        const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now(), { signal: AbortSignal.timeout(10000) });
         const rawText = await res.text();
         let data = {};
         try { data = JSON.parse(rawText); } catch(e) {}
 
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
-          // Giữ các công việc mới từ local lên đầu, sau đó ghép danh sách từ backend
-          const combined = [...localJobs];
-          data.jobs.forEach(bj => {
-            if (!bj || !bj.position || bj.position === 'undefined' || String(bj.position).trim().length === 0) return;
-            const exists = combined.some(cj => 
-              String(cj.id) === String(bj.id) || 
-              (cj.position.toLowerCase().trim() === bj.position.toLowerCase().trim() && (cj.department || '').toLowerCase().trim() === (bj.department || '').toLowerCase().trim())
+          // Lấy trực tiếp danh sách từ Backend (Backend luôn sắp xếp việc mới nhất lên đầu #1)
+          let validJobs = data.jobs.filter(j => 
+            j && j.position && j.position !== 'undefined' && 
+            String(j.position).trim().length > 0 && 
+            !deletedJobIds.includes(String(j.id))
+          );
+
+          // Ghép thêm bất kỳ việc nào trong localJobs nếu có (không để sót)
+          localJobs.forEach(lj => {
+            const exists = validJobs.some(vj => 
+              String(vj.id) === String(lj.id) || 
+              (vj.position.toLowerCase().trim() === lj.position.toLowerCase().trim() && (vj.department || '').toLowerCase().trim() === (lj.department || '').toLowerCase().trim())
             );
             if (!exists) {
-              combined.push(bj);
+              validJobs.unshift(lj);
             }
           });
 
           const seen = new Set();
-          availableJobs = combined.filter(j => {
+          availableJobs = validJobs.filter(j => {
             if (!j || !j.position || j.position === 'undefined' || String(j.position).trim().length === 0) return false;
             if (deletedJobIds.includes(String(j.id))) return false;
             const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
@@ -612,6 +617,16 @@
 
     function renderDefaultJobs() {
       availableJobs = [
+        {
+          id: 15,
+          position: "Senior Fullstack Developer",
+          department: "Engineering",
+          location: "TP. Hồ Chí Minh",
+          salary: "30 - 45 Triệu VND",
+          requirements: "Thành thạo ReactJS, Node.js, thiết kế cơ sở dữ liệu MySQL, Docker, CI/CD và Microservices.",
+          job_description: "Phát triển các hệ thống tuyển dụng thông minh và microservices tích hợp Agentic AI.",
+          status: "published"
+        },
         {
           id: 14,
           position: "Senior Backend Engineer",

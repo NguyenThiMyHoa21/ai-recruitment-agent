@@ -1,5 +1,15 @@
 [
   {
+    "id": 15,
+    "position": "Senior Fullstack Developer",
+    "department": "Engineering",
+    "location": "TP. Hồ Chí Minh",
+    "salary": "30 - 45 Triệu VND",
+    "requirements": "Thành thạo ReactJS, Node.js, thiết kế cơ sở dữ liệu MySQL, Docker, CI/CD và Microservices.",
+    "job_description": "BẢN MÔ TẢ CÔNG VIỆC CHUYÊN NGHIỆP: SENIOR FULLSTACK DEVELOPER\nPhòng ban: Engineering | Địa điểm: TP. Hồ Chí Minh | Mức lương: 30 - 45 Triệu VND\n\n1. TỔNG QUAN VỊ TRÍ & SỨ MỆNH\nChúng tôi đang tìm kiếm nhân tài cho vị trí Senior Fullstack Developer. Bạn sẽ đóng vai trò chủ chốt trong việc xây dựng giải pháp, nâng cao hiệu quả công việc và đóng góp vào mục tiêu phát triển bền vững của tổ chức trong môi trường năng động và sáng tạo.\n\n2. TRÁCH NHIỆM & NHIỆM VỤ CHÍNH\n- Trực tiếp thực thi và quản lý các nghiệp vụ chuyên môn cho vị trí Senior Fullstack Developer.\n- Phối hợp chặt chẽ với các phòng ban liên quan để tối ưu hóa quy trình làm việc.\n- Đề xuất các sáng kiến cải tiến hiệu suất và chất lượng công việc hàng quý.\n- Báo cáo định kỳ tiến độ công việc và giải quyết kịp thời các phát sinh.\n\n3. YÊU CẦU CHUYÊN MÔN & KỸ NĂNG\n- Tiêu chuẩn chuyên môn: Thành thạo ReactJS, Node.js, thiết kế cơ sở dữ liệu MySQL, Docker, CI/CD và Microservices.\n- Kỹ năng giao tiếp chuyên nghiệp, làm việc nhóm hiệu quả và khả năng thích ứng linh hoạt.\n- Tinh thần trách nhiệm cao, chủ động trong công việc và cam kết đạt mục tiêu đề ra.\n\n4. QUYỀN LỢI & CHẾ ĐỘ ĐÃI NGỘ XỨNG ĐÁNG\n- Mức thu nhập cạnh tranh: 30 - 45 Triệu VND, xét tăng lương định kỳ hằng năm.\n- Thưởng hiệu suất công việc (KPIs), thưởng lương tháng 13 và các dịp lễ tết.\n- Chế độ bảo hiểm toàn diện theo quy định, khám sức khỏe định kỳ.\n- Cơ hội đào tạo chuyên sâu và lộ trình thăng tiến rõ ràng lên cấp quản lý.\n- Môi trường làm việc văn minh, đồng nghiệp trẻ trung và hỗ trợ hết mình.\n\n5. MỨC LƯƠNG & CHÍNH SÁCH THƯỞNG\n- Mức lương khởi điểm: 30 - 45 Triệu VND kèm các phụ cấp công việc và thiết bị làm việc.\n\n6. QUY TRÌNH PHỎNG VẤN & HƯỚNG DẪN ỨNG TUYỂN\n- Vòng 1: Tác tử AI sàng lọc CV tự động và phản hồi trong 24 giờ.\n- Vòng 2: Phỏng vấn chuyên môn với Trưởng bộ phận.\n- Vòng 3: Trao đổi văn hóa & Gửi thư mời nhận việc (Offer Letter).",
+    "status": "published"
+  },
+  {
     "id": 14,
     "position": "Senior Backend Engineer",
     "department": "Engineering",
