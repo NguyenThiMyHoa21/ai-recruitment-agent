@@ -377,6 +377,10 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 candidate_id: Number(targetId),
+                candidate_name: cand.full_name || cand.name || candidate_name,
+                candidate_email: cand.email || candidate_email,
+                email: cand.email || candidate_email,
+                position: cand.job_title || cand.position || position,
                 requested_by: "Auto_CV_Screening_Pass"
             })
         });
@@ -426,27 +430,31 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
         saveCandidatesToFile();
     }
 
-    // Kích hoạt Luồng 5 (gửi thư mời Gmail kèm giờ PV và link Meet)
-    console.log(`[Auto-Pass] Kích hoạt Luồng 5 gửi email thư mời tới ${cand.email || candidate_email} lúc ${interviewTime}...`);
-    try {
-        await fetch(`${N8N_URL}/webhook/send-interview-invite`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                candidate_id: Number(targetId),
-                candidate_name: cand.full_name || cand.name || candidate_name,
-                candidate_email: cand.email || candidate_email,
-                position: cand.job_title || cand.position || position,
-                interview_time: interviewTime,
-                interviewer: interviewer,
-                meet_link: meetLink,
-                notification_type: "invite",
-                type: "invite"
-            })
-        });
-        console.log(`[Auto-Pass] Đã gửi thư mời phỏng vấn thành công qua Gmail cho ${cand.email || candidate_email}!`);
-    } catch (autoInviteErr) {
-        console.warn("[Auto-Pass] Lỗi gửi email Luồng 5:", autoInviteErr.message);
+    // Kích hoạt Luồng 5 (Chỉ gọi dự phòng nếu Luồng 4 không kết nối được hoặc n8n offline để tránh gửi trùng email)
+    if (!l4Result || !l4Result.success || l4Result.fallback) {
+        console.log(`[Auto-Pass] Luồng 4 fallback/offline ➜ Kích hoạt Luồng 5 dự phòng gửi thư mời tới ${cand.email || candidate_email}...`);
+        try {
+            await fetch(`${N8N_URL}/webhook/send-interview-invite`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    candidate_id: Number(targetId),
+                    candidate_name: cand.full_name || cand.name || candidate_name,
+                    candidate_email: cand.email || candidate_email,
+                    position: cand.job_title || cand.position || position,
+                    interview_time: interviewTime,
+                    interviewer: interviewer,
+                    meet_link: meetLink,
+                    notification_type: "invite",
+                    type: "invite"
+                })
+            });
+            console.log(`[Auto-Pass] Đã gửi thư mời phỏng vấn thành công qua Gmail dự phòng cho ${cand.email || candidate_email}!`);
+        } catch (autoInviteErr) {
+            console.warn("[Auto-Pass] Lỗi gửi email Luồng 5 dự phòng:", autoInviteErr.message);
+        }
+    } else {
+        console.log(`[Auto-Pass] Luồng 4 đã tự động điều phối Luồng 5 gửi thư mời thành công, không gửi trùng.`);
     }
 
     return {
@@ -1283,6 +1291,9 @@ app.post("/api/auto-schedule-pass", async (req, res) => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     candidate_id: Number(targetId),
+                    candidate_name: candidate_name || "Ứng viên",
+                    candidate_email: candidate_email,
+                    email: candidate_email,
                     requested_by: "Auto_CV_Screening_Pass"
                 })
             });
@@ -1318,23 +1329,25 @@ app.post("/api/auto-schedule-pass", async (req, res) => {
         const interviewer = cand.interviewer_name || (l4Result.data && l4Result.data.interviewer) || "Nguyễn HR";
         const meetLink = cand.meeting_link || (l4Result.data && l4Result.data.meeting_link) || "https://meet.google.com/dfj-amei-jzt";
 
-        // Tự động kích hoạt Luồng 5 (gửi thư mời Gmail) để bảo đảm 100% email được gửi đi
-        try {
-            fetch(`${N8N_URL}/webhook/send-interview-invite`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    candidate_id: Number(targetId),
-                    candidate_name: cand.full_name || cand.name || candidate_name,
-                    candidate_email: cand.email || candidate_email,
-                    position: cand.job_title || cand.position,
-                    interview_time: interviewTime,
-                    interviewer: interviewer,
-                    meet_link: meetLink
-                })
-            }).catch(e => console.warn("Lỗi auto-dispatch Luồng 5:", e.message));
-        } catch (autoInviteErr) {
-            console.warn("Lỗi gửi email Luồng 5:", autoInviteErr.message);
+        // Tự động kích hoạt Luồng 5 (Chỉ gọi dự phòng nếu Luồng 4 n8n không phản hồi hoặc dùng fallback)
+        if (!l4Result || !l4Result.success || l4Result.fallback) {
+            try {
+                fetch(`${N8N_URL}/webhook/send-interview-invite`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        candidate_id: Number(targetId),
+                        candidate_name: cand.full_name || cand.name || candidate_name,
+                        candidate_email: cand.email || candidate_email,
+                        position: cand.job_title || cand.position,
+                        interview_time: interviewTime,
+                        interviewer: interviewer,
+                        meet_link: meetLink
+                    })
+                }).catch(e => console.warn("Lỗi auto-dispatch Luồng 5:", e.message));
+            } catch (autoInviteErr) {
+                console.warn("Lỗi gửi email Luồng 5:", autoInviteErr.message);
+            }
         }
 
         return res.json({
@@ -1581,7 +1594,7 @@ app.post("/api/candidates/:id/send-invite", async (req, res) => {
                 id: candidateId,
                 name: "Ứng viên #" + candidateId,
                 full_name: "Ứng viên #" + candidateId,
-                email: "ungvien@vku.udn.vn",
+                email: "hoami2113@gmail.com",
                 job_title: "Chuyên viên Tuyển dụng",
                 interview_time: defaultSmartTime,
                 interviewer_name: "Hội Đồng Phỏng Vấn VKU",

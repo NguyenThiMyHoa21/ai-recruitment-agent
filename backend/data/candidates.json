@@ -1,5 +1,24 @@
 [
   {
+    "id": 101,
+    "job_id": 15,
+    "name": "Nguyễn Thị Mỹ Hoa",
+    "full_name": "Nguyễn Thị Mỹ Hoa",
+    "email": "hoami2113@gmail.com",
+    "applied_position": "Senior Fullstack Developer",
+    "position": "Senior Fullstack Developer",
+    "cv_content": "Kỹ sư phần mềm Fullstack giàu kinh nghiệm, thành thạo ReactJS, NodeJS, MySQL, Docker, CI/CD, Microservices.",
+    "cv_text": "Kỹ sư phần mềm Fullstack giàu kinh nghiệm, thành thạo ReactJS, NodeJS, MySQL, Docker, CI/CD, Microservices.",
+    "match_score": 93,
+    "approval_status": "INTERVIEW_SCHEDULED",
+    "status": "Phỏng vấn",
+    "ai_evaluation": "Ứng viên Nguyễn Thị Mỹ Hoa đáp ứng tốt yêu cầu chuyên môn vị trí Senior Fullstack Developer. Điểm đánh giá năng lực: 93/100. Kỹ năng nổi bật ghi nhận: mysql, react, docker, node, nodejs. Tác tử AI đề xuất: ĐẠT (Mời phỏng vấn).",
+    "created_at": "2026-10-30T08:16:09.229Z",
+    "interview_time": "2026-10-31 09:30:00",
+    "interviewer_name": "Trần Văn Tech",
+    "meeting_link": "https://meet.google.com/t4e-wobl-ish"
+  },
+  {
     "id": 1,
     "job_id": 1,
     "name": "Lê Thị Hoa",
