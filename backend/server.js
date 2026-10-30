@@ -369,6 +369,22 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
         console.warn("[Auto-Pass] Gán ID tạm thời cho ứng viên:", targetId);
     }
 
+    // Lấy thông tin ứng viên hiện tại
+    let cand = {};
+    try {
+        const [candRows] = await db.query(
+            "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
+            [Number(targetId)]
+        );
+        if (candRows && candRows.length > 0) cand = candRows[0];
+    } catch (dbErr) {
+        const mc = MOCK_CANDIDATES.find(c => Number(c.id) === Number(targetId) || (candidate_email && c.email === candidate_email));
+        if (mc) cand = mc;
+    }
+    cand.email = cand.email || candidate_email;
+    cand.full_name = cand.full_name || cand.name || candidate_name;
+    cand.job_title = cand.job_title || cand.position || cand.applied_position || position || "Vị trí tuyển dụng";
+
     // Gọi Luồng 4 n8n để xếp lịch phỏng vấn và tạo Google Meet
     let l4Result = {};
     try {
@@ -388,22 +404,6 @@ async function executeAutoSchedulePass({ candidate_id, candidate_name, candidate
     } catch (e) {
         console.warn("[Auto-Pass] Lỗi gọi webhook Luồng 4:", e.message);
     }
-
-    // Lấy thông tin ứng viên hiện tại
-    let cand = {};
-    try {
-        const [candRows] = await db.query(
-            "SELECT c.*, COALESCE(c.applied_position, j.position, 'Vị trí chuyên viên') as job_title FROM candidates c LEFT JOIN jobs j ON c.job_id = j.id WHERE c.id = ?",
-            [Number(targetId)]
-        );
-        if (candRows && candRows.length > 0) cand = candRows[0];
-    } catch (dbErr) {
-        const mc = MOCK_CANDIDATES.find(c => Number(c.id) === Number(targetId) || (candidate_email && c.email === candidate_email));
-        if (mc) cand = mc;
-    }
-    cand.email = cand.email || candidate_email;
-    cand.full_name = cand.full_name || cand.name || candidate_name;
-    cand.job_title = cand.job_title || cand.position || cand.applied_position || position || "Vị trí tuyển dụng";
 
     const interviewTime = cand.interview_time || (l4Result.data && l4Result.data.interview_time) || calculateSmartNextInterviewTime();
     const interviewer = cand.interviewer_name || (l4Result.data && l4Result.data.interviewer) || "Trần Văn Tech";
