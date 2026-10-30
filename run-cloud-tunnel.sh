@@ -14,6 +14,8 @@ echo "=========================================================="
 echo "📦 1. Khởi động n8n & MySQL trong Docker..."
 docker start mysql-recruitment 2>/dev/null || true
 docker start n8n 2>/dev/null || true
+docker exec -u 0 n8n sh -c 'echo "nameserver 8.8.8.8" > /etc/resolv.conf' 2>/dev/null || true
+docker exec -u 0 n8n sh -c 'grep -q "mysql-recruitment" /etc/hosts || echo "172.17.0.2 mysql-recruitment" >> /etc/hosts' 2>/dev/null || true
 echo "   ✅ MySQL & n8n đã sẵn sàng!"
 
 # 2. Khởi động Backend nội bộ (phục vụ cả localhost:3000 nếu cần)

@@ -129,6 +129,7 @@ Chúng tôi đang tìm kiếm nhân tài cho vị trí ${jobData.position}. Bạ
                 status: 'published'
             };
             try {
+                localStorage.removeItem('deleted_job_ids');
                 let customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
                 // Lọc bỏ nếu đã tồn tại cùng tên hoặc cùng id
                 customJobs = customJobs.filter(j => 
@@ -203,6 +204,7 @@ const defaultJobsFallback = [
 // Tự động dọn sạch các bản ghi lỗi và trùng lặp trong localStorage ngay khi tải trang
 (function cleanCorruptedLocalStorage() {
     try {
+        localStorage.removeItem('deleted_job_ids');
         const raw = localStorage.getItem('custom_jobs');
         if (raw) {
             const list = JSON.parse(raw);
@@ -225,9 +227,8 @@ async function loadActiveJobs() {
     const tbody = document.getElementById("jobsTableBody");
     if (!tbody) return;
 
-    let deletedJobIds = [];
     try {
-        deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
+        localStorage.removeItem('deleted_job_ids');
     } catch(e) {}
 
     try {
@@ -238,11 +239,10 @@ async function loadActiveJobs() {
 
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
-            // Lọc bỏ triệt để các bản ghi không hợp lệ hoặc đã bị xóa
+            // Lấy danh sách hợp lệ trực tiếp từ Backend
             let validJobs = data.jobs.filter(j => 
                 j && j.position && j.position !== 'undefined' && 
-                String(j.position).trim().length > 0 && 
-                !deletedJobIds.includes(String(j.id))
+                String(j.position).trim().length > 0
             );
             
             // Tự động gộp / khử trùng lặp nếu có các vị trí cùng tên và phòng ban
@@ -265,7 +265,7 @@ async function loadActiveJobs() {
             let localCustom = [];
             try { localCustom = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(e) {}
             localCustom.forEach(lj => {
-                if (!lj || !lj.position || deletedJobIds.includes(String(lj.id))) return;
+                if (!lj || !lj.position) return;
                 const exists = validJobs.some(vj => 
                     String(vj.id) === String(lj.id) || 
                     vj.position.toLowerCase().trim() === lj.position.toLowerCase().trim()
@@ -285,10 +285,10 @@ async function loadActiveJobs() {
         let customJobs = [];
         try { 
             customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
-            customJobs = customJobs.filter(j => j && j.position && j.position !== 'undefined' && !deletedJobIds.includes(String(j.id)));
+            customJobs = customJobs.filter(j => j && j.position && j.position !== 'undefined');
         } catch(err) {}
 
-        let combined = defaultJobsFallback.filter(j => !deletedJobIds.includes(String(j.id)));
+        let combined = [...defaultJobsFallback];
         try {
             customJobs.forEach(cj => {
                 const existing = combined.find(j => String(j.id) === String(cj.id));
@@ -473,12 +473,6 @@ async function deleteJob(jobId, jobPosition) {
                 let customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
                 customJobs = customJobs.filter(j => String(j.id) !== String(jobId));
                 localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
-
-                let deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
-                if (!deletedJobIds.includes(String(jobId))) {
-                    deletedJobIds.push(String(jobId));
-                    localStorage.setItem('deleted_job_ids', JSON.stringify(deletedJobIds));
-                }
             } catch(e) {}
 
             // 2. Cập nhật cache bộ nhớ ngay lập tức

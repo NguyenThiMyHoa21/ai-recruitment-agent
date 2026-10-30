@@ -517,9 +517,9 @@
     let currentFilter = 'all';
 
     async function loadJobs() {
-      let deletedJobIds = [];
+      // Dọn dẹp danh sách xóa cũ để không bao giờ bị ẩn tin tuyển dụng
       try {
-        deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
+        localStorage.removeItem('deleted_job_ids');
       } catch(e) {}
 
       // BƯỚC 1: Nạp ngay từ localStorage để công việc mới đăng hiển thị lập tức không độ trễ
@@ -531,8 +531,7 @@
           if (Array.isArray(listLocal) && listLocal.length > 0) {
             localJobs = listLocal.filter(j => 
               j && j.position && j.position !== 'undefined' && 
-              String(j.position).trim().length > 0 &&
-              !deletedJobIds.includes(String(j.id))
+              String(j.position).trim().length > 0
             );
             if (localJobs.length > 0) {
               availableJobs = [...localJobs];
@@ -554,8 +553,7 @@
           // Lấy trực tiếp danh sách từ Backend (Backend luôn sắp xếp việc mới nhất lên đầu #1)
           let validJobs = data.jobs.filter(j => 
             j && j.position && j.position !== 'undefined' && 
-            String(j.position).trim().length > 0 && 
-            !deletedJobIds.includes(String(j.id))
+            String(j.position).trim().length > 0
           );
 
           // Ghép thêm bất kỳ việc nào trong localJobs nếu có (không để sót)
@@ -572,7 +570,6 @@
           const seen = new Set();
           availableJobs = validJobs.filter(j => {
             if (!j || !j.position || j.position === 'undefined' || String(j.position).trim().length === 0) return false;
-            if (deletedJobIds.includes(String(j.id))) return false;
             const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
             if (seen.has(key)) return false;
             seen.add(key);
@@ -594,19 +591,13 @@
     }
 
     function loadFallbackJobs() {
-      let deletedJobIds = [];
-      try {
-        deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
-      } catch(e) {}
-
       try {
         const raw = localStorage.getItem('custom_jobs');
         if (raw) {
           const list = JSON.parse(raw);
           if (Array.isArray(list) && list.length > 0) {
             availableJobs = list.filter(j => 
-              j && j.position && j.position !== 'undefined' && 
-              !deletedJobIds.includes(String(j.id))
+              j && j.position && j.position !== 'undefined'
             );
             if (availableJobs.length > 0) return;
           }
