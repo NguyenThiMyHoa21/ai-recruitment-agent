@@ -25,7 +25,7 @@ const db = mysql.createPool({
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://ships-out-banana-shelter.trycloudflare.com" : "http://localhost:5678");
+const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://required-breed-fragrances-mice.trycloudflare.com" : "http://localhost:5678");
 
 const path = require("path");
 
