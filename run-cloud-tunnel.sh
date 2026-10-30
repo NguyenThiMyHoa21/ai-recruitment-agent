@@ -32,16 +32,17 @@ nohup cloudflared tunnel --url http://localhost:5678 > /tmp/tunnel.log 2>&1 &
 
 echo "⏳ Đang kết nối mạng Cloudflare để cấp link công khai mới..."
 NEW_URL=""
-for i in {1..15}; do
+for i in {1..20}; do
     sleep 1
-    NEW_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' /tmp/tunnel.log | head -n 1 || true)
+    NEW_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' /tmp/tunnel.log 2>/dev/null | grep -v 'api.trycloudflare.com' | head -n 1 || true)
     if [ -n "$NEW_URL" ]; then
         break
     fi
 done
 
 if [ -z "$NEW_URL" ]; then
-    echo "❌ Chưa lấy được link Cloudflare. Vui lòng kiểm tra lại kết nối Wifi/Internet trên máy!"
+    echo "❌ Chưa lấy được link Cloudflare hợp lệ (hoặc đường hầm đang thử kết nối lại)."
+    echo "👉 Kiểm tra log tại /tmp/tunnel.log hoặc thử chạy lại script sau 5 giây."
     exit 1
 fi
 
@@ -53,12 +54,16 @@ echo "=========================================================="
 echo "⚙️  4. Cập nhật link mới vào backend/server.js..."
 sed -i -E "s|https://[a-zA-Z0-9.-]*\.trycloudflare\.com|$NEW_URL|g" backend/server.js
 
-echo "🚀 5. Tự động đồng bộ lên GitHub (Render sẽ tự động redeploy & lưu dữ liệu bền vững)..."
-git add backend/server.js backend/data-store.js backend/data/*.json frontend/script.js run-cloud-tunnel.sh
-git commit -m "chore: auto-update cloudflare tunnel to $NEW_URL and sync persistent data" || true
+echo "🚀 5. Tự động đồng bộ lên GitHub (Render redeploy, cập nhật Cổng ứng viên & tạo nhánh Git)..."
+git add backend/server.js backend/data-store.js backend/data/*.json frontend/script.js frontend/index.html frontend/candidate-portal.html run-cloud-tunnel.sh
+git commit -m "chore: sync job posting with candidate portal, update tunnel $NEW_URL and branches" || true
 git branch -f main develop 2>/dev/null || true
+git branch -f feature/yenhi develop 2>/dev/null || true
+git branch -f feature/yennhi develop 2>/dev/null || true
 git push origin develop:develop || true
 git push origin develop:main || true
+git push origin develop:feature/yenhi || true
+git push origin develop:feature/yennhi || true
 
 echo "=========================================================="
 echo "🎉 HOÀN TẤT 100%! HỆ THỐNG ĐÃ SẴN SÀNG ĐỂ BÁO CÁO:"

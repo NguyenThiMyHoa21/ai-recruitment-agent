@@ -25,7 +25,7 @@ const db = mysql.createPool({
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://api.trycloudflare.com" : "http://localhost:5678");
+const N8N_URL = process.env.N8N_URL || (process.env.RENDER ? "https://comparable-yeah-invitation-thunder.trycloudflare.com" : "http://localhost:5678");
 
 const path = require("path");
 
@@ -172,8 +172,8 @@ Chúng tôi đang tìm kiếm nhân tài cho vị trí ${jobData.position || 'Ch
         );
 
         if (existingIdx !== -1) {
-            console.log(`[JobService] Vị trí "${position}" đã tồn tại (#${MOCK_JOBS[existingIdx].id}), cập nhật thông tin thay vì tạo trùng lặp.`);
-            MOCK_JOBS[existingIdx] = {
+            console.log(`[JobService] Vị trí "${position}" đã tồn tại (#${MOCK_JOBS[existingIdx].id}), cập nhật thông tin và đưa lên đầu Cổng ứng viên.`);
+            const updatedJob = {
                 ...MOCK_JOBS[existingIdx],
                 location,
                 salary,
@@ -181,11 +181,15 @@ Chúng tôi đang tìm kiếm nhân tài cho vị trí ${jobData.position || 'Ch
                 job_description: jobDescription,
                 status: "published"
             };
+            MOCK_JOBS.splice(existingIdx, 1);
+            MOCK_JOBS.unshift(updatedJob);
+            saveJobsToFile();
+
             return res.json({
                 success: true,
-                message: "Tin tuyển dụng đã tồn tại và được cập nhật thành công!",
-                jobId: MOCK_JOBS[existingIdx].id,
-                job: MOCK_JOBS[existingIdx],
+                message: "Tin tuyển dụng đã tồn tại và được cập nhật thành công lên đầu Cổng ứng viên!",
+                jobId: updatedJob.id,
+                job: updatedJob,
                 n8nResponse: n8nJson
             });
         }

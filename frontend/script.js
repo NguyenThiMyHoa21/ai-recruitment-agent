@@ -96,7 +96,33 @@ Chúng tôi đang tìm kiếm nhân tài cho vị trí ${jobData.position}. Bạ
 
             form.reset();
 
-            // Đồng bộ nạp lại danh sách công việc chính xác từ máy chủ (chỉ tạo đúng 1 vị trí)
+            // 1. Lưu ngay công việc mới tạo vào đầu danh sách localStorage để Cổng ứng viên lập tức nhận diện
+            const newlyCreatedJob = {
+                id: result.job?.id || result.jobId || (Date.now() % 100000),
+                position: jobData.position,
+                department: jobData.department,
+                location: jobData.location,
+                salary: jobData.salary,
+                requirements: jobData.requirements,
+                job_description: jd,
+                status: 'published'
+            };
+            try {
+                let customJobs = JSON.parse(localStorage.getItem('custom_jobs') || '[]');
+                // Lọc bỏ nếu đã tồn tại cùng tên hoặc cùng id
+                customJobs = customJobs.filter(j => 
+                    j && j.position &&
+                    String(j.id) !== String(newlyCreatedJob.id) &&
+                    j.position.toLowerCase().trim() !== newlyCreatedJob.position.toLowerCase().trim()
+                );
+                // Đưa công việc mới nhất lên vị trí số 1
+                customJobs.unshift(newlyCreatedJob);
+                localStorage.setItem('custom_jobs', JSON.stringify(customJobs));
+            } catch(e) {
+                console.warn("Lỗi đồng bộ localStorage:", e);
+            }
+
+            // 2. Đồng bộ nạp lại danh sách công việc chính xác từ máy chủ
             await loadActiveJobs();
         } else {
             throw new Error(result.message || "Gửi yêu cầu tuyển dụng thất bại. Vui lòng kiểm tra lại.");
@@ -208,6 +234,21 @@ async function loadActiveJobs() {
                     j.status = 'published';
                 }
             });
+
+            // Giữ lại các job mới được tạo trong localStorage mà backend chưa kịp sync
+            let localCustom = [];
+            try { localCustom = JSON.parse(localStorage.getItem('custom_jobs') || '[]'); } catch(e) {}
+            localCustom.forEach(lj => {
+                if (!lj || !lj.position || deletedJobIds.includes(String(lj.id))) return;
+                const exists = validJobs.some(vj => 
+                    String(vj.id) === String(lj.id) || 
+                    vj.position.toLowerCase().trim() === lj.position.toLowerCase().trim()
+                );
+                if (!exists) {
+                    validJobs.unshift(lj);
+                }
+            });
+
             // Đồng bộ sang localStorage để Cổng ứng viên đọc đồng nhất
             localStorage.setItem('custom_jobs', JSON.stringify(validJobs));
             renderJobsTable(validJobs);

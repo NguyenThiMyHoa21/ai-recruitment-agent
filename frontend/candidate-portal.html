@@ -522,6 +522,28 @@
         deletedJobIds = JSON.parse(localStorage.getItem('deleted_job_ids') || '[]').map(String);
       } catch(e) {}
 
+      // BƯỚC 1: Nạp ngay từ localStorage để công việc mới đăng hiển thị lập tức không độ trễ
+      let localJobs = [];
+      try {
+        const rawLocal = localStorage.getItem('custom_jobs');
+        if (rawLocal) {
+          const listLocal = JSON.parse(rawLocal);
+          if (Array.isArray(listLocal) && listLocal.length > 0) {
+            localJobs = listLocal.filter(j => 
+              j && j.position && j.position !== 'undefined' && 
+              String(j.position).trim().length > 0 &&
+              !deletedJobIds.includes(String(j.id))
+            );
+            if (localJobs.length > 0) {
+              availableJobs = [...localJobs];
+              updateCounts(availableJobs);
+              renderJobsFiltered();
+            }
+          }
+        }
+      } catch(e) {}
+
+      // BƯỚC 2: Đồng bộ thêm với Backend API
       try {
         const res = await fetch(`${API_BASE}/api/jobs?t=` + Date.now(), { signal: AbortSignal.timeout(4000) });
         const rawText = await res.text();
@@ -529,8 +551,21 @@
         try { data = JSON.parse(rawText); } catch(e) {}
 
         if (res.ok && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
+          // Giữ các công việc mới từ local lên đầu, sau đó ghép danh sách từ backend
+          const combined = [...localJobs];
+          data.jobs.forEach(bj => {
+            if (!bj || !bj.position || bj.position === 'undefined' || String(bj.position).trim().length === 0) return;
+            const exists = combined.some(cj => 
+              String(cj.id) === String(bj.id) || 
+              (cj.position.toLowerCase().trim() === bj.position.toLowerCase().trim() && (cj.department || '').toLowerCase().trim() === (bj.department || '').toLowerCase().trim())
+            );
+            if (!exists) {
+              combined.push(bj);
+            }
+          });
+
           const seen = new Set();
-          availableJobs = data.jobs.filter(j => {
+          availableJobs = combined.filter(j => {
             if (!j || !j.position || j.position === 'undefined' || String(j.position).trim().length === 0) return false;
             if (deletedJobIds.includes(String(j.id))) return false;
             const key = `${j.position.toLowerCase().trim()}::${(j.department || '').toLowerCase().trim()}`;
@@ -539,12 +574,14 @@
             return true;
           });
           try { localStorage.setItem('custom_jobs', JSON.stringify(availableJobs)); } catch(e) {}
-        } else {
+        } else if (!availableJobs || availableJobs.length === 0) {
           loadFallbackJobs();
         }
       } catch (err) {
-        console.warn("Lỗi tải danh sách job từ Backend, chuyển sang dự phòng:", err);
-        loadFallbackJobs();
+        console.warn("Lỗi tải danh sách job từ Backend, giữ danh sách hiện tại:", err);
+        if (!availableJobs || availableJobs.length === 0) {
+          loadFallbackJobs();
+        }
       }
 
       updateCounts(availableJobs);
@@ -611,8 +648,11 @@
     }
 
     function updateCounts(jobs) {
-      const pubCount = jobs.filter(j => (j.status || 'published') === 'published').length;
-      const closedCount = jobs.filter(j => j.status === 'closed' || j.status === 'draft').length;
+      const pubCount = jobs.filter(j => String(j.status || 'published').toLowerCase() === 'published').length;
+      const closedCount = jobs.filter(j => {
+        const s = String(j.status || '').toLowerCase();
+        return s === 'closed' || s === 'draft';
+      }).length;
       
       const elAll = document.getElementById('countAll');
       const elPub = document.getElementById('countPublished');
@@ -643,9 +683,12 @@
     function renderJobsFiltered() {
       let filtered = availableJobs;
       if (currentFilter === 'published') {
-        filtered = availableJobs.filter(j => (j.status || 'published') === 'published');
+        filtered = availableJobs.filter(j => String(j.status || 'published').toLowerCase() === 'published');
       } else if (currentFilter === 'closed') {
-        filtered = availableJobs.filter(j => j.status === 'closed' || j.status === 'draft');
+        filtered = availableJobs.filter(j => {
+          const s = String(j.status || '').toLowerCase();
+          return s === 'closed' || s === 'draft';
+        });
       }
 
       const searchVal = (document.getElementById('jobSearchInput')?.value || '').toLowerCase().trim();
