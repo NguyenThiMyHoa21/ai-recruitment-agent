@@ -46,8 +46,40 @@ form.addEventListener("submit", async (event) => {
                 n8nData = {};
             }
 
-            const jd = result.job?.job_description || n8nData.job_description || 
-                `BẢN MÔ TẢ CÔNG VIỆC CHUYÊN NGHIỆP\n\n1. VỊ TRÍ TUYỂN DỤNG: ${jobData.position}\n2. PHÒNG BAN: ${jobData.department} | ĐỊA ĐIỂM: ${jobData.location}\n3. MỨC LƯƠNG: ${jobData.salary}\n4. TIÊU CHUẨN ỨNG VIÊN: ${jobData.requirements}\n5. QUYỀN LỢI ĐÃI NGỘ: Môi trường làm việc năng động, lộ trình phát triển rõ ràng, bảo hiểm đầy đủ, thưởng theo hiệu suất.`;
+            let jd = result.job?.job_description || n8nData.job_description;
+            if (!jd || jd.includes('<html') || jd.includes('Cloudflare Tunnel') || jd.includes('<!DOCTYPE') || jd.length < 50) {
+                jd = `BẢN MÔ TẢ CÔNG VIỆC CHUYÊN NGHIỆP: ${String(jobData.position || 'Chuyên viên').toUpperCase()}
+Phòng ban: ${jobData.department || 'Nhân sự & Vận hành'} | Địa điểm: ${jobData.location || 'Đà Nẵng / Toàn quốc'} | Mức lương: ${jobData.salary || 'Thỏa thuận'}
+
+1. TỔNG QUAN VỊ TRÍ & SỨ MỆNH
+Chúng tôi đang tìm kiếm nhân tài cho vị trí ${jobData.position}. Bạn sẽ đóng vai trò chủ chốt trong việc xây dựng giải pháp, nâng cao hiệu quả công việc và đóng góp vào mục tiêu phát triển bền vững của tổ chức trong môi trường năng động và sáng tạo.
+
+2. TRÁCH NHIỆM & NHIỆM VỤ CHÍNH
+- Trực tiếp thực thi và quản lý các nghiệp vụ chuyên môn cho vị trí ${jobData.position}.
+- Phối hợp chặt chẽ với các phòng ban liên quan để tối ưu hóa quy trình làm việc.
+- Đề xuất các sáng kiến cải tiến hiệu suất và chất lượng công việc hàng quý.
+- Báo cáo định kỳ tiến độ công việc và giải quyết kịp thời các phát sinh.
+
+3. YÊU CẦU CHUYÊN MÔN & KỸ NĂNG
+- Tiêu chuẩn chuyên môn: ${jobData.requirements || 'Kỹ năng chuyên môn vững vàng, tư duy logic và khả năng làm việc độc lập.'}
+- Kỹ năng giao tiếp chuyên nghiệp, làm việc nhóm hiệu quả và khả năng thích ứng linh hoạt.
+- Tinh thần trách nhiệm cao, chủ động trong công việc và cam kết đạt mục tiêu đề ra.
+
+4. QUYỀN LỢI & CHẾ ĐỘ ĐÃI NGỘ XỨNG ĐÁNG
+- Mức thu nhập cạnh tranh: ${jobData.salary || 'Thỏa thuận theo năng lực'}, xét tăng lương định kỳ hằng năm.
+- Thưởng hiệu suất công việc (KPIs), thưởng lương tháng 13 và các dịp lễ tết.
+- Chế độ bảo hiểm toàn diện theo quy định, khám sức khỏe định kỳ.
+- Cơ hội đào tạo chuyên sâu và lộ trình thăng tiến rõ ràng lên cấp quản lý.
+- Môi trường làm việc văn minh, đồng nghiệp trẻ trung và hỗ trợ hết mình.
+
+5. MỨC LƯƠNG & CHÍNH SÁCH THƯỞNG
+- Mức lương khởi điểm: ${jobData.salary || 'Cạnh tranh'} kèm các phụ cấp công việc và thiết bị làm việc.
+
+6. QUY TRÌNH PHỎNG VẤN & HƯỚNG DẪN ỨNG TUYỂN
+- Vòng 1: Tác tử AI sàng lọc CV tự động và phản hồi trong 24 giờ.
+- Vòng 2: Phỏng vấn chuyên môn với Trưởng bộ phận.
+- Vòng 3: Trao đổi văn hóa & Gửi thư mời nhận việc (Offer Letter).`;
+            }
 
             const jdEl = document.getElementById("aiJdContent");
             if (jdEl) jdEl.innerText = jd;

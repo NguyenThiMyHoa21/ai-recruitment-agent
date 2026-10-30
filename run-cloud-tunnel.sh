@@ -54,7 +54,7 @@ echo "⚙️  4. Cập nhật link mới vào backend/server.js..."
 sed -i -E "s|https://[a-zA-Z0-9.-]*\.trycloudflare\.com|$NEW_URL|g" backend/server.js
 
 echo "🚀 5. Tự động đồng bộ lên GitHub (Render sẽ tự động redeploy & lưu dữ liệu bền vững)..."
-git add backend/server.js backend/data-store.js backend/data/*.json run-cloud-tunnel.sh
+git add backend/server.js backend/data-store.js backend/data/*.json frontend/script.js run-cloud-tunnel.sh
 git commit -m "chore: auto-update cloudflare tunnel to $NEW_URL and sync persistent data" || true
 git branch -f main develop 2>/dev/null || true
 git push origin develop:develop || true
